@@ -3,6 +3,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "FactoryCharacter.h"
 #include "FactoryTopViewPawn.h"
+#include "DrawDebugHelpers.h"
 
 AFactoryPlayerController::AFactoryPlayerController()
 {
@@ -24,9 +25,11 @@ void AFactoryPlayerController::BeginPlay()
             Subsystem->AddMappingContext(MouseMappingContext, 1);
         }
     }
-
+    
+    // 3인칭 뷰 캐릭터 캐싱
     CachedNormalViewCharacter = Cast<AFactoryCharacter>(GetCharacter());
-
+    
+    // 탑뷰 액터 생성 및 캐싱
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -46,9 +49,27 @@ void AFactoryPlayerController::SetupInputComponent()
     {
         // 뷰 모드 전환
         EnhancedInputComponent->BindAction(ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
+        // 배치모드 고스트 회전
+        EnhancedInputComponent->BindAction(GhostRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotationGhostBuilding);
     }
 }
 
+void AFactoryPlayerController::PlayerTick(float DeltaTime)
+{
+    Super::PlayerTick(DeltaTime);
+    
+    //TODO : 배치모드가 실행되었을때만 돌도록 추후 수정
+    FVector GhostBuildingLocation = GetBuildingPlacementLocation();
+    DrawDebugSphere(GetWorld(), GhostBuildingLocation, 50.f, 26, FColor::Red);
+    if (CachedGhostBuilding)
+    {
+        CachedGhostBuilding->SetActorLocation(GhostBuildingLocation);
+    }
+}
+
+/** 
+ * 3인칭과 탑뷰 모드 전환
+ */
 void AFactoryPlayerController::OnToggleViewMode()
 {
     if (!CachedNormalViewCharacter || !CachedTopViewPawn)
@@ -85,7 +106,7 @@ void AFactoryPlayerController::OnToggleViewMode()
 
     FTimerHandle ViewChangeTimerHandle;
     GetWorldTimerManager().SetTimer(ViewChangeTimerHandle, [this, TargetPawn, NewMode]()
-                                    {
+    {
         if(!IsValid(this))
         {
             return;
@@ -96,6 +117,7 @@ void AFactoryPlayerController::OnToggleViewMode()
         if (NewMode == EViewModeType::NormalView)
         {
             bShowMouseCursor = false;
+            CachedTopViewPawn->SetActorHiddenInGame(true);
             SetInputMode(FInputModeGameOnly());
         }
         else
@@ -106,5 +128,65 @@ void AFactoryPlayerController::OnToggleViewMode()
             SetInputMode(FInputModeGameAndUI());
         }
         EnableInput(this);
-        CurrentViewMode = NewMode; }, BlendTime, false);
+        CurrentViewMode = NewMode; 
+    }, BlendTime, false);
+}
+
+/**
+ * 배치모드에서 그리드에 맞게 배치될 고스트의 위치 산출
+ * @return 고스트의 위치
+ */
+FVector AFactoryPlayerController::GetBuildingPlacementLocation()
+{
+    FHitResult HitResult;
+    bool bHit;
+    
+    if (CurrentViewMode == EViewModeType::NormalView)
+    {
+        FVector CameraLocation;
+        FRotator CameraRotation;
+        GetPlayerViewPoint(CameraLocation, CameraRotation);
+        FVector TraceStart = CameraLocation;
+        FVector TraceEnd = TraceStart + (CameraRotation.Vector() * MaxBuildTraceDistance);
+        
+        FCollisionQueryParams CollisionQueryParams;
+        CollisionQueryParams.AddIgnoredActor(GetPawn());
+        
+        bHit = GetWorld()->LineTraceSingleByChannel(
+            HitResult, TraceStart, TraceEnd, ECC_GameTraceChannel1, CollisionQueryParams);
+        
+        // 만약 일정 거리 감지못하면 아래쪽 검사
+        if (!bHit)
+        {
+            FVector DownTraceStart = TraceEnd;
+            FVector DownTraceEnd = DownTraceStart + (FVector::DownVector * MaxBuildTraceDistance);
+            bHit = GetWorld()->LineTraceSingleByChannel(
+                HitResult, DownTraceStart, DownTraceEnd, ECC_GameTraceChannel1, CollisionQueryParams);
+        }
+    }
+    else
+    {
+        bHit = GetHitResultUnderCursor(ECC_GameTraceChannel1, false, HitResult);
+    }
+    
+    if (!bHit) return FVector::ZeroVector;
+    
+    float SnappedX = FMath::GridSnap(HitResult.Location.X, 100.f);
+    float SnappedY = FMath::GridSnap(HitResult.Location.Y, 100.f);
+    
+    return FVector(SnappedX, SnappedY, HitResult.Location.Z);
+}
+
+/**
+ * 배치모드에서 고스트를 회전시킴
+ */
+void AFactoryPlayerController::RotationGhostBuilding()
+{
+    if (!CachedGhostBuilding) return;
+    
+    float CurrentYaw = CachedGhostBuilding->GetActorRotation().Yaw;
+    float NextYaw = FMath::GridSnap(CurrentYaw + 90.f, 90.f);
+    NextYaw = FRotator::NormalizeAxis(NextYaw);
+    
+    CachedGhostBuilding->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
 }
