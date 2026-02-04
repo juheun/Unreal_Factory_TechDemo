@@ -4,6 +4,8 @@
 #include "FactoryCharacter.h"
 #include "FactoryTopViewPawn.h"
 #include "DrawDebugHelpers.h"
+#include "FactoryObjectData.h"
+#include "FactoryPlacePreview.h"
 
 AFactoryPlayerController::AFactoryPlayerController()
 {
@@ -50,7 +52,7 @@ void AFactoryPlayerController::SetupInputComponent()
         // 뷰 모드 전환
         EnhancedInputComponent->BindAction(ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
         // 배치모드 고스트 회전
-        EnhancedInputComponent->BindAction(GhostRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotationGhostBuilding);
+        EnhancedInputComponent->BindAction(GhostRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
     }
 }
 
@@ -59,11 +61,11 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
     Super::PlayerTick(DeltaTime);
     
     //TODO : 배치모드가 실행되었을때만 돌도록 추후 수정
-    FVector GhostBuildingLocation = GetBuildingPlacementLocation();
+    FVector GhostBuildingLocation = GetPlacementObjectLocation();
     DrawDebugSphere(GetWorld(), GhostBuildingLocation, 50.f, 26, FColor::Red);
-    if (CachedGhostBuilding)
+    if (CurrentPlacementPreview)
     {
-        CachedGhostBuilding->SetActorLocation(GhostBuildingLocation);
+        CurrentPlacementPreview->SetActorLocation(GhostBuildingLocation);
     }
 }
 
@@ -136,7 +138,7 @@ void AFactoryPlayerController::OnToggleViewMode()
  * 배치모드에서 그리드에 맞게 배치될 고스트의 위치 산출
  * @return 고스트의 위치
  */
-FVector AFactoryPlayerController::GetBuildingPlacementLocation()
+FVector AFactoryPlayerController::GetPlacementObjectLocation() const
 {
     FHitResult HitResult;
     bool bHit;
@@ -171,22 +173,42 @@ FVector AFactoryPlayerController::GetBuildingPlacementLocation()
     
     if (!bHit) return FVector::ZeroVector;
     
-    float SnappedX = FMath::GridSnap(HitResult.Location.X, 100.f);
-    float SnappedY = FMath::GridSnap(HitResult.Location.Y, 100.f);
-    
-    return FVector(SnappedX, SnappedY, HitResult.Location.Z);
+    return CalculateSnappedLocation(HitResult.Location, CurrentPlacementPreview->GetObjectData()->GridSize);
+}
+
+FVector AFactoryPlayerController::CalculateSnappedLocation(FVector InRawLocation, FIntPoint GridSize) const
+{
+    auto SnapValue = [](float Raw, int32 Size) -> float
+    {
+        // TODO : 매직넘버 처리
+        // 기본 100단위 그리드 시작점 (칸의 왼쪽/위쪽 선)
+        float GridStart = FMath::FloorToFloat(Raw / 100.0f) * 100.0f;
+        
+        // 칸수가 홀수면 50유닛(중앙)만큼, 짝수면 0만큼 오프셋
+        float Offset = (Size % 2 != 0) ? 50.0f : 0.0f;
+        
+        return GridStart + Offset;
+    };
+
+    FVector Snapped;
+    Snapped.X = SnapValue(InRawLocation.X, GridSize.X);
+    Snapped.Y = SnapValue(InRawLocation.Y, GridSize.Y);
+    Snapped.Z = InRawLocation.Z; // 높이는 바닥에 고정
+
+    return Snapped;
 }
 
 /**
  * 배치모드에서 고스트를 회전시킴
  */
-void AFactoryPlayerController::RotationGhostBuilding()
+void AFactoryPlayerController::RotatePlacementPreview()
 {
-    if (!CachedGhostBuilding) return;
+    if (!CurrentPlacementPreview) return;
     
-    float CurrentYaw = CachedGhostBuilding->GetActorRotation().Yaw;
+    float CurrentYaw = CurrentPlacementPreview->GetActorRotation().Yaw;
     float NextYaw = FMath::GridSnap(CurrentYaw + 90.f, 90.f);
     NextYaw = FRotator::NormalizeAxis(NextYaw);
     
-    CachedGhostBuilding->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
+    CurrentPlacementPreview->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
 }
+

@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,7 +6,7 @@
 #include "FactoryPlayerController.generated.h"
 
 /**
- *
+ * 팩토리 건설 및 시점 제어를 담당하는 컨트롤러
  */
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryPlayerController : public APlayerController
@@ -20,39 +18,40 @@ public:
     
     virtual void PlayerTick(float DeltaTime) override;
 
+    //void SetCurrentPlacementObject(class UFactoryObjectData* NewData);
+
 protected:
     virtual void BeginPlay() override;
+    virtual void SetupInputComponent() override;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "State")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Factory|State")
     EViewModeType CurrentViewMode = EViewModeType::NormalView;
 
 private:
-    UPROPERTY(EditAnywhere, Category = Input, meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
     TObjectPtr<class UInputMappingContext> DefaultMappingContext;
-
-    UPROPERTY(EditAnywhere, Category = Input, meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
     TObjectPtr<class UInputMappingContext> MouseMappingContext;
 
-    UPROPERTY(EditAnywhere, Category = Input, meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
     TObjectPtr<class UInputAction> ToggleViewModeAction;
-    UPROPERTY(EditAnywhere, Category = Input, meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
     TObjectPtr<class UInputAction> GhostRotateAction;
 
     UPROPERTY()
-    TObjectPtr<class AFactoryCharacter> CachedNormalViewCharacter; // 3인칭 뷰 캐릭터
+    TObjectPtr<class AFactoryCharacter> CachedNormalViewCharacter;
     UPROPERTY()
-    TObjectPtr<class AFactoryTopViewPawn> CachedTopViewPawn;    // 위에서 내려다보는 폰
+    TObjectPtr<class AFactoryTopViewPawn> CachedTopViewPawn;
     
-    UPROPERTY(EditAnywhere, Category = Input)
-    TObjectPtr<AActor> CachedGhostBuilding;    //TODO : 설치 전 배치모드의 액터. 추후에 클래스 변경 및 동적으로 받을 수 있게 변경
+    UPROPERTY()
+    TObjectPtr<class AFactoryPlacePreview> CurrentPlacementPreview;
 
     const float MaxBuildTraceDistance = 1000.f;
     
     void OnToggleViewMode();
-    FVector GetBuildingPlacementLocation();
-    void RotationGhostBuilding();
+    void RotatePlacementPreview();
     
-    //bool IsBuildingMode() const;
+    FVector GetPlacementObjectLocation() const;
     
-    virtual void SetupInputComponent() override;
+    FVector CalculateSnappedLocation(FVector InRawLocation, FIntPoint InGridSize) const;
 };
