@@ -42,7 +42,7 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> PreviewDynamicMaterial;	// 배치불가시 색상변경 위함
-	void SetPlacementValid(bool bIsValid);	// 배치가능 여부에 따라 색상 변경
+	void SetPlacementValid(bool const bIsValid);	// 배치가능 여부에 따라 색상 변경
 	bool bIsPlacementValid = true;
 	
 	UPROPERTY()

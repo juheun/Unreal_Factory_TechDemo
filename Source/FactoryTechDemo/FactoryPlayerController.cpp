@@ -46,12 +46,7 @@ void AFactoryPlayerController::BeginPlay()
     {
         GridLength = Settings->GetGridLength();
     }
-    
-    ///임시!!!
-    if (TempObjectData)
-    {
-        SetCurrentPlacementPreview(TempObjectData);
-    }
+
 }
 
 void AFactoryPlayerController::SetupInputComponent()
@@ -61,9 +56,17 @@ void AFactoryPlayerController::SetupInputComponent()
     if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent))
     {
         // 뷰 모드 전환
-        EnhancedInputComponent->BindAction(ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
+        EnhancedInputComponent->BindAction(
+            ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
         // 배치모드 고스트 회전
-        EnhancedInputComponent->BindAction(PreviewObjectRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
+        EnhancedInputComponent->BindAction(
+            PreviewObjectRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
+        // 오브젝트 배치
+        EnhancedInputComponent->BindAction(
+            PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::PlaceObject);
+        // 오브젝트 배치모드 시작 // TODO: 제거
+        EnhancedInputComponent->BindAction(
+            TemporaryStartPlaceModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::TemporaryStartPlaceMode);
     }
 }
 
@@ -71,19 +74,32 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
     
-    //TODO : 배치모드가 실행되었을때만 돌도록 추후 수정
+    if (!bIsPlaceMode || !CurrentPlacePreview) return;
+    
     FVector GhostBuildingLocation = GetPlacementObjectLocation();
-    if (CurrentPlacePreview)
-    {
-        CurrentPlacePreview->SetActorLocation(GhostBuildingLocation);
-    }
+    CurrentPlacePreview->SetActorLocation(GhostBuildingLocation);
 }
 
-void AFactoryPlayerController::SetCurrentPlacementPreview(class UFactoryObjectData* data)
+/**
+ * 
+ * @param Data 
+ */
+void AFactoryPlayerController::SetCurrentPlacementPreview(class UFactoryObjectData* Data)
 {
-    CurrentPlacePreviewData = data;
+    if (!Data)
+    {
+        bIsPlaceMode = false;
+        if (CurrentPlacePreview)
+        {
+            CurrentPlacePreview->Destroy();
+            CurrentPlacePreview = nullptr;
+        }
+        return;
+    }
+    bIsPlaceMode = true;
+    CurrentPlacePreviewData = Data;
     CurrentPlacePreview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
-    CurrentPlacePreview->InitPreview(data);
+    CurrentPlacePreview->InitPreview(Data);
 }
 
 /** 
@@ -226,5 +242,37 @@ void AFactoryPlayerController::RotatePlacementPreview()
     NextYaw = FRotator::NormalizeAxis(NextYaw);
     
     CurrentPlacePreview->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
+}
+
+void AFactoryPlayerController::PlaceObject()
+{
+    // 프리뷰가 있고, 현재 위치가 배치 가능한 상태일 때만 소환
+    if (CurrentPlacePreview && CurrentPlacePreview->GetPlacementValid() && CurrentPlacePreviewData)
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+        FVector Location = CurrentPlacePreview->GetActorLocation();
+        FRotator Rotation = CurrentPlacePreview->GetActorRotation();
+
+        // 데이터 에셋에 지정된 실제 BP 클래스 소환
+        GetWorld()->SpawnActor<AActor>(
+            CurrentPlacePreviewData->PlaceObjectBP, 
+            Location, 
+            Rotation, 
+            SpawnParams
+        );
+
+        SetCurrentPlacementPreview(nullptr);
+    }
+}
+
+void AFactoryPlayerController::TemporaryStartPlaceMode()
+{
+    if (bIsPlaceMode) return;
+    if (TempObjectData)
+    {
+        SetCurrentPlacementPreview(TempObjectData);
+    }
 }
 
