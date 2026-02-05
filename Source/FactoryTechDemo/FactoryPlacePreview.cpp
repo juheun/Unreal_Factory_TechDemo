@@ -2,6 +2,8 @@
 
 
 #include "FactoryPlacePreview.h"
+
+#include "FactoryBuildingSettings.h"
 #include "FactoryObjectData.h"
 #include "Components/BoxComponent.h"
 #include "Components/DecalComponent.h"
@@ -17,11 +19,17 @@ AFactoryPlacePreview::AFactoryPlacePreview()
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	MeshComponent->SetupAttachment(RootComponent);
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshComponent->SetReceivesDecals(false);
 	
 	GridDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("GridDecal"));
 	GridDecalComponent->SetupAttachment(RootComponent);
-	GridDecalComponent->SetRelativeLocation(FVector(0.f, 0.f, 50.f));	// 데칼 적용을 위해 일부 들어올림
+	GridDecalComponent->SetRelativeLocation(FVector(0.f, 0.f, 1.f));	// 데칼 적용을 위해 살짝 들어올림
 	GridDecalComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	ConstructorHelpers::FObjectFinder<UMaterialInterface> GridMatAsset(TEXT("/Game/Material/M_BuildGrid.M_BuildGrid"));
+	if (GridMatAsset.Succeeded())
+	{
+		GridDecalComponent->SetDecalMaterial(GridMatAsset.Object);
+	}
 	
 	OverlapBox = CreateDefaultSubobject<UBoxComponent>(TEXT("OverlapBox"));
 	OverlapBox->SetupAttachment(RootComponent);
@@ -39,18 +47,26 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 		MeshComponent->SetStaticMesh(Data->ObjectMesh);
 	}
 	
+	const UFactoryBuildingSettings* BuildingSettings = GetDefault<UFactoryBuildingSettings>();
+	if (!BuildingSettings) return;
+	
+	UMaterialInterface* PreviewMaterial = BuildingSettings->PreviewObjectMaterial.LoadSynchronous();
+	
+	MeshComponent->SetMaterial(0, PreviewMaterial);
 	PreviewDynamicMaterial = MeshComponent->CreateDynamicMaterialInstance(0);
 	
-	//TODO: 매직넘버 처리
-	float BoxX = Data->GridSize.X * 100.f * 0.5f;
-	float BoxY = Data->GridSize.Y * 100.f * 0.5f;
+	float GridLength = BuildingSettings->GridLength;
+	
+	float BoxX = Data->GridSize.X * GridLength * 0.5f;
+	float BoxY = Data->GridSize.Y * GridLength * 0.5f;
 	OverlapBox->SetBoxExtent(FVector(BoxX, BoxY, 50.f));
 	
-	float DecalRangeX = BoxX + 500.f;
-	float DecalRangeY = BoxY + 500.f;
-	GridDecalComponent->DecalSize = FVector(200.f, DecalRangeX, DecalRangeY);	// 투사깊이, x, y
+	int GridDecalRangeMultiplier = 5;
+	float GridDecalRange = GridLength * GridDecalRangeMultiplier;
 	
-	GridDynamicMaterial = GridDecalComponent->CreateDynamicMaterialInstance();
+	float DecalRangeX = BoxX + GridDecalRange;
+	float DecalRangeY = BoxY + GridDecalRange;
+	GridDecalComponent->DecalSize = FVector(200.f, DecalRangeX, DecalRangeY);	// 투사깊이, x, y
 }
 
 void AFactoryPlacePreview::SetPlacementValid(bool bIsValid)

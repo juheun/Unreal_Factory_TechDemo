@@ -29,14 +29,18 @@ protected:
 
 private:
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputMappingContext> DefaultMappingContext;
+    TObjectPtr<class UInputMappingContext> DefaultMappingContext;   // 이동관련
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputMappingContext> MouseMappingContext;
+    TObjectPtr<class UInputMappingContext> MouseMappingContext; // 마우스 회전 관련
 
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputAction> ToggleViewModeAction;
+    TObjectPtr<class UInputAction> ToggleViewModeAction;    // 3인칭 - 탑뷰 전환 버튼
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputAction> GhostRotateAction;
+    TObjectPtr<class UInputAction> PreviewObjectRotateAction;   // 프리뷰 객체 회전 버튼
+    
+    // 테스트 후 삭제
+    UPROPERTY(EditAnywhere)
+    TObjectPtr<class UFactoryObjectData> TempObjectData;
 
     UPROPERTY()
     TObjectPtr<class AFactoryCharacter> CachedNormalViewCharacter;
@@ -44,9 +48,14 @@ private:
     TObjectPtr<class AFactoryTopViewPawn> CachedTopViewPawn;
     
     UPROPERTY()
-    TObjectPtr<class AFactoryPlacePreview> CurrentPlacementPreview;
+    TObjectPtr<class AFactoryPlacePreview> CurrentPlacePreview;
+    
+    UFUNCTION()
+    void SetCurrentPlacementPreview(class UFactoryObjectData* data);
+    UPROPERTY()
+    TObjectPtr<class UFactoryObjectData> CurrentPlacePreviewData;
 
-    const float MaxBuildTraceDistance = 1000.f;
+    const float MaxBuildTraceDistance = 1500.f;
     
     void OnToggleViewMode();
     void RotatePlacementPreview();
@@ -54,4 +63,6 @@ private:
     FVector GetPlacementObjectLocation() const;
     
     FVector CalculateSnappedLocation(FVector InRawLocation, FIntPoint InGridSize) const;
+    
+    float GridLength = 100.f;
 };

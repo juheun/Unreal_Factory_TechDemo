@@ -34,20 +34,17 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Visual")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
-
 	UPROPERTY(VisibleAnywhere, Category = "Visual")
 	TObjectPtr<UDecalComponent> GridDecalComponent;
-	
 	UPROPERTY(VisibleAnywhere, Category = "Collision")
 	TObjectPtr<UBoxComponent> OverlapBox;
 	
-	UPROPERTY()
-	TObjectPtr<UMaterialInstanceDynamic> PreviewDynamicMaterial;
-	UPROPERTY()
-	TObjectPtr<UMaterialInstanceDynamic> GridDynamicMaterial;
 	
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> PreviewDynamicMaterial;	// 배치불가시 색상변경 위함
 	void SetPlacementValid(bool bIsValid);	// 배치가능 여부에 따라 색상 변경
 	bool bIsPlacementValid = true;
+	
 	UPROPERTY()
 	TObjectPtr<const UFactoryObjectData> ObjectData;
 };

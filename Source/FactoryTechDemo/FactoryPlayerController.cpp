@@ -3,7 +3,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "FactoryCharacter.h"
 #include "FactoryTopViewPawn.h"
-#include "DrawDebugHelpers.h"
+#include "FactoryBuildingSettings.h"
 #include "FactoryObjectData.h"
 #include "FactoryPlacePreview.h"
 
@@ -41,6 +41,17 @@ void AFactoryPlayerController::BeginPlay()
         FRotator::ZeroRotator,
         SpawnParams);
     CachedTopViewPawn->SetActorHiddenInGame(true);
+
+    if (const UFactoryBuildingSettings* Settings = GetDefault<UFactoryBuildingSettings>())
+    {
+        GridLength = Settings->GridLength;
+    }
+    
+    ///임시!!!
+    if (TempObjectData)
+    {
+        SetCurrentPlacementPreview(TempObjectData);
+    }
 }
 
 void AFactoryPlayerController::SetupInputComponent()
@@ -52,7 +63,7 @@ void AFactoryPlayerController::SetupInputComponent()
         // 뷰 모드 전환
         EnhancedInputComponent->BindAction(ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
         // 배치모드 고스트 회전
-        EnhancedInputComponent->BindAction(GhostRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
+        EnhancedInputComponent->BindAction(PreviewObjectRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
     }
 }
 
@@ -62,11 +73,17 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
     
     //TODO : 배치모드가 실행되었을때만 돌도록 추후 수정
     FVector GhostBuildingLocation = GetPlacementObjectLocation();
-    DrawDebugSphere(GetWorld(), GhostBuildingLocation, 50.f, 26, FColor::Red);
-    if (CurrentPlacementPreview)
+    if (CurrentPlacePreview)
     {
-        CurrentPlacementPreview->SetActorLocation(GhostBuildingLocation);
+        CurrentPlacePreview->SetActorLocation(GhostBuildingLocation);
     }
+}
+
+void AFactoryPlayerController::SetCurrentPlacementPreview(class UFactoryObjectData* data)
+{
+    CurrentPlacePreviewData = data;
+    CurrentPlacePreview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
+    CurrentPlacePreview->InitPreview(data);
 }
 
 /** 
@@ -173,19 +190,18 @@ FVector AFactoryPlayerController::GetPlacementObjectLocation() const
     
     if (!bHit) return FVector::ZeroVector;
     
-    return CalculateSnappedLocation(HitResult.Location, CurrentPlacementPreview->GetObjectData()->GridSize);
+    return CalculateSnappedLocation(HitResult.Location, CurrentPlacePreviewData->GridSize);
 }
 
 FVector AFactoryPlayerController::CalculateSnappedLocation(FVector InRawLocation, FIntPoint GridSize) const
 {
-    auto SnapValue = [](float Raw, int32 Size) -> float
+    auto SnapValue = [this](float Raw, int32 Size) -> float
     {
-        // TODO : 매직넘버 처리
-        // 기본 100단위 그리드 시작점 (칸의 왼쪽/위쪽 선)
-        float GridStart = FMath::FloorToFloat(Raw / 100.0f) * 100.0f;
+        // 그리드 시작점 (칸의 왼쪽/위쪽 선)
+        float GridStart = FMath::FloorToFloat(Raw / GridLength) * GridLength;
         
-        // 칸수가 홀수면 50유닛(중앙)만큼, 짝수면 0만큼 오프셋
-        float Offset = (Size % 2 != 0) ? 50.0f : 0.0f;
+        // 칸수가 홀수면 중앙만큼, 짝수면 0만큼 오프셋
+        float Offset = (Size % 2 != 0) ? GridLength * 0.5f : 0.0f;
         
         return GridStart + Offset;
     };
@@ -203,12 +219,12 @@ FVector AFactoryPlayerController::CalculateSnappedLocation(FVector InRawLocation
  */
 void AFactoryPlayerController::RotatePlacementPreview()
 {
-    if (!CurrentPlacementPreview) return;
+    if (!CurrentPlacePreview) return;
     
-    float CurrentYaw = CurrentPlacementPreview->GetActorRotation().Yaw;
+    float CurrentYaw = CurrentPlacePreview->GetActorRotation().Yaw;
     float NextYaw = FMath::GridSnap(CurrentYaw + 90.f, 90.f);
     NextYaw = FRotator::NormalizeAxis(NextYaw);
     
-    CurrentPlacementPreview->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
+    CurrentPlacePreview->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
 }
 
