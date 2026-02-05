@@ -44,7 +44,7 @@ void AFactoryPlayerController::BeginPlay()
 
     if (const UFactoryBuildingSettings* Settings = GetDefault<UFactoryBuildingSettings>())
     {
-        GridLength = Settings->GridLength;
+        GridLength = Settings->GetGridLength();
     }
     
     ///임시!!!

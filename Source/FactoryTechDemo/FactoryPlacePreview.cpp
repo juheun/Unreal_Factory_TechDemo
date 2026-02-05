@@ -50,12 +50,12 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 	const UFactoryBuildingSettings* BuildingSettings = GetDefault<UFactoryBuildingSettings>();
 	if (!BuildingSettings) return;
 	
-	UMaterialInterface* PreviewMaterial = BuildingSettings->PreviewObjectMaterial.LoadSynchronous();
+	UMaterialInterface* PreviewMaterial = BuildingSettings->GetPlacePreviewMaterial();
 	
 	MeshComponent->SetMaterial(0, PreviewMaterial);
 	PreviewDynamicMaterial = MeshComponent->CreateDynamicMaterialInstance(0);
 	
-	float GridLength = BuildingSettings->GridLength;
+	float GridLength = BuildingSettings->GetGridLength();
 	
 	float BoxX = Data->GridSize.X * GridLength * 0.5f;
 	float BoxY = Data->GridSize.Y * GridLength * 0.5f;

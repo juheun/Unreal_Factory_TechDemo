@@ -14,9 +14,14 @@ class FACTORYTECHDEMO_API UFactoryBuildingSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 	
-	public:
+public:
 	static const UFactoryBuildingSettings* Get() {return GetDefault<UFactoryBuildingSettings>();}
 	
+	UMaterialInterface* GetPlacePreviewMaterial() const {return PreviewObjectMaterial.LoadSynchronous();};
+	
+	float GetGridLength() const {return GridLength;}
+
+private:
 	UPROPERTY(Config, EditAnywhere, Category="Visuals")
 	TSoftObjectPtr<UMaterialInterface> PreviewObjectMaterial;
 	
