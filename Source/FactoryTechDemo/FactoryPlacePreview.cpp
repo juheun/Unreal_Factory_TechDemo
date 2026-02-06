@@ -57,8 +57,8 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 	
 	float GridLength = BuildingSettings->GetGridLength();
 	
-	float BoxX = Data->GridSize.X * GridLength * 0.5f;
-	float BoxY = Data->GridSize.Y * GridLength * 0.5f;
+	float BoxX = Data->GridSize.X * GridLength * 0.5f - 1.f;	// 바로 옆 그리드와 붙는것 방지하기 위해 1 빼줌
+	float BoxY = Data->GridSize.Y * GridLength * 0.5f - 1.f;
 	OverlapBox->SetBoxExtent(FVector(BoxX, BoxY, 50.f));
 	
 	int GridDecalRangeMultiplier = 5;
@@ -78,7 +78,7 @@ void AFactoryPlacePreview::SetPlacementValid(const bool bIsValid)
 	
 	if (PreviewDynamicMaterial)
 	{
-		FLinearColor TargetColor = bIsValid ? FLinearColor::White : FLinearColor::Red;
+		FLinearColor TargetColor = bIsValid ? FLinearColor::Gray : FLinearColor::Red;
 		PreviewDynamicMaterial->SetVectorParameterValue(TEXT("Color"), TargetColor);
 	}
 }
