@@ -18,7 +18,6 @@ void AFactoryPlaceObjectBase::InitObject(const UFactoryObjectData* Data)
 {
 	if (!Data) return;
 	DataAsset = Data;
-	
 }
 
 // Called when the game starts or when spawned
