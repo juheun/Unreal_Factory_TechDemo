@@ -117,10 +117,10 @@ void AFactoryPlayerController::OnToggleViewMode()
     const float BlendTime = 0.3f;
     APawn* CurrentPawn = GetPawn();
     APawn* TargetPawn = nullptr;
-    EViewModeType NewMode;
+    EFactoryViewModeType NewMode;
 
     // 뷰 모드 전환 준비
-    if (CurrentViewMode == EViewModeType::NormalView)
+    if (CurrentViewMode == EFactoryViewModeType::NormalView)
     {
         if (CurrentPawn)
         {
@@ -128,13 +128,13 @@ void AFactoryPlayerController::OnToggleViewMode()
         }
         CachedTopViewPawn->SetActorHiddenInGame(false);
         TargetPawn = CachedTopViewPawn;
-        NewMode = EViewModeType::TopView;
+        NewMode = EFactoryViewModeType::TopView;
     }
     else
     {
         CachedTopViewPawn->SetCameraPerspective(true);
         TargetPawn = CachedNormalViewCharacter;
-        NewMode = EViewModeType::NormalView;
+        NewMode = EFactoryViewModeType::NormalView;
     }
 
     // 뷰 모드 전환 시작
@@ -151,7 +151,7 @@ void AFactoryPlayerController::OnToggleViewMode()
 
         Possess(TargetPawn);
         
-        if (NewMode == EViewModeType::NormalView)
+        if (NewMode == EFactoryViewModeType::NormalView)
         {
             bShowMouseCursor = false;
             CachedTopViewPawn->SetActorHiddenInGame(true);
@@ -178,7 +178,7 @@ FVector AFactoryPlayerController::GetPlacementObjectLocation() const
     FHitResult HitResult;
     bool bHit;
     
-    if (CurrentViewMode == EViewModeType::NormalView)
+    if (CurrentViewMode == EFactoryViewModeType::NormalView)
     {
         FVector CameraLocation;
         FRotator CameraRotation;

@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "ViewModeType.h"
+#include "FactoryViewModeType.h"
 #include "FactoryPlayerController.generated.h"
 
 /**
@@ -25,7 +25,7 @@ protected:
     virtual void SetupInputComponent() override;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Factory|State")
-    EViewModeType CurrentViewMode = EViewModeType::NormalView;
+    EFactoryViewModeType CurrentViewMode = EFactoryViewModeType::NormalView;
 
 private:
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
