@@ -57,7 +57,7 @@ private:
     TObjectPtr<class AFactoryPlacePreview> CurrentPlacePreview;
     
     UFUNCTION()
-    void SetCurrentPlacementPreview(class UFactoryObjectData* Data);
+    void SetCurrentPlacePreview(class UFactoryObjectData* Data);
     UPROPERTY()
     TObjectPtr<class UFactoryObjectData> CurrentPlacePreviewData;
 

@@ -20,9 +20,7 @@ public:
 	
 	//TODO: 추후 AActor가 아닌 실제 고스트, 배치오브젝트 클래스로 변경할것 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Classes")
-	TSubclassOf<AActor> PlaceObjectBP;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visual")
-	TObjectPtr<UStaticMesh> ObjectMesh;
+	TSubclassOf<class AFactoryPlaceObjectBase> PlaceObjectBP;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Placement")
 	FIntPoint GridSize = FIntPoint(1, 1);

@@ -6,6 +6,7 @@
 #include "FactoryBuildingSettings.h"
 #include "FactoryObjectData.h"
 #include "FactoryPlacePreview.h"
+#include "FactoryPlaceObjectBase.h"
 
 AFactoryPlayerController::AFactoryPlayerController()
 {
@@ -81,10 +82,10 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
 }
 
 /**
- * 
- * @param Data 
+ * 새로 배치할 객체를 정함
+ * @param Data 새로 배치할 객체, nullptr 이면 배치모드 종료 
  */
-void AFactoryPlayerController::SetCurrentPlacementPreview(class UFactoryObjectData* Data)
+void AFactoryPlayerController::SetCurrentPlacePreview(class UFactoryObjectData* Data)
 {
     if (!Data)
     {
@@ -93,6 +94,7 @@ void AFactoryPlayerController::SetCurrentPlacementPreview(class UFactoryObjectDa
         {
             CurrentPlacePreview->Destroy();
             CurrentPlacePreview = nullptr;
+            CurrentPlacePreviewData = nullptr;
         }
         return;
     }
@@ -256,14 +258,18 @@ void AFactoryPlayerController::PlaceObject()
         FRotator Rotation = CurrentPlacePreview->GetActorRotation();
 
         // 데이터 에셋에 지정된 실제 BP 클래스 소환
-        GetWorld()->SpawnActor<AActor>(
+        AFactoryPlaceObjectBase* PlaceObject = GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
             CurrentPlacePreviewData->PlaceObjectBP, 
             Location, 
             Rotation, 
             SpawnParams
         );
+        if (PlaceObject)
+        {
+            PlaceObject->InitObject(CurrentPlacePreviewData);
+        }
 
-        SetCurrentPlacementPreview(nullptr);
+        SetCurrentPlacePreview(nullptr);
     }
 }
 
@@ -272,7 +278,7 @@ void AFactoryPlayerController::TemporaryStartPlaceMode()
     if (bIsPlaceMode) return;
     if (TempObjectData)
     {
-        SetCurrentPlacementPreview(TempObjectData);
+        SetCurrentPlacePreview(TempObjectData);
     }
 }
 

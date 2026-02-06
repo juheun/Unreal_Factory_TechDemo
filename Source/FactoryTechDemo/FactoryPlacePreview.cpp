@@ -7,6 +7,7 @@
 #include "FactoryObjectData.h"
 #include "Components/BoxComponent.h"
 #include "Components/DecalComponent.h"
+#include "FactoryPlaceObjectBase.h"
 
 // Sets default values
 AFactoryPlacePreview::AFactoryPlacePreview()
@@ -42,9 +43,10 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 	
 	ObjectData = Data;
 	
-	if (Data->ObjectMesh)
+	if (Data->PlaceObjectBP)
 	{
-		MeshComponent->SetStaticMesh(Data->ObjectMesh);
+		AFactoryPlaceObjectBase* PlaceObjectBase = Data->PlaceObjectBP->GetDefaultObject<AFactoryPlaceObjectBase>();
+		MeshComponent->SetStaticMesh(PlaceObjectBase->GetStaticMesh());
 	}
 	
 	const UFactoryBuildingSettings* BuildingSettings = GetDefault<UFactoryBuildingSettings>();
