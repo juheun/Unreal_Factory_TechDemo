@@ -1,8 +1,8 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FactoryItemVisual.h"
-#include "FactoryItemData.h"
+#include "Items/FactoryItemVisual.h"
+#include "Items/FactoryItemData.h"
 
 
 // Sets default values

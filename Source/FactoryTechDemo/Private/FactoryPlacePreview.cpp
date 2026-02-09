@@ -3,7 +3,7 @@
 
 #include "FactoryPlacePreview.h"
 
-#include "FactoryBuildingSettings.h"
+#include "Settings/FactoryBuildingSettings.h"
 #include "FactoryObjectData.h"
 #include "Components/BoxComponent.h"
 #include "Components/DecalComponent.h"

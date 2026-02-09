@@ -1,9 +1,9 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FactoryLogisticsPortComponent.h"
+#include "Logistics/FactoryLogisticsPortComponent.h"
 
-#include "FactoryBuildingSettings.h"
+#include "Settings/FactoryBuildingSettings.h"
 
 
 // Sets default values for this component's properties

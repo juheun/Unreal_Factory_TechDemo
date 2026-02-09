@@ -3,7 +3,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "FactoryCharacter.h"
 #include "FactoryTopViewPawn.h"
-#include "FactoryBuildingSettings.h"
+#include "Settings/FactoryBuildingSettings.h"
 #include "FactoryObjectData.h"
 #include "FactoryPlacePreview.h"
 #include "FactoryPlaceObjectBase.h"

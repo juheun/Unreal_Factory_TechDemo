@@ -1,8 +1,8 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FactoryCycleSubsystem.h"
-#include "FactoryLogisticsObjectBase.h"
+#include "Subsystems/FactoryCycleSubsystem.h"
+#include "Logistics/FactoryLogisticsObjectBase.h"
 
 void UFactoryCycleSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {

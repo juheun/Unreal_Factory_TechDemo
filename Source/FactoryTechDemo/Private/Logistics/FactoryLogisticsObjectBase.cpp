@@ -1,10 +1,10 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FactoryLogisticsObjectBase.h"
+#include "Logistics/FactoryLogisticsObjectBase.h"
 
-#include "FactoryCycleSubsystem.h"
-#include "FactoryLogisticsPortComponent.h"
+#include "Subsystems/FactoryCycleSubsystem.h"
+#include "Logistics/FactoryLogisticsPortComponent.h"
 
 
 // Sets default values
