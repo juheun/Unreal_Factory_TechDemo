@@ -16,14 +16,13 @@ public:
 	AFactoryLogisticsObjectBase();
 
 	virtual void InitObject(const class UFactoryObjectData* Data) override;
-
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	virtual void OnFactoryCycle();	//공장 시스템의 처리단위마다 호출되는 함수
 	
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Logistics")
 	TArray<TObjectPtr<class UFactoryLogisticsPortComponent>> LogisticsPortArr;
 	
 	void InitializeLogisticsPort();
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };

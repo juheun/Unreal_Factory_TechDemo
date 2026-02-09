@@ -2,14 +2,15 @@
 
 
 #include "FactoryLogisticsObjectBase.h"
+
+#include "FactoryCycleSubsystem.h"
 #include "FactoryLogisticsPortComponent.h"
 
 
 // Sets default values
 AFactoryLogisticsObjectBase::AFactoryLogisticsObjectBase()
 {
-	//TODO: 디버그 끝나면 false로 바꿀것
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 }
 
 void AFactoryLogisticsObjectBase::InitObject(const class UFactoryObjectData* Data)
@@ -19,10 +20,11 @@ void AFactoryLogisticsObjectBase::InitObject(const class UFactoryObjectData* Dat
 	InitializeLogisticsPort();
 }
 
-// Called every frame
-void AFactoryLogisticsObjectBase::Tick(float DeltaTime)
+/**
+ * 공장 시스템의 처리단위마다 호출되는 함수
+ */
+void AFactoryLogisticsObjectBase::OnFactoryCycle()
 {
-	Super::Tick(DeltaTime);
 }
 
 void AFactoryLogisticsObjectBase::InitializeLogisticsPort()
@@ -38,5 +40,25 @@ void AFactoryLogisticsObjectBase::InitializeLogisticsPort()
 			Port->ScanForConnection();
 		}
 	}
+}
+
+void AFactoryLogisticsObjectBase::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
+	{
+		CycleSubsystem->RegisterLogisticsActor(this);
+	}
+}
+
+void AFactoryLogisticsObjectBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
+	{
+		CycleSubsystem->UnregisterLogisticsActor(this);
+	}
+	
+	Super::EndPlay(EndPlayReason);
 }
 
