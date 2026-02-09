@@ -2,8 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "FactoryViewModeType.h"
 #include "FactoryPlayerController.generated.h"
+
+UENUM(BlueprintType)
+enum class EFactoryViewModeType : uint8
+{
+    NormalView UMETA(DisplayName = "Normal Mode"),
+    TopView UMETA(DisplayName = "Top View Mode"),
+};
 
 /**
  * 팩토리 건설 및 시점 제어를 담당하는 컨트롤러
