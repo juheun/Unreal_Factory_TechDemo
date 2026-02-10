@@ -21,6 +21,8 @@ public:
 	void RegisterLogisticsActor(class AFactoryLogisticsObjectBase* LogisticsObject);
 	void UnregisterLogisticsActor(class AFactoryLogisticsObjectBase* LogisticsObject);
 	
+	void SortRegisteredLogisticsObjectArr();
+	
 protected:
 	void OnFactoryCycle();
 	

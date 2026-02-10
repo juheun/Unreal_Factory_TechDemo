@@ -4,7 +4,7 @@
 void UFactoryOutputPortComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	// 앞을 보고 Input을 찾음
+	// 앞을 보고 InputPort을 찾음
 	ScanForConnection(GetForwardVector(), UFactoryInputPortComponent::StaticClass());
 }
 

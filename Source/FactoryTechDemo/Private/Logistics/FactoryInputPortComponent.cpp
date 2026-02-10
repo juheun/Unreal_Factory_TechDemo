@@ -1,20 +1,20 @@
 ﻿#include "Logistics/FactoryInputPortComponent.h"
 
 #include "Logistics/FactoryLogisticsObjectBase.h"
-#include "Logistics/FactoryOutputPortComponent.h" // cpp에는 include 필수
+#include "Logistics/FactoryOutputPortComponent.h"
 
 void UFactoryInputPortComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	OwningMachine = Cast<AFactoryLogisticsObjectBase>(GetOwner());
+	PortOwner = Cast<AFactoryLogisticsObjectBase>(GetOwner());
 
 	ScanForConnection(-GetForwardVector(), UFactoryOutputPortComponent::StaticClass());
 }
 
-bool UFactoryInputPortComponent::CanAccept(TSet<UFactoryInputPortComponent*>& Visited)
+bool UFactoryInputPortComponent::CanAccept(TSet<UFactoryInputPortComponent*>& Visited) const
 {
-	if (OwningMachine && !OwningMachine->CanReceiveItem(this))
+	if (PortOwner && !PortOwner->CanPushItemFromBeforeObject(this))
 	{
 		return false;
 	}

@@ -15,14 +15,12 @@ public:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, Category = "Factory State")
-	TObjectPtr<UFactoryItemData> CurrentItem;
-    
-	UPROPERTY(VisibleAnywhere, Category = "Factory State")
-	TObjectPtr<UFactoryItemData> PendingItem;
+	TObjectPtr<UFactoryItemData> PendingItem;	//설비에 이동하기위해 아이템이 예약되는 공간
     
 	// 빠른 접근용 Owner 캐싱
 	UPROPERTY(Transient)
-	TObjectPtr<AFactoryLogisticsObjectBase> OwningMachine;
-
-	bool CanAccept(TSet<UFactoryInputPortComponent*>& Visited);
+	TObjectPtr<AFactoryLogisticsObjectBase> PortOwner;
+	
+	// PortOwner가 Item을 받을 수 있는지 확인하는 함수
+	bool CanAccept(TSet<UFactoryInputPortComponent*>& Visited) const;
 };

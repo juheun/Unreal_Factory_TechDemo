@@ -38,13 +38,18 @@ void UFactoryCycleSubsystem::UnregisterLogisticsActor(class AFactoryLogisticsObj
 	}
 }
 
+void UFactoryCycleSubsystem::SortRegisteredLogisticsObjectArr()
+{
+	// TODO : RegisteredLogisticsObjectArr의 위상정렬 구현
+}
+
 void UFactoryCycleSubsystem::OnFactoryCycle()
 {
 	for (AFactoryLogisticsObjectBase* LogisticsObject : RegisteredLogisticsObjectArr)
 	{
 		if (IsValid(LogisticsObject))
 		{
-			LogisticsObject->DetermineNextState();
+			LogisticsObject->PlanCycle();
 		}
 	}
 	
@@ -52,7 +57,7 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	{
 		if (IsValid(LogisticsObject))
 		{
-			LogisticsObject->CommitState();
+			LogisticsObject->ExecuteCycle();
 		}
 	}
 	
@@ -60,7 +65,7 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	{
 		if (IsValid(LogisticsObject))
 		{
-			LogisticsObject->UpdateState();
+			LogisticsObject->UpdateView();
 		}
 	}
 }

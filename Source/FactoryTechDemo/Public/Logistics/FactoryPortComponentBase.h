@@ -19,7 +19,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")
 	TObjectPtr<UFactoryPortComponentBase> ConnectedPort;
 
-	// 연결/해제 함수
+	// 연결 함수
 	void ConnectTo(UFactoryPortComponentBase* Target);
 	void Disconnect();
 

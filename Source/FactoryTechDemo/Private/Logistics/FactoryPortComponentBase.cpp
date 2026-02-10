@@ -1,5 +1,5 @@
 ﻿#include "Logistics/FactoryPortComponentBase.h"
-#include "Settings/FactoryBuildingSettings.h" // 그리드 사이즈용
+#include "Settings/FactoryBuildingSettings.h"
 
 UFactoryPortComponentBase::UFactoryPortComponentBase()
 {

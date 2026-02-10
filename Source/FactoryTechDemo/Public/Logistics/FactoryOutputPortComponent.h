@@ -13,6 +13,6 @@ class FACTORYTECHDEMO_API UFactoryOutputPortComponent : public UFactoryPortCompo
 public:
 	virtual void BeginPlay() override;
 
-	// 헬퍼 함수: 연결된 놈을 Input으로 캐스팅해서 줌
+	// 연결된 놈을 Input으로 캐스팅해서 줌
 	UFactoryInputPortComponent* GetConnectedInput() const;
 };
