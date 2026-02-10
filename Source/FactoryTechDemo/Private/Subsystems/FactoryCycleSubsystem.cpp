@@ -44,7 +44,23 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	{
 		if (IsValid(LogisticsObject))
 		{
-			LogisticsObject->OnFactoryCycle();
+			LogisticsObject->DetermineNextState();
+		}
+	}
+	
+	for (AFactoryLogisticsObjectBase* LogisticsObject : RegisteredLogisticsObjectArr)
+	{
+		if (IsValid(LogisticsObject))
+		{
+			LogisticsObject->CommitState();
+		}
+	}
+	
+	for (AFactoryLogisticsObjectBase* LogisticsObject : RegisteredLogisticsObjectArr)
+	{
+		if (IsValid(LogisticsObject))
+		{
+			LogisticsObject->UpdateState();
 		}
 	}
 }

@@ -8,6 +8,9 @@
 
 class UFactoryObjectData;
 
+/**
+ * 오브젝트 배치에 관한 기능을 가진 클래스
+ */
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryPlaceObjectBase : public AActor
 {
@@ -26,10 +29,10 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	
-	UPROPERTY(EditAnywhere, Category="Visual")
+	UPROPERTY(EditDefaultsOnly, Category="Visual")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 	
-	UPROPERTY(EditAnywhere, Category="Data")
+	UPROPERTY(EditDefaultsOnly, Category="Data")
 	TObjectPtr<const UFactoryObjectData> DataAsset;
 	
 	
