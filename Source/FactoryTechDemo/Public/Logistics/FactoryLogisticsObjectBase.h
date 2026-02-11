@@ -33,6 +33,9 @@ public:
 	// 이전 설비에서 InputPort로 아이템을 밀어넣을 수 있는지 확인해주는 로직을 구현
 	virtual bool CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const 
 		PURE_VIRTUAL(AFactoryLogisticsObjectBase::CanPushItemFromBeforeObject, return false; );
+	
+	int32 GetConnectedOutputPortNumber() const;
+	TArray<AFactoryLogisticsObjectBase*> GetConnectedInputPortsObject() const;
 
 protected:
 	// 포트 자동 수집 및 분류 함수

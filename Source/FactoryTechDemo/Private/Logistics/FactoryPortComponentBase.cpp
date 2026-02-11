@@ -1,4 +1,6 @@
 ﻿#include "Logistics/FactoryPortComponentBase.h"
+
+#include "Logistics/FactoryLogisticsObjectBase.h"
 #include "Settings/FactoryBuildingSettings.h"
 
 UFactoryPortComponentBase::UFactoryPortComponentBase()
@@ -7,6 +9,13 @@ UFactoryPortComponentBase::UFactoryPortComponentBase()
 	SetCollisionResponseToAllChannels(ECR_Ignore);
 	SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Block);
 	BoxExtent = FVector(10.0f, 40.0f, 10.0f);
+}
+
+void UFactoryPortComponentBase::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	PortOwner = Cast<AFactoryLogisticsObjectBase>(GetOwner());
 }
 
 void UFactoryPortComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)

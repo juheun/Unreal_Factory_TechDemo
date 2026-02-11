@@ -27,6 +27,7 @@ void UFactoryCycleSubsystem::RegisterLogisticsActor(class AFactoryLogisticsObjec
 	if (LogisticsObject)
 	{
 		RegisteredLogisticsObjectArr.AddUnique(LogisticsObject);
+		bGraphDirty = true;
 	}
 }
 
@@ -35,16 +36,92 @@ void UFactoryCycleSubsystem::UnregisterLogisticsActor(class AFactoryLogisticsObj
 	if (LogisticsObject)
 	{
 		RegisteredLogisticsObjectArr.Remove(LogisticsObject);
+		bGraphDirty = true;
 	}
 }
 
 void UFactoryCycleSubsystem::SortRegisteredLogisticsObjectArr()
 {
-	// TODO : RegisteredLogisticsObjectArr의 위상정렬 구현
+	TMap<AFactoryLogisticsObjectBase*, int32> OutportConnectedMap;
+	TQueue<AFactoryLogisticsObjectBase*> ZeroOutportQueue;
+	TArray<AFactoryLogisticsObjectBase*> SortedOutportArray;
+	
+	// 초기화. 연결된 outport가 0인 설비 골라서 Enqueue
+	for (int i = 0; i < RegisteredLogisticsObjectArr.Num(); i++)
+	{
+		int32 ConnectedOutputPortNumber = RegisteredLogisticsObjectArr[i]->GetConnectedOutputPortNumber();
+		if (ConnectedOutputPortNumber == 0)
+		{
+			ZeroOutportQueue.Enqueue(RegisteredLogisticsObjectArr[i]);
+		}
+		else
+		{
+			OutportConnectedMap.Add(RegisteredLogisticsObjectArr[i], ConnectedOutputPortNumber);
+		}
+	}
+	
+	while (SortedOutportArray.Num() != RegisteredLogisticsObjectArr.Num())
+	{
+		AFactoryLogisticsObjectBase* DequeuedObject = nullptr;
+		if (ZeroOutportQueue.Dequeue(DequeuedObject))
+		{
+			// Queue에 남은 Object 있는 경우 kahn 알고리즘 지속
+			TArray<AFactoryLogisticsObjectBase*> ConnectedObject = DequeuedObject->GetConnectedInputPortsObject();
+			for (int i = 0; i < ConnectedObject.Num(); i++)
+			{
+				OutportConnectedMap[ConnectedObject[i]]--;
+				if (OutportConnectedMap[ConnectedObject[i]] == 0)
+				{
+					ZeroOutportQueue.Enqueue(ConnectedObject[i]);
+					OutportConnectedMap.Remove(ConnectedObject[i]);
+				}
+			}
+			SortedOutportArray.Add(DequeuedObject);
+		}
+		else
+		{
+			// Queue에 남은 Object 없는 경우 순환 설비 존재. 강제로 끊어낼 설비 찾기 시작
+			AFactoryLogisticsObjectBase* CycleStarter = nullptr;
+			for (auto& Pair : OutportConnectedMap)
+			{
+				CycleStarter = Pair.Key;
+				break; 
+			}
+			if (CycleStarter)
+			{
+				AFactoryLogisticsObjectBase* Current = CycleStarter;
+				TSet<AFactoryLogisticsObjectBase*> Visited;
+				while (Current && !Visited.Contains(Current))
+				{
+					Visited.Add(Current);
+					const TArray<AFactoryLogisticsObjectBase*> InputObjects = Current->GetConnectedInputPortsObject();
+					if (InputObjects.Num() > 0) 
+					{
+						Current = InputObjects[0];
+					}
+					else 
+					{
+						break; 
+					}
+				}
+				ZeroOutportQueue.Enqueue(Current);
+				OutportConnectedMap.Remove(Current);
+			}
+		}
+	}
+	
+	// 정렬된 배열로 갈아끼움
+	RegisteredLogisticsObjectArr = SortedOutportArray;
 }
 
 void UFactoryCycleSubsystem::OnFactoryCycle()
 {
+	if(bGraphDirty)
+	{
+		SortRegisteredLogisticsObjectArr();
+		bGraphDirty = false;
+	}
+
 	for (AFactoryLogisticsObjectBase* LogisticsObject : RegisteredLogisticsObjectArr)
 	{
 		if (IsValid(LogisticsObject))

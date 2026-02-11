@@ -6,6 +6,8 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "FactoryCycleSubsystem.generated.h"
 
+class AFactoryLogisticsObjectBase;
+
 /**
  * 
  */
@@ -18,19 +20,20 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
-	void RegisterLogisticsActor(class AFactoryLogisticsObjectBase* LogisticsObject);
-	void UnregisterLogisticsActor(class AFactoryLogisticsObjectBase* LogisticsObject);
-	
-	void SortRegisteredLogisticsObjectArr();
+	void RegisterLogisticsActor(AFactoryLogisticsObjectBase* LogisticsObject);
+	void UnregisterLogisticsActor(AFactoryLogisticsObjectBase* LogisticsObject);
 	
 protected:
 	void OnFactoryCycle();
+	// RegisteredLogisticsObjectArr의 위상정렬 구현
+	void SortRegisteredLogisticsObjectArr();	
 	
 private:
 	FTimerHandle CycleTimerHandle;
 	
 	UPROPERTY()
-	TArray<class AFactoryLogisticsObjectBase*> RegisteredLogisticsObjectArr;
+	TArray<AFactoryLogisticsObjectBase*> RegisteredLogisticsObjectArr;
 	
+	bool bGraphDirty = false;	// 사이클 내부에서 설비의 위상정렬의 재설정을 하는 플래그
 	const float CycleInterval = 1.f;
 };

@@ -38,6 +38,33 @@ void AFactoryLogisticsObjectBase::InitObject(const UFactoryObjectData* Data)
 	InitializeLogisticsPort();
 }
 
+int32 AFactoryLogisticsObjectBase::GetConnectedOutputPortNumber() const
+{
+	int32 ConnectedOutputPortNumber = 0;
+	for (int i = 0; i < LogisticsOutputPortArr.Num(); i++)
+	{
+		if (LogisticsOutputPortArr[i]->GetConnectedInput())
+		{
+			ConnectedOutputPortNumber++;
+		}
+	}
+	return ConnectedOutputPortNumber;
+}
+
+TArray<AFactoryLogisticsObjectBase*> AFactoryLogisticsObjectBase::GetConnectedInputPortsObject() const
+{
+	TArray<AFactoryLogisticsObjectBase*> ConnectedInputPortObjects;
+	for (int i = 0; i < LogisticsInputPortArr.Num(); i++)
+	{
+		if (LogisticsInputPortArr[i]->GetConnectedOutput())
+		{
+			AFactoryLogisticsObjectBase* Temp = LogisticsInputPortArr[i]->GetConnectedOutput()->GetPortOwner();
+			ConnectedInputPortObjects.Add(Temp);
+		}
+	}
+	return ConnectedInputPortObjects;
+}
+
 void AFactoryLogisticsObjectBase::InitializeLogisticsPort()
 {
 	LogisticsOutputPortArr.Empty();
