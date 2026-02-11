@@ -40,6 +40,13 @@ void UFactoryCycleSubsystem::UnregisterLogisticsActor(class AFactoryLogisticsObj
 	}
 }
 
+float UFactoryCycleSubsystem::GetCycleAlpha() const
+{
+	float NowTime = GetWorld()->GetTimeSeconds();
+	float Alpha = (NowTime - LastStartCycleTime) / CycleInterval;
+	return FMath::Clamp(Alpha, 0.0f, 1.f);
+}
+
 void UFactoryCycleSubsystem::SortRegisteredLogisticsObjectArr()
 {
 	TMap<AFactoryLogisticsObjectBase*, int32> OutportConnectedMap;
@@ -121,6 +128,8 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 		SortRegisteredLogisticsObjectArr();
 		bGraphDirty = false;
 	}
+	
+	LastStartCycleTime = GetWorld()->GetTimeSeconds();
 
 	for (AFactoryLogisticsObjectBase* LogisticsObject : RegisteredLogisticsObjectArr)
 	{

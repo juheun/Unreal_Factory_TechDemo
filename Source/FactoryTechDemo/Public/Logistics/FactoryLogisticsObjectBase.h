@@ -2,9 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "FactoryPlaceObjectBase.h"
+#include "Items/FactoryItemData.h"
 #include "FactoryLogisticsObjectBase.generated.h"
 
-class UFactoryItemData;
 class UFactoryObjectData;
 class UFactoryInputPortComponent;
 class UFactoryOutputPortComponent;
@@ -42,7 +42,7 @@ protected:
 	void InitializeLogisticsPort();
 	
 	// InputPort에 Pending된 아이템을 처리하는 함수 구현. 상속을 받는 설비에 따라 버퍼 공간에 넣거나 가공을 하는 등 행동을 정의 해야함.
-	virtual void PullItemFromInputPorts(const UFactoryItemData* Item) 
+	virtual void PullItemFromInputPorts(FFactoryItemInstance& Item) 
 		PURE_VIRTUAL(AFactoryLogisticsObjectBase::ReceiveItem, ; );
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Logistics")

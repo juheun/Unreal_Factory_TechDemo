@@ -1,10 +1,10 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
+#include "Items/FactoryItemData.h"
 #include "Logistics/FactoryPortComponentBase.h"
 #include "FactoryInputPortComponent.generated.h"
 
 class UFactoryOutputPortComponent;
-class UFactoryItemData; 
 class AFactoryLogisticsObjectBase;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -16,7 +16,7 @@ public:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, Category = "Factory State")
-	TObjectPtr<UFactoryItemData> PendingItem;	//설비에 이동하기위해 아이템이 예약되는 공간
+	FFactoryItemInstance PendingItem;	//설비에 이동하기위해 아이템이 예약되는 공간
 	
 	UFactoryOutputPortComponent* GetConnectedOutput() const;
 	
