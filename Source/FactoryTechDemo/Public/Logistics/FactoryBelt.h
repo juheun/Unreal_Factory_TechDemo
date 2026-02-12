@@ -42,4 +42,6 @@ protected:
 	void UpdateSplinePath(EBeltType Type);
 	virtual void PullItemFromInputPorts(FFactoryItemInstance& Item) override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+	
+	const float BeltHeight = 20.f;
 };
