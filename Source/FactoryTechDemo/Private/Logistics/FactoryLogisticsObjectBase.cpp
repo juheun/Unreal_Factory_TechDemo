@@ -11,6 +11,14 @@ AFactoryLogisticsObjectBase::AFactoryLogisticsObjectBase()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
+
+void AFactoryLogisticsObjectBase::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	
+	InitializeLogisticsPort();
+}
+
 void AFactoryLogisticsObjectBase::BeginPlay()
 {
 	Super::BeginPlay();
@@ -31,13 +39,6 @@ void AFactoryLogisticsObjectBase::EndPlay(const EEndPlayReason::Type EndPlayReas
 	Super::EndPlay(EndPlayReason);
 }
 
-void AFactoryLogisticsObjectBase::InitObject(const UFactoryObjectData* Data)
-{
-	Super::InitObject(Data);
-	
-	InitializeLogisticsPort();
-}
-
 int32 AFactoryLogisticsObjectBase::GetConnectedOutputPortNumber() const
 {
 	int32 ConnectedOutputPortNumber = 0;
@@ -56,7 +57,7 @@ TArray<AFactoryLogisticsObjectBase*> AFactoryLogisticsObjectBase::GetConnectedIn
 	TArray<AFactoryLogisticsObjectBase*> ConnectedInputPortObjects;
 	for (int i = 0; i < LogisticsInputPortArr.Num(); i++)
 	{
-		if (LogisticsInputPortArr[i]->GetConnectedOutput())
+		if (LogisticsInputPortArr[i] != nullptr && LogisticsInputPortArr[i]->GetConnectedOutput())
 		{
 			AFactoryLogisticsObjectBase* Temp = LogisticsInputPortArr[i]->GetConnectedOutput()->GetPortOwner();
 			ConnectedInputPortObjects.Add(Temp);
@@ -94,3 +95,4 @@ void AFactoryLogisticsObjectBase::InitializeLogisticsPort()
 		}
 	}
 }
+

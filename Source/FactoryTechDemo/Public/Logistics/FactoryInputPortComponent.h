@@ -15,7 +15,7 @@ class FACTORYTECHDEMO_API UFactoryInputPortComponent : public UFactoryPortCompon
 public:
 	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, Category = "Factory State")
+	UPROPERTY(Transient, SkipSerialization)
 	FFactoryItemInstance PendingItem;	//설비에 이동하기위해 아이템이 예약되는 공간
 	
 	UFactoryOutputPortComponent* GetConnectedOutput() const;

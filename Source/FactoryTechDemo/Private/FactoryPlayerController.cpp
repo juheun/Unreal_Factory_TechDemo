@@ -264,10 +264,6 @@ void AFactoryPlayerController::PlaceObject()
             Rotation, 
             SpawnParams
         );
-        if (PlaceObject)
-        {
-            PlaceObject->InitObject(CurrentPlacePreviewData);
-        }
 
         SetCurrentPlacePreview(nullptr);
     }

@@ -34,6 +34,8 @@ AFactoryPlacePreview::AFactoryPlacePreview()
 	
 	OverlapBox = CreateDefaultSubobject<UBoxComponent>(TEXT("OverlapBox"));
 	OverlapBox->SetupAttachment(RootComponent);
+	OverlapBox->SetGenerateOverlapEvents(true);
+	OverlapBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	OverlapBox->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
 }
 
@@ -61,7 +63,7 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 	
 	float BoxX = Data->GridSize.X * GridLength * 0.5f - 1.f;	// 바로 옆 그리드와 붙는것 방지하기 위해 1 빼줌
 	float BoxY = Data->GridSize.Y * GridLength * 0.5f - 1.f;
-	OverlapBox->SetBoxExtent(FVector(BoxX, BoxY, 50.f));
+	OverlapBox->SetBoxExtent(FVector(BoxX, BoxY, 500.f));
 	
 	int GridDecalRangeMultiplier = 5;
 	float GridDecalRange = GridLength * GridDecalRangeMultiplier;

@@ -7,15 +7,19 @@
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Items/FactoryItemData.h"
+#include "Items/FactoryItemVisual.h"
 #include "Settings/FactoryBuildingSettings.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
 
 
 AFactoryBelt::AFactoryBelt()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 	
 	SplineComponent = CreateDefaultSubobject<USplineComponent>("SplineComponent");
+	
+	SplineComponent->SetupAttachment(RootComponent);
 }
 
 void AFactoryBelt::OnConstruction(const FTransform& Transform)
@@ -30,6 +34,8 @@ void AFactoryBelt::PlanCycle()
 	// 벨트는 무조건 Output이 하나라는 가정하에 index 0사용
 	if (!CurrentItem.ItemData || !LogisticsOutputPortArr.IsValidIndex(0)) return;
 	
+	bIsBeltStop = true;
+	
 	UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[0]->GetConnectedInput();
 	if (!TargetPort) return;
 	
@@ -37,29 +43,31 @@ void AFactoryBelt::PlanCycle()
 	{
 		TargetPort->PendingItem = CurrentItem;	// 상대방 Input에 아이템 밀어넣기
 		CurrentItem = FFactoryItemInstance();
+		bIsBeltStop = false;
 	}
 }
 
 void AFactoryBelt::ExecuteCycle()
 {
 	// InputPort에 Pending된 아이템이 있으면 가져옴
-	if (LogisticsOutputPortArr.IsValidIndex(0)) return;
+	if (!LogisticsInputPortArr.IsValidIndex(0) || !LogisticsInputPortArr[0]) return;
 	if (LogisticsInputPortArr[0]->PendingItem.IsValid())
 	{
 		PullItemFromInputPorts(LogisticsInputPortArr[0]->PendingItem);
 		LogisticsInputPortArr[0]->PendingItem = FFactoryItemInstance();
+		bIsBeltStop = false;
 	}
 }
 
 void AFactoryBelt::UpdateView()
 {
-	SetActorTickEnabled(CurrentItem.IsValid());
 	if (CurrentItem.IsValid() && CurrentItem.VisualActor)
 	{
-		FVector StartLocation = SplineComponent->GetLocationAtDistanceAlongSpline(0.0f, ESplineCoordinateSpace::World);
-		CurrentItem.VisualActor->SetActorLocation(StartLocation);
+		float SpineAlpha = bIsBeltStop ? 1.f : 0.f;
+		SetSpineDistance(SpineAlpha);
 		CurrentItem.VisualActor->SetActorHiddenInGame(false);
 	}
+	SetActorTickEnabled(!bIsBeltStop && CurrentItem.IsValid());
 }
 
 void AFactoryBelt::Tick(float DeltaSeconds)
@@ -68,21 +76,16 @@ void AFactoryBelt::Tick(float DeltaSeconds)
 	
 	if (CurrentItem.IsValid() && CurrentItem.VisualActor)
 	{
-		float Alpha = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>()->GetCycleAlpha();
-		
-		float TotalLength = SplineComponent->GetSplineLength();
-		float TargetDistance = Alpha * TotalLength;
-		
-		FVector NewLoc = SplineComponent->GetLocationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
-		FRotator NewRot = SplineComponent->GetRotationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
-		
-		CurrentItem.VisualActor->SetActorLocationAndRotation(NewLoc, NewRot);
+		UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>();
+		if (!CycleSubsystem) return;
+		float Alpha = CycleSubsystem->GetCycleAlpha();
+		SetSpineDistance(Alpha);
 	}
 }
 
 bool AFactoryBelt::CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const
 {
-	if (!LogisticsInputPortArr[0]) return false;
+	if (!LogisticsInputPortArr.IsValidIndex(0)) return false;
 	const UFactoryItemData* PendingItem = LogisticsInputPortArr[0]->PendingItem.ItemData;
 	return !PendingItem && !CurrentItem.ItemData;
 }
@@ -140,6 +143,18 @@ void AFactoryBelt::UpdateSplinePath(EBeltType Type)
 	
 	SplineComponent->UpdateSpline(); 
 	SplineComponent->bSplineHasBeenEdited = true;
+	
+	TotalSpineLength = SplineComponent->GetSplineLength();
+}
+
+void AFactoryBelt::SetSpineDistance(float Alpha)
+{
+	float TargetDistance = Alpha * TotalSpineLength;
+		
+	FVector NewLoc = SplineComponent->GetLocationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
+	FRotator NewRot = SplineComponent->GetRotationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
+		
+	CurrentItem.VisualActor->SetActorLocationAndRotation(NewLoc, NewRot);
 }
 
 

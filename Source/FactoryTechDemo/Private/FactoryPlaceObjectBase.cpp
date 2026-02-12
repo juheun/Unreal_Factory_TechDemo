@@ -12,6 +12,7 @@ AFactoryPlaceObjectBase::AFactoryPlaceObjectBase()
 	
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("MeshComponent");
 	RootComponent = MeshComponent;
+	MeshComponent->bReceivesDecals = false;
 }
 
 void AFactoryPlaceObjectBase::InitObject(const UFactoryObjectData* Data)

@@ -14,16 +14,19 @@ void UFactoryWarehouseSubsystem::StoreItem(UFactoryItemData* ItemData, const int
 
 bool UFactoryWarehouseSubsystem::TryConsumeItem(UFactoryItemData* ItemData, const int32 Amount)
 {
-	if (!ItemData) return false;
-	
-	int32* StoredAmount = WarehouseInventory.Find(ItemData);
-	
-	if (StoredAmount == nullptr || *StoredAmount < Amount)
-	{
-		return false;
-	}
-	*StoredAmount -= Amount;
+	//TODO:테스트 후 제거
 	return true;
+	
+	// if (!ItemData) return false;
+	//
+	// int32* StoredAmount = WarehouseInventory.Find(ItemData);
+	//
+	// if (StoredAmount == nullptr || *StoredAmount < Amount)
+	// {
+	// 	return false;
+	// }
+	// *StoredAmount -= Amount;
+	// return true;
 }
 
 int32 UFactoryWarehouseSubsystem::GetItemAmount(UFactoryItemData* ItemData) const

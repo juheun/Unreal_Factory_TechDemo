@@ -6,6 +6,8 @@
 #include "Engine/DataAsset.h"
 #include "FactoryItemData.generated.h"
 
+class AFactoryItemVisual;
+
 USTRUCT(BlueprintType)
 struct FFactoryItemInstance
 {
@@ -14,8 +16,8 @@ struct FFactoryItemInstance
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<const class UFactoryItemData> ItemData;	//이 아이템이 무엇인지에 대한 정보
 	
-	UPROPERTY()
-	TObjectPtr<AActor> VisualActor; //실제로 공간상의 움직임을 표현하기 위한 액터
+	UPROPERTY(Transient, SkipSerialization)
+	TObjectPtr<AFactoryItemVisual> VisualActor; //실제로 공간상의 움직임을 표현하기 위한 액터
 	
 	bool IsValid() const { return ItemData != nullptr; }
 	
