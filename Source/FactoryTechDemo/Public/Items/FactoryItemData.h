@@ -8,6 +8,14 @@
 
 class AFactoryItemVisual;
 
+UENUM(BlueprintType)
+enum class EFactoryItemCategory : uint8
+{
+	Resource UMETA(DisplayName = "Resource"),
+	Consumable UMETA(DisplayName = "Consumable"),
+	Facility UMETA(DisplayName = "Facility"),
+};
+
 USTRUCT(BlueprintType)
 struct FFactoryItemInstance
 {
@@ -34,12 +42,15 @@ class FACTORYTECHDEMO_API UFactoryItemData : public UPrimaryDataAsset
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Identity")
 	FText ItemName;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Identity")
 	FName ItemID;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Identity")
 	TObjectPtr<UTexture2D> ItemICon;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Identity")
+	EFactoryItemCategory ItemCategory = EFactoryItemCategory::Resource;
 };

@@ -4,6 +4,9 @@
 #include "GameFramework/PlayerController.h"
 #include "FactoryPlayerController.generated.h"
 
+class UInputMappingContext;
+class UInputAction;
+
 UENUM(BlueprintType)
 enum class EFactoryViewModeType : uint8
 {
@@ -35,18 +38,25 @@ protected:
 
 private:
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputMappingContext> DefaultMappingContext;   // 이동관련
+    TObjectPtr<UInputMappingContext> DefaultMappingContext;   // 이동관련
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputMappingContext> MouseMappingContext; // 마우스 회전 관련
+    TObjectPtr<UInputMappingContext> MouseMappingContext; // 마우스 회전 관련
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> QuickSlotContext; // 퀵슬롯 관련
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> PlacementContext; // 배치모드 관련
 
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputAction> ToggleViewModeAction;    // 3인칭 - 탑뷰 전환 키
+    TObjectPtr<UInputAction> ToggleViewModeAction;    // 3인칭 - 탑뷰 전환 키
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputAction> PreviewObjectRotateAction;   // 프리뷰 객체 회전 키
+    TObjectPtr<UInputAction> PreviewObjectRotateAction;   // 프리뷰 객체 회전 키
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputAction> TemporaryStartPlaceModeAction;   // 임시 배치모드 시작 카
+    TObjectPtr<UInputAction> PlaceObjectAction;   // 프리뷰 객체 배치 키
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<class UInputAction> PlaceObjectAction;   // 프리뷰 객체 회전 키
+    TObjectPtr<UInputAction> PlaceObjectCancelAction;   // 프리뷰 객체 배치 취소 키
+    
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TArray<TObjectPtr<UInputAction>> QuickSlotActionArr;  // 0~9 퀵슬롯
     
     
     //시점 조작
@@ -56,9 +66,8 @@ private:
     TObjectPtr<class AFactoryTopViewPawn> CachedTopViewPawn;
     
     
-    // 테스트 후 삭제
-    UPROPERTY(EditAnywhere)
-    TObjectPtr<class UFactoryObjectData> TempObjectData;
+    UPROPERTY(EditAnywhere, Category = "Factory|Data")
+    TArray<TObjectPtr<class UFactoryObjectData>> QuickSlotObjectDataArr;
     UPROPERTY()
     TObjectPtr<class AFactoryPlacePreview> CurrentPlacePreview;
     
@@ -74,7 +83,8 @@ private:
     FVector CalculateSnappedLocation(FVector InRawLocation, FIntPoint InGridSize) const;
     void RotatePlacementPreview();
     void PlaceObject();
-    void TemporaryStartPlaceMode();
+    void CancelPlaceObject();
+    void ExecuteQuickSlotAction(int32 SlotIndex);
     
     const float MaxBuildTraceDistance = 1500.f;
     float GridLength = 100.f;

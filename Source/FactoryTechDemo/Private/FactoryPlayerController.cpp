@@ -27,6 +27,10 @@ void AFactoryPlayerController::BeginPlay()
         {
             Subsystem->AddMappingContext(MouseMappingContext, 1);
         }
+        if (QuickSlotContext)
+        {
+            Subsystem->AddMappingContext(QuickSlotContext, 1);
+        }
     }
     
     // 3인칭 뷰 캐릭터 캐싱
@@ -65,9 +69,18 @@ void AFactoryPlayerController::SetupInputComponent()
         // 오브젝트 배치
         EnhancedInputComponent->BindAction(
             PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::PlaceObject);
-        // 오브젝트 배치모드 시작 // TODO: 제거
+        // 오브젝트 배치 취소
         EnhancedInputComponent->BindAction(
-            TemporaryStartPlaceModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::TemporaryStartPlaceMode);
+            PlaceObjectCancelAction, ETriggerEvent::Started, this, &AFactoryPlayerController::CancelPlaceObject);
+        // 퀵슬롯
+        for (int i = 0; i < QuickSlotActionArr.Num(); i++)
+        {
+            if (QuickSlotActionArr[i])
+            {
+                EnhancedInputComponent->BindAction(
+                    QuickSlotActionArr[i], ETriggerEvent::Started, this, &AFactoryPlayerController::ExecuteQuickSlotAction, i);
+            }
+        }
     }
 }
 
@@ -87,9 +100,17 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
  */
 void AFactoryPlayerController::SetCurrentPlacePreview(class UFactoryObjectData* Data)
 {
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+    
     if (!Data)
     {
         bIsPlaceMode = false;
+        
+        if (Subsystem && PlacementContext)
+        {
+            Subsystem->RemoveMappingContext(PlacementContext);
+        }
+        
         if (CurrentPlacePreview)
         {
             CurrentPlacePreview->Destroy();
@@ -99,6 +120,12 @@ void AFactoryPlayerController::SetCurrentPlacePreview(class UFactoryObjectData* 
         return;
     }
     bIsPlaceMode = true;
+    
+    if (Subsystem && PlacementContext)
+    {
+        Subsystem->AddMappingContext(PlacementContext,2);
+    }
+    
     CurrentPlacePreviewData = Data;
     CurrentPlacePreview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
     CurrentPlacePreview->InitPreview(Data);
@@ -269,12 +296,18 @@ void AFactoryPlayerController::PlaceObject()
     }
 }
 
-void AFactoryPlayerController::TemporaryStartPlaceMode()
+void AFactoryPlayerController::CancelPlaceObject()
+{
+    SetCurrentPlacePreview(nullptr);
+}
+
+void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 {
     if (bIsPlaceMode) return;
-    if (TempObjectData)
+    
+    if (QuickSlotActionArr.IsValidIndex(SlotIndex) && QuickSlotObjectDataArr[SlotIndex])
     {
-        SetCurrentPlacePreview(TempObjectData);
+        SetCurrentPlacePreview(QuickSlotObjectDataArr[SlotIndex]);
     }
 }
 
