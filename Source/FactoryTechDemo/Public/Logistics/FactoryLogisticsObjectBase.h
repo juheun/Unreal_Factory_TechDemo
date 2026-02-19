@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "FactoryPlaceObjectBase.h"
+#include "Placement/FactoryPlaceObjectBase.h"
 #include "Items/FactoryItemData.h"
 #include "FactoryLogisticsObjectBase.generated.h"
 

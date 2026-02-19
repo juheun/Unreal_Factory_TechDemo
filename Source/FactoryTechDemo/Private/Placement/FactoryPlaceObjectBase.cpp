@@ -1,8 +1,8 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FactoryPlaceObjectBase.h"
-#include "FactoryObjectData.h"
+#include "Placement/FactoryPlaceObjectBase.h"
+#include "Placement/FactoryObjectData.h"
 
 // Sets default values
 AFactoryPlaceObjectBase::AFactoryPlaceObjectBase()

@@ -1,12 +1,12 @@
-#include "FactoryPlayerController.h"
+#include "Player/FactoryPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "FactoryCharacter.h"
-#include "FactoryTopViewPawn.h"
+#include "Player/FactoryCharacter.h"
+#include "Player/FactoryTopViewPawn.h"
 #include "Settings/FactoryBuildingSettings.h"
-#include "FactoryObjectData.h"
-#include "FactoryPlacePreview.h"
-#include "FactoryPlaceObjectBase.h"
+#include "Placement/FactoryObjectData.h"
+#include "Placement/FactoryPlacePreview.h"
+#include "Placement/FactoryPlaceObjectBase.h"
 
 AFactoryPlayerController::AFactoryPlayerController()
 {

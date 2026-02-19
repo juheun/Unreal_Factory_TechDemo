@@ -1,13 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FactoryPlacePreview.h"
+#include "Placement/FactoryPlacePreview.h"
 
 #include "Settings/FactoryBuildingSettings.h"
-#include "FactoryObjectData.h"
+#include "Placement/FactoryObjectData.h"
+#include "Placement/FactoryPlaceObjectBase.h"
 #include "Components/BoxComponent.h"
 #include "Components/DecalComponent.h"
-#include "FactoryPlaceObjectBase.h"
 
 // Sets default values
 AFactoryPlacePreview::AFactoryPlacePreview()
