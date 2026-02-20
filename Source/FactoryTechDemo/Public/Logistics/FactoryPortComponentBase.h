@@ -22,14 +22,14 @@ public:
 	void ConnectTo(UFactoryPortComponentBase* Target);
 	void Disconnect();
 	
-	AFactoryLogisticsObjectBase* GetPortOwner() const { return PortOwner;}
+	AFactoryLogisticsObjectBase* GetPortOwner() const { return PortOwner.Get();}
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")
-	TObjectPtr<AFactoryLogisticsObjectBase> PortOwner;
+	TWeakObjectPtr<AFactoryLogisticsObjectBase> PortOwner;
 	// 내가 연결된 대상
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")
-	TObjectPtr<UFactoryPortComponentBase> ConnectedPort;
+	TWeakObjectPtr<UFactoryPortComponentBase> ConnectedPort;
 	
 	// 연결 스캔 로직
 	void ScanForConnection(FVector Direction, TSubclassOf<UFactoryPortComponentBase> TargetClassType);
