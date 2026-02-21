@@ -32,9 +32,9 @@ void AFactoryWarehouseExporter::PlanCycle()
 			//TODO : 추후 풀링 시스템에서 가져오기
 			FVector SpawnLocation = TargetPort->GetComponentLocation(); // 일단 포트 위치에 스폰
 			NewInstance.VisualActor = GetWorld()->SpawnActor<AFactoryItemVisual>(AFactoryItemVisual::StaticClass(), SpawnLocation, FRotator::ZeroRotator);
-			if (NewInstance.VisualActor)
+			if (AFactoryItemVisual* ItemVisual = NewInstance.VisualActor.Get())
 			{
-				NewInstance.VisualActor->UpdateVisual(ItemData);
+				ItemVisual->UpdateVisual(ItemData);
 			}
 			TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
 		}

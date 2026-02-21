@@ -34,7 +34,7 @@ private:
 	FTimerHandle CycleTimerHandle;
 	
 	UPROPERTY()
-	TArray<AFactoryLogisticsObjectBase*> RegisteredLogisticsObjectArr;
+	TArray<TWeakObjectPtr<AFactoryLogisticsObjectBase>> RegisteredLogisticsObjectArr;
 	
 	float LastStartCycleTime = 0.f;
 	bool bGraphDirty = false;	// 사이클 내부에서 설비의 위상정렬의 재설정을 하는 플래그

@@ -34,6 +34,4 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Data")
 	TObjectPtr<const UFactoryObjectData> DataAsset;
-	
-	
 };

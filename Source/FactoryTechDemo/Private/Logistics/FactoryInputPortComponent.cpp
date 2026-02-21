@@ -18,7 +18,14 @@ UFactoryOutputPortComponent* UFactoryInputPortComponent::GetConnectedOutput() co
 
 bool UFactoryInputPortComponent::CanAccept(TSet<UFactoryInputPortComponent*>& Visited) const
 {
-	if (!PortOwner.IsValid() || !PortOwner->CanPushItemFromBeforeObject(this))
+	if (AFactoryLogisticsObjectBase* InlinePortOwner = PortOwner.Get())
+	{
+		if (!InlinePortOwner->CanPushItemFromBeforeObject(this))
+		{
+			return false;
+		}
+	}
+	else
 	{
 		return false;
 	}

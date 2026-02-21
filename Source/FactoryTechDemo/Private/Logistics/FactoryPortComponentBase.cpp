@@ -27,12 +27,12 @@ void UFactoryPortComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason
 
 void UFactoryPortComponentBase::Disconnect()
 {
-	if (ConnectedPort.IsValid())
+	if (UFactoryPortComponentBase* TargetPort = ConnectedPort.Get())
 	{
 		// 상대방의 연결 정보도 지워줌 (상호 해제)
-		if (ConnectedPort->ConnectedPort.Get() == this)
+		if (TargetPort->ConnectedPort.Get() == this)
 		{
-			ConnectedPort->ConnectedPort = nullptr;
+			TargetPort->ConnectedPort = nullptr;
 		}
 		ConnectedPort = nullptr;
 	}
@@ -49,7 +49,7 @@ void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 
 void UFactoryPortComponentBase::ScanForConnection(FVector Direction, TSubclassOf<UFactoryPortComponentBase> TargetClassType)
 {
-	if (ConnectedPort.IsValid()) return; // 이미 연결됐으면 스캔 X
+	if (ConnectedPort.Get()) return; // 이미 연결됐으면 스캔 X
 
 	float GridSize = GetDefault<UFactoryBuildingSettings>()->GetGridLength();
 	FVector Start = GetComponentLocation();

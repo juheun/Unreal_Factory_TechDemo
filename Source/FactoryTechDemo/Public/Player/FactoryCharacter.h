@@ -7,6 +7,9 @@
 
 #include "FactoryCharacter.generated.h"
 
+struct FInputActionValue;
+class UInputAction;
+
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryCharacter : public ACharacter
 {
@@ -25,18 +28,18 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     // Called to bind functionality to input
-    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+    virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-    TObjectPtr<class UInputAction> MoveAction;
+    TObjectPtr<UInputAction> MoveAction;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-    TObjectPtr<class UInputAction> LookAction;
+    TObjectPtr<UInputAction> LookAction;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-    TObjectPtr<class UInputAction> JumpAction;
+    TObjectPtr<UInputAction> JumpAction;
 
-    void Move(const struct FInputActionValue& Value);
-    void Look(const struct FInputActionValue& Value);
+    void Move(const FInputActionValue& Value);
+    void Look(const FInputActionValue& Value);
 };

@@ -51,19 +51,22 @@ void UFactoryCycleSubsystem::SortRegisteredLogisticsObjectArr()
 {
 	TMap<AFactoryLogisticsObjectBase*, int32> OutportConnectedMap;
 	TQueue<AFactoryLogisticsObjectBase*> ZeroOutportQueue;
-	TArray<AFactoryLogisticsObjectBase*> SortedOutportArray;
+	TArray<TWeakObjectPtr<AFactoryLogisticsObjectBase>> SortedOutportArray;
 	
 	// 초기화. 연결된 outport가 0인 설비 골라서 Enqueue
 	for (int i = 0; i < RegisteredLogisticsObjectArr.Num(); i++)
 	{
-		int32 ConnectedOutputPortNumber = RegisteredLogisticsObjectArr[i]->GetConnectedOutputPortNumber();
-		if (ConnectedOutputPortNumber == 0)
+		if (AFactoryLogisticsObjectBase* RegisteredObjPtr = RegisteredLogisticsObjectArr[i].Get())
 		{
-			ZeroOutportQueue.Enqueue(RegisteredLogisticsObjectArr[i]);
-		}
-		else
-		{
-			OutportConnectedMap.Add(RegisteredLogisticsObjectArr[i], ConnectedOutputPortNumber);
+			int32 ConnectedOutputPortNumber = RegisteredObjPtr->GetConnectedOutputPortNumber();
+			if (ConnectedOutputPortNumber == 0)
+			{
+				ZeroOutportQueue.Enqueue(RegisteredObjPtr);
+			}
+			else
+			{
+				OutportConnectedMap.Add(RegisteredObjPtr, ConnectedOutputPortNumber);
+			}
 		}
 	}
 	
@@ -136,6 +139,13 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 {
 	if (!GetWorld() || !GetWorld()->IsGameWorld()) return;
 	
+	//죽은 포인터 전부 청소
+	RegisteredLogisticsObjectArr.RemoveAllSwap(
+		[](const TWeakObjectPtr<AFactoryLogisticsObjectBase>& Ptr)
+		{
+			return !Ptr.IsValid();
+		});
+	
 	if(bGraphDirty)
 	{
 		SortRegisteredLogisticsObjectArr();
@@ -144,25 +154,25 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	
 	LastStartCycleTime = GetWorld()->GetTimeSeconds();
 
-	for (AFactoryLogisticsObjectBase* LogisticsObject : RegisteredLogisticsObjectArr)
+	for (const auto& WeakObjectPtr : RegisteredLogisticsObjectArr)
 	{
-		if (IsValid(LogisticsObject))
+		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
 		{
 			LogisticsObject->PlanCycle();
 		}
 	}
 	
-	for (AFactoryLogisticsObjectBase* LogisticsObject : RegisteredLogisticsObjectArr)
+	for (const auto& WeakObjectPtr : RegisteredLogisticsObjectArr)
 	{
-		if (IsValid(LogisticsObject))
+		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
 		{
 			LogisticsObject->ExecuteCycle();
 		}
 	}
 	
-	for (AFactoryLogisticsObjectBase* LogisticsObject : RegisteredLogisticsObjectArr)
+	for (const auto& WeakObjectPtr : RegisteredLogisticsObjectArr)
 	{
-		if (IsValid(LogisticsObject))
+		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
 		{
 			LogisticsObject->UpdateView();
 		}

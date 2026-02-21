@@ -61,20 +61,22 @@ void AFactoryBelt::ExecuteCycle()
 
 void AFactoryBelt::UpdateView()
 {
-	if (CurrentItem.IsValid() && CurrentItem.VisualActor)
+	AFactoryItemVisual* ItemVisual = CurrentItem.VisualActor.Get();
+	if (ItemVisual)
 	{
 		float SpineAlpha = bIsBeltStop ? 1.f : 0.f;
 		SetSpineDistance(SpineAlpha);
-		CurrentItem.VisualActor->SetActorHiddenInGame(false);
+		ItemVisual->SetActorHiddenInGame(false);
 	}
-	SetActorTickEnabled(!bIsBeltStop && CurrentItem.IsValid());
+	SetActorTickEnabled(!bIsBeltStop && ItemVisual);
 }
 
 void AFactoryBelt::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
-	if (CurrentItem.IsValid() && CurrentItem.VisualActor)
+	AFactoryItemVisual* ItemVisual = CurrentItem.VisualActor.Get();
+	if (ItemVisual)
 	{
 		UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>();
 		if (!CycleSubsystem) return;
@@ -153,8 +155,11 @@ void AFactoryBelt::SetSpineDistance(float Alpha)
 		
 	FVector NewLoc = SplineComponent->GetLocationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
 	FRotator NewRot = SplineComponent->GetRotationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
-		
-	CurrentItem.VisualActor->SetActorLocationAndRotation(NewLoc, NewRot);
+	
+	if (AFactoryItemVisual* ItemVisual = CurrentItem.VisualActor.Get())
+	{
+		ItemVisual->SetActorLocationAndRotation(NewLoc, NewRot);
+	}
 }
 
 

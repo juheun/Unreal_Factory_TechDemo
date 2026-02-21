@@ -10,11 +10,6 @@ void UFactoryOutputPortComponent::BeginPlay()
 
 UFactoryInputPortComponent* UFactoryOutputPortComponent::GetConnectedInput() const
 {
-	if (!ConnectedPort.IsValid()) 
-	{
-		return nullptr;
-	}
-	
 	// 부모 변수(ConnectedPort)를 캐스팅해서 리턴
 	return Cast<UFactoryInputPortComponent>(ConnectedPort.Get());
 }

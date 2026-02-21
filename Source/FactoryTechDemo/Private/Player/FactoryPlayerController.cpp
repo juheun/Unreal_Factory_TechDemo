@@ -88,10 +88,11 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
     
-    if (!bIsPlaceMode || !CurrentPlacePreview) return;
+    AFactoryPlacePreview* Preview = CurrentPlacePreview.Get();
+    if (!bIsPlaceMode || !Preview) return;
     
     FVector GhostBuildingLocation = GetPlacementObjectLocation();
-    CurrentPlacePreview->SetActorLocation(GhostBuildingLocation);
+    Preview->SetActorLocation(GhostBuildingLocation);
 }
 
 /**
@@ -102,6 +103,7 @@ void AFactoryPlayerController::SetCurrentPlacePreview(class UFactoryObjectData* 
 {
     UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
     
+    
     if (!Data)
     {
         bIsPlaceMode = false;
@@ -111,7 +113,7 @@ void AFactoryPlayerController::SetCurrentPlacePreview(class UFactoryObjectData* 
             Subsystem->RemoveMappingContext(PlacementContext);
         }
         
-        if (CurrentPlacePreview)
+        if (CurrentPlacePreview.Get())
         {
             CurrentPlacePreview->Destroy();
             CurrentPlacePreview = nullptr;
@@ -128,7 +130,10 @@ void AFactoryPlayerController::SetCurrentPlacePreview(class UFactoryObjectData* 
     
     CurrentPlacePreviewData = Data;
     CurrentPlacePreview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
-    CurrentPlacePreview->InitPreview(Data);
+    if (AFactoryPlacePreview* Preview = CurrentPlacePreview.Get())
+    {
+        Preview->InitPreview(Data);
+    }
 }
 
 /** 
@@ -136,7 +141,7 @@ void AFactoryPlayerController::SetCurrentPlacePreview(class UFactoryObjectData* 
  */
 void AFactoryPlayerController::OnToggleViewMode()
 {
-    if (!CachedNormalViewCharacter || !CachedTopViewPawn)
+    if (!CachedNormalViewCharacter.IsValid() || !CachedTopViewPawn.IsValid())
     {
         return;
     }
@@ -154,15 +159,17 @@ void AFactoryPlayerController::OnToggleViewMode()
             CachedTopViewPawn->SetActorLocation(CurrentPawn->GetActorLocation());
         }
         CachedTopViewPawn->SetActorHiddenInGame(false);
-        TargetPawn = CachedTopViewPawn;
+        TargetPawn = CachedTopViewPawn.Get();
         NewMode = EFactoryViewModeType::TopView;
     }
     else
     {
         CachedTopViewPawn->SetCameraPerspective(true);
-        TargetPawn = CachedNormalViewCharacter;
+        TargetPawn = CachedNormalViewCharacter.Get();
         NewMode = EFactoryViewModeType::NormalView;
     }
+    
+    if (!TargetPawn) return;
 
     // 뷰 모드 전환 시작
     DisableInput(this);
@@ -264,28 +271,31 @@ FVector AFactoryPlayerController::CalculateSnappedLocation(FVector InRawLocation
  */
 void AFactoryPlayerController::RotatePlacementPreview()
 {
-    if (!CurrentPlacePreview) return;
+    AFactoryPlacePreview* Preview = CurrentPlacePreview.Get();
+    if (!Preview) return;
     
-    float CurrentYaw = CurrentPlacePreview->GetActorRotation().Yaw;
+    float CurrentYaw = Preview->GetActorRotation().Yaw;
     float NextYaw = FMath::GridSnap(CurrentYaw + 90.f, 90.f);
     NextYaw = FRotator::NormalizeAxis(NextYaw);
     
-    CurrentPlacePreview->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
+    Preview->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
 }
 
 void AFactoryPlayerController::PlaceObject()
 {
+    AFactoryPlacePreview* Preview = CurrentPlacePreview.Get();
+    
     // 프리뷰가 있고, 현재 위치가 배치 가능한 상태일 때만 소환
-    if (CurrentPlacePreview && CurrentPlacePreview->GetPlacementValid() && CurrentPlacePreviewData)
+    if (Preview && Preview->GetPlacementValid() && CurrentPlacePreviewData)
     {
         FActorSpawnParameters SpawnParams;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-        FVector Location = CurrentPlacePreview->GetActorLocation();
-        FRotator Rotation = CurrentPlacePreview->GetActorRotation();
+        FVector Location = Preview->GetActorLocation();
+        FRotator Rotation = Preview->GetActorRotation();
 
         // 데이터 에셋에 지정된 실제 BP 클래스 소환
-        AFactoryPlaceObjectBase* PlaceObject = GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
+        GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
             CurrentPlacePreviewData->PlaceObjectBP, 
             Location, 
             Rotation, 

@@ -6,6 +6,8 @@
 #include "Engine/DataAsset.h"
 #include "FactoryObjectData.generated.h"
 
+class AFactoryPlaceObjectBase;
+
 /**
  * 
  */
@@ -19,7 +21,7 @@ public:
 	FText ObjectName;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Classes")
-	TSubclassOf<class AFactoryPlaceObjectBase> PlaceObjectBP;
+	TSubclassOf<AFactoryPlaceObjectBase> PlaceObjectBP;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Placement")
 	FIntPoint GridSize = FIntPoint(1, 1);

@@ -6,6 +6,10 @@
 
 class UInputMappingContext;
 class UInputAction;
+class AFactoryCharacter;
+class AFactoryTopViewPawn;
+class UFactoryObjectData;
+class AFactoryPlacePreview;
 
 UENUM(BlueprintType)
 enum class EFactoryViewModeType : uint8
@@ -61,20 +65,20 @@ private:
     
     //시점 조작
     UPROPERTY()
-    TObjectPtr<class AFactoryCharacter> CachedNormalViewCharacter;
+    TWeakObjectPtr<AFactoryCharacter> CachedNormalViewCharacter;
     UPROPERTY()
-    TObjectPtr<class AFactoryTopViewPawn> CachedTopViewPawn;
+    TWeakObjectPtr<AFactoryTopViewPawn> CachedTopViewPawn;
     
     
     UPROPERTY(EditAnywhere, Category = "Factory|Data")
-    TArray<TObjectPtr<class UFactoryObjectData>> QuickSlotObjectDataArr;
+    TArray<TObjectPtr<UFactoryObjectData>> QuickSlotObjectDataArr;
     UPROPERTY()
-    TObjectPtr<class AFactoryPlacePreview> CurrentPlacePreview;
+    TWeakObjectPtr<AFactoryPlacePreview> CurrentPlacePreview;
     
     UFUNCTION()
-    void SetCurrentPlacePreview(class UFactoryObjectData* Data);
+    void SetCurrentPlacePreview(UFactoryObjectData* Data);
     UPROPERTY()
-    TObjectPtr<class UFactoryObjectData> CurrentPlacePreviewData;
+    TObjectPtr<UFactoryObjectData> CurrentPlacePreviewData;
 
     
     void OnToggleViewMode();
