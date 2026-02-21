@@ -7,6 +7,8 @@
 #include "Inventory/FFactoryInventorySlot.h"
 #include "FactoryInventoryComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventorySlotUpdated, int32, SlotIndex, FFactoryInventorySlot, SlotData);
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FACTORYTECHDEMO_API UFactoryInventoryComponent : public UActorComponent
 {
@@ -44,6 +46,9 @@ public:
 	// 인벤토리 내 아이템 정렬
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SortInventory();
+	
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FOnInventorySlotUpdated OnSlotUpdated;	// 인벤토리 슬롯이 업데이트될 때 호출
 	
 	// 인벤토리의 슬롯 총 갯수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")

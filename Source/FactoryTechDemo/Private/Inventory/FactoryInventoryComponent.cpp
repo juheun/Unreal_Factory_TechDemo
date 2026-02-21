@@ -34,6 +34,7 @@ int32 UFactoryInventoryComponent::AddItemToTargetSlot(int32 SlotIndex, FName Ite
 		TargetSlot.ItemID = ItemID;
 		int32 ClampedAmount = FMath::Clamp(Amount, 0, FFactoryInventorySlot::MaxCapacity);
 		TargetSlot.Amount = ClampedAmount;
+		OnSlotUpdated.Broadcast(SlotIndex, TargetSlot);
 		return ClampedAmount;
 	}
 	
@@ -44,6 +45,7 @@ int32 UFactoryInventoryComponent::AddItemToTargetSlot(int32 SlotIndex, FName Ite
 		
 		int32 AmountToAdd = FMath::Min(Amount, AvailableSpace);
 		TargetSlot.Amount += AmountToAdd;
+		OnSlotUpdated.Broadcast(SlotIndex, TargetSlot);
 		return AmountToAdd;
 	}
 	
@@ -96,6 +98,7 @@ bool UFactoryInventoryComponent::RemoveItemFromTargetSlot(int32 SlotIndex, int32
 		TargetSlot.Clear();
 	}
 	
+	OnSlotUpdated.Broadcast(SlotIndex, TargetSlot);
 	return true;
 }
 
@@ -158,6 +161,7 @@ void UFactoryInventoryComponent::SortInventory()
 			int32 AmountToAdd = FMath::Min(TotalAmount, FFactoryInventorySlot::MaxCapacity);
 			InventorySlots[SlotIndex].ItemID = ItemID;
 			InventorySlots[SlotIndex].Amount = AmountToAdd;
+			OnSlotUpdated.Broadcast(SlotIndex, InventorySlots[SlotIndex]);
 			TotalAmount -= AmountToAdd;
 			SlotIndex++;
 		}
