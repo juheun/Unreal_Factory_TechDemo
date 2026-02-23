@@ -50,6 +50,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FOnInventorySlotUpdated OnSlotUpdated;	// 인벤토리 슬롯이 업데이트될 때 호출
 	
+	int32 GetMaxItemSlotCount() const { return MaxItemSlotCount; }
+	
+protected:
 	// 인벤토리의 슬롯 총 갯수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	int32 MaxItemSlotCount = 20;

@@ -4,12 +4,15 @@
 #include "GameFramework/PlayerController.h"
 #include "FactoryPlayerController.generated.h"
 
+// 전방 선언 (Forward Declarations)
+class UFactoryInventoryComponent;
 class UInputMappingContext;
 class UInputAction;
 class AFactoryCharacter;
 class AFactoryTopViewPawn;
 class UFactoryObjectData;
 class AFactoryPlacePreview;
+class UFactoryInventoryWidget;
 
 UENUM(BlueprintType)
 enum class EFactoryViewModeType : uint8
@@ -28,69 +31,94 @@ class FACTORYTECHDEMO_API AFactoryPlayerController : public APlayerController
 
 public:
     AFactoryPlayerController();
-    
+
+    // --- 엔진 오버라이드 ---
     virtual void PlayerTick(float DeltaTime) override;
 
-    //void SetCurrentPlacementObject(class UFactoryObjectData* NewData);
+    // --- 외부 인터페이스 ---
+    void ToggleInventoryWidget();   //인벤토리 UI 토글
 
 protected:
+    // --- 엔진 오버라이드 (Protected) ---
     virtual void BeginPlay() override;
     virtual void SetupInputComponent() override;
 
+    // --- 상태 정보 (State) ---
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Factory|State")
     EFactoryViewModeType CurrentViewMode = EFactoryViewModeType::NormalView;
 
-private:
+    bool bIsInventoryOpen = false;
+    bool bIsPlaceMode = false;
+
+    // --- UI 구성 ---
+    UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
+    TSubclassOf<UFactoryInventoryWidget> InventoryWidgetBP;
+
+    UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+    TObjectPtr<UFactoryInventoryWidget> InventoryWidget;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
+    int32 InventoryColumns = 5;
+
+    // --- 입력 에셋 (Enhanced Input) ---
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<UInputMappingContext> DefaultMappingContext;   // 이동관련
+    TObjectPtr<UInputMappingContext> DefaultMappingContext;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<UInputMappingContext> MouseMappingContext; // 마우스 회전 관련
+    TObjectPtr<UInputMappingContext> MouseMappingContext;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<UInputMappingContext> QuickSlotContext; // 퀵슬롯 관련
+    TObjectPtr<UInputMappingContext> QuickSlotContext;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<UInputMappingContext> PlacementContext; // 배치모드 관련
+    TObjectPtr<UInputMappingContext> PlacementContext;
 
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<UInputAction> ToggleViewModeAction;    // 3인칭 - 탑뷰 전환 키
+    TObjectPtr<UInputAction> ToggleViewModeAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<UInputAction> PreviewObjectRotateAction;   // 프리뷰 객체 회전 키
+    TObjectPtr<UInputAction> PreviewObjectRotateAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<UInputAction> PlaceObjectAction;   // 프리뷰 객체 배치 키
+    TObjectPtr<UInputAction> PlaceObjectAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TObjectPtr<UInputAction> PlaceObjectCancelAction;   // 프리뷰 객체 배치 취소 키
-    
+    TObjectPtr<UInputAction> PlaceObjectCancelAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TArray<TObjectPtr<UInputAction>> QuickSlotActionArr;  // 0~9 퀵슬롯
-    
-    
-    //시점 조작
+    TObjectPtr<UInputAction> ToggleInventoryAction;
+
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TArray<TObjectPtr<UInputAction>> QuickSlotActionArr;
+
+    // --- 시스템 데이터 및 캐싱 ---
+    UPROPERTY(EditDefaultsOnly, Category = "Factory|Component")
+    TObjectPtr<UFactoryInventoryComponent> InventoryComponent;
+
+    UPROPERTY(EditAnywhere, Category = "Factory|Data")
+    TArray<TObjectPtr<UFactoryObjectData>> QuickSlotObjectDataArr;
+
     UPROPERTY()
     TWeakObjectPtr<AFactoryCharacter> CachedNormalViewCharacter;
     UPROPERTY()
     TWeakObjectPtr<AFactoryTopViewPawn> CachedTopViewPawn;
-    
-    
-    UPROPERTY(EditAnywhere, Category = "Factory|Data")
-    TArray<TObjectPtr<UFactoryObjectData>> QuickSlotObjectDataArr;
+
     UPROPERTY()
     TWeakObjectPtr<AFactoryPlacePreview> CurrentPlacePreview;
-    
-    UFUNCTION()
-    void SetCurrentPlacePreview(UFactoryObjectData* Data);
     UPROPERTY()
     TObjectPtr<UFactoryObjectData> CurrentPlacePreviewData;
 
-    
+    // --- 내부 로직 제어 ---
+    void UpdateInputState();
     void OnToggleViewMode();
-    
+
+    // 배치 시스템
+    UFUNCTION()
+    void SetCurrentPlacePreview(UFactoryObjectData* Data);
     FVector GetPlacementObjectLocation() const;
     FVector CalculateSnappedLocation(FVector InRawLocation, FIntPoint InGridSize) const;
     void RotatePlacementPreview();
     void PlaceObject();
     void CancelPlaceObject();
+
+    // 퀵슬롯 시스템
     void ExecuteQuickSlotAction(int32 SlotIndex);
-    
+
+private:
+    // --- 상수 및 설정값 ---
     const float MaxBuildTraceDistance = 1500.f;
     float GridLength = 100.f;
-    bool bIsPlaceMode = false;
 };

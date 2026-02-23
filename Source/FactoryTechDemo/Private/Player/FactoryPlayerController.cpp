@@ -1,6 +1,8 @@
 #include "Player/FactoryPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "FactoryInventoryWidget.h"
+#include "Inventory/FactoryInventoryComponent.h"
 #include "Player/FactoryCharacter.h"
 #include "Player/FactoryTopViewPawn.h"
 #include "Settings/FactoryBuildingSettings.h"
@@ -10,76 +12,46 @@
 
 AFactoryPlayerController::AFactoryPlayerController()
 {
-    // bShowMouseCursor = true;
+    InventoryComponent = CreateDefaultSubobject<UFactoryInventoryComponent>(TEXT("InventoryComponent"));
 }
+
+#pragma region 엔진 라이프 사이클
 
 void AFactoryPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
+    // 1. 인풋 서브시스템 설정
     if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
     {
-        if (DefaultMappingContext)
-        {
-            Subsystem->AddMappingContext(DefaultMappingContext, 0);
-        }
-        if (MouseMappingContext)
-        {
-            Subsystem->AddMappingContext(MouseMappingContext, 1);
-        }
-        if (QuickSlotContext)
-        {
-            Subsystem->AddMappingContext(QuickSlotContext, 1);
-        }
+        if (DefaultMappingContext) Subsystem->AddMappingContext(DefaultMappingContext, 0);
+        if (MouseMappingContext) Subsystem->AddMappingContext(MouseMappingContext, 1);
+        if (QuickSlotContext) Subsystem->AddMappingContext(QuickSlotContext, 1);
     }
     
-    // 3인칭 뷰 캐릭터 캐싱
+    // 2. 액터 캐싱 및 생성
     CachedNormalViewCharacter = Cast<AFactoryCharacter>(GetCharacter());
     
-    // 탑뷰 액터 생성 및 캐싱
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     CachedTopViewPawn = GetWorld()->SpawnActor<AFactoryTopViewPawn>(
-        AFactoryTopViewPawn::StaticClass(),
-        FVector::ZeroVector,
-        FRotator::ZeroRotator,
-        SpawnParams);
+        AFactoryTopViewPawn::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
     CachedTopViewPawn->SetActorHiddenInGame(true);
 
+    // 3. 게임 설정 로드
     if (const UFactoryBuildingSettings* Settings = GetDefault<UFactoryBuildingSettings>())
     {
         GridLength = Settings->GetGridLength();
     }
-
-}
-
-void AFactoryPlayerController::SetupInputComponent()
-{
-    Super::SetupInputComponent();
-
-    if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent))
+    
+    // 4. UI 초기화
+    if (IsLocalController() && InventoryWidgetBP)
     {
-        // 뷰 모드 전환
-        EnhancedInputComponent->BindAction(
-            ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
-        // 배치모드 고스트 회전
-        EnhancedInputComponent->BindAction(
-            PreviewObjectRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
-        // 오브젝트 배치
-        EnhancedInputComponent->BindAction(
-            PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::PlaceObject);
-        // 오브젝트 배치 취소
-        EnhancedInputComponent->BindAction(
-            PlaceObjectCancelAction, ETriggerEvent::Started, this, &AFactoryPlayerController::CancelPlaceObject);
-        // 퀵슬롯
-        for (int i = 0; i < QuickSlotActionArr.Num(); i++)
+        InventoryWidget = CreateWidget<UFactoryInventoryWidget>(this, InventoryWidgetBP);
+        if (InventoryWidget && InventoryComponent)
         {
-            if (QuickSlotActionArr[i])
-            {
-                EnhancedInputComponent->BindAction(
-                    QuickSlotActionArr[i], ETriggerEvent::Started, this, &AFactoryPlayerController::ExecuteQuickSlotAction, i);
-            }
+            InventoryWidget->InitInventory(InventoryComponent, InventoryColumns);
         }
     }
 }
@@ -88,151 +60,166 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
     
-    AFactoryPlacePreview* Preview = CurrentPlacePreview.Get();
-    if (!bIsPlaceMode || !Preview) return;
-    
-    FVector GhostBuildingLocation = GetPlacementObjectLocation();
-    Preview->SetActorLocation(GhostBuildingLocation);
+    if (bIsPlaceMode && CurrentPlacePreview.IsValid())
+    {
+        FVector GhostBuildingLocation = GetPlacementObjectLocation();
+        CurrentPlacePreview->SetActorLocation(GhostBuildingLocation);
+    }
 }
 
-/**
- * 새로 배치할 객체를 정함
- * @param Data 새로 배치할 객체, nullptr 이면 배치모드 종료 
- */
-void AFactoryPlayerController::SetCurrentPlacePreview(class UFactoryObjectData* Data)
+void AFactoryPlayerController::SetupInputComponent()
 {
-    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-    
-    
-    if (!Data)
+    Super::SetupInputComponent();
+
+    if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent))
     {
-        bIsPlaceMode = false;
-        
-        if (Subsystem && PlacementContext)
+        EnhancedInputComponent->BindAction(ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
+        EnhancedInputComponent->BindAction(PreviewObjectRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
+        EnhancedInputComponent->BindAction(PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::PlaceObject);
+        EnhancedInputComponent->BindAction(PlaceObjectCancelAction, ETriggerEvent::Started, this, &AFactoryPlayerController::CancelPlaceObject);
+        EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleInventoryWidget);
+
+        for (int i = 0; i < QuickSlotActionArr.Num(); i++)
         {
-            Subsystem->RemoveMappingContext(PlacementContext);
+            if (QuickSlotActionArr[i])
+            {
+                EnhancedInputComponent->BindAction(QuickSlotActionArr[i], ETriggerEvent::Started, this, &AFactoryPlayerController::ExecuteQuickSlotAction, i);
+            }
         }
-        
-        if (CurrentPlacePreview.Get())
-        {
-            CurrentPlacePreview->Destroy();
-            CurrentPlacePreview = nullptr;
-            CurrentPlacePreviewData = nullptr;
-        }
-        return;
-    }
-    bIsPlaceMode = true;
-    
-    if (Subsystem && PlacementContext)
-    {
-        Subsystem->AddMappingContext(PlacementContext,2);
-    }
-    
-    CurrentPlacePreviewData = Data;
-    CurrentPlacePreview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
-    if (AFactoryPlacePreview* Preview = CurrentPlacePreview.Get())
-    {
-        Preview->InitPreview(Data);
     }
 }
 
-/** 
- * 3인칭과 탑뷰 모드 전환
- */
+#pragma endregion 
+
+#pragma region UI 및 입력 상태 제어
+
+void AFactoryPlayerController::ToggleInventoryWidget()
+{
+    if (InventoryWidget)
+    {
+        if (bIsInventoryOpen) InventoryWidget->RemoveFromParent();
+        else InventoryWidget->AddToViewport();
+    }
+    bIsInventoryOpen = !bIsInventoryOpen;
+    UpdateInputState();
+}
+
+void AFactoryPlayerController::UpdateInputState()
+{
+    if (bIsInventoryOpen)
+    {
+        FInputModeGameAndUI InputMode;
+        if (InventoryWidget) InputMode.SetWidgetToFocus(InventoryWidget->TakeWidget());
+        SetInputMode(InputMode);
+        bShowMouseCursor = true;
+    }
+    else
+    {
+        if (CurrentViewMode == EFactoryViewModeType::TopView)
+        {
+            SetInputMode(FInputModeGameAndUI());
+            bShowMouseCursor = true;
+        }
+        else
+        {
+            SetInputMode(FInputModeGameOnly());
+            bShowMouseCursor = false;
+        }
+    }
+}
+
+#pragma endregion 
+
+#pragma region 뷰 모드 전환
+
 void AFactoryPlayerController::OnToggleViewMode()
 {
-    if (!CachedNormalViewCharacter.IsValid() || !CachedTopViewPawn.IsValid())
-    {
-        return;
-    }
+    if (!CachedNormalViewCharacter.IsValid() || !CachedTopViewPawn.IsValid()) return;
 
     const float BlendTime = 0.3f;
-    APawn* CurrentPawn = GetPawn();
-    APawn* TargetPawn = nullptr;
-    EFactoryViewModeType NewMode;
+    APawn* TargetPawn = (CurrentViewMode == EFactoryViewModeType::NormalView) ? 
+        Cast<APawn>(CachedTopViewPawn.Get()) : Cast<APawn>(CachedNormalViewCharacter.Get());
 
-    // 뷰 모드 전환 준비
     if (CurrentViewMode == EFactoryViewModeType::NormalView)
     {
-        if (CurrentPawn)
-        {
-            CachedTopViewPawn->SetActorLocation(CurrentPawn->GetActorLocation());
-        }
+        CachedTopViewPawn->SetActorLocation(GetPawn()->GetActorLocation());
         CachedTopViewPawn->SetActorHiddenInGame(false);
-        TargetPawn = CachedTopViewPawn.Get();
-        NewMode = EFactoryViewModeType::TopView;
     }
     else
     {
         CachedTopViewPawn->SetCameraPerspective(true);
-        TargetPawn = CachedNormalViewCharacter.Get();
-        NewMode = EFactoryViewModeType::NormalView;
     }
     
-    if (!TargetPawn) return;
-
-    // 뷰 모드 전환 시작
     DisableInput(this);
     SetViewTargetWithBlend(TargetPawn, BlendTime);
 
     FTimerHandle ViewChangeTimerHandle;
-    GetWorldTimerManager().SetTimer(ViewChangeTimerHandle, [this, TargetPawn, NewMode]()
+    GetWorldTimerManager().SetTimer(ViewChangeTimerHandle, [this, TargetPawn]()
     {
-        if(!IsValid(this))
-        {
-            return;
-        }
+        if(!IsValid(this)) return;
 
         Possess(TargetPawn);
-        
+        EFactoryViewModeType NewMode = (CurrentViewMode == EFactoryViewModeType::NormalView) ? 
+            EFactoryViewModeType::TopView : EFactoryViewModeType::NormalView;
+
         if (NewMode == EFactoryViewModeType::NormalView)
         {
-            bShowMouseCursor = false;
             CachedTopViewPawn->SetActorHiddenInGame(true);
-            SetInputMode(FInputModeGameOnly());
         }
         else
         {
             CachedTopViewPawn->SetActorHiddenInGame(false);
             CachedTopViewPawn->SetCameraPerspective(false);
-            bShowMouseCursor = true;
-            SetInputMode(FInputModeGameAndUI());
         }
-        EnableInput(this);
+
         CurrentViewMode = NewMode; 
+        UpdateInputState();
+        EnableInput(this);
     }, BlendTime, false);
 }
 
-/**
- * 배치모드에서 그리드에 맞게 배치될 고스트의 위치 산출
- * @return 고스트의 위치
- */
+#pragma endregion 
+
+#pragma region 배치 시스템 (Placement)
+
+void AFactoryPlayerController::SetCurrentPlacePreview(UFactoryObjectData* Data)
+{
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+    
+    if (!Data)
+    {
+        bIsPlaceMode = false;
+        if (Subsystem && PlacementContext) Subsystem->RemoveMappingContext(PlacementContext);
+        if (CurrentPlacePreview.IsValid()) { CurrentPlacePreview->Destroy(); CurrentPlacePreview = nullptr; }
+        CurrentPlacePreviewData = nullptr;
+        return;
+    }
+
+    bIsPlaceMode = true;
+    if (Subsystem && PlacementContext) Subsystem->AddMappingContext(PlacementContext, 2);
+    
+    CurrentPlacePreviewData = Data;
+    CurrentPlacePreview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
+    if (CurrentPlacePreview.IsValid()) CurrentPlacePreview->InitPreview(Data);
+}
+
 FVector AFactoryPlayerController::GetPlacementObjectLocation() const
 {
     FHitResult HitResult;
-    bool bHit;
+    bool bHit = false;
     
     if (CurrentViewMode == EFactoryViewModeType::NormalView)
     {
-        FVector CameraLocation;
-        FRotator CameraRotation;
+        FVector CameraLocation; FRotator CameraRotation;
         GetPlayerViewPoint(CameraLocation, CameraRotation);
-        FVector TraceStart = CameraLocation;
-        FVector TraceEnd = TraceStart + (CameraRotation.Vector() * MaxBuildTraceDistance);
+        FVector TraceEnd = CameraLocation + (CameraRotation.Vector() * MaxBuildTraceDistance);
         
-        FCollisionQueryParams CollisionQueryParams;
-        CollisionQueryParams.AddIgnoredActor(GetPawn());
+        FCollisionQueryParams Params; Params.AddIgnoredActor(GetPawn());
+        bHit = GetWorld()->LineTraceSingleByChannel(HitResult, CameraLocation, TraceEnd, ECC_GameTraceChannel1, Params);
         
-        bHit = GetWorld()->LineTraceSingleByChannel(
-            HitResult, TraceStart, TraceEnd, ECC_GameTraceChannel1, CollisionQueryParams);
-        
-        // 만약 일정 거리 감지못하면 아래쪽 검사
         if (!bHit)
         {
-            FVector DownTraceStart = TraceEnd;
-            FVector DownTraceEnd = DownTraceStart + (FVector::DownVector * MaxBuildTraceDistance);
-            bHit = GetWorld()->LineTraceSingleByChannel(
-                HitResult, DownTraceStart, DownTraceEnd, ECC_GameTraceChannel1, CollisionQueryParams);
+            bHit = GetWorld()->LineTraceSingleByChannel(HitResult, TraceEnd, TraceEnd + (FVector::DownVector * MaxBuildTraceDistance), ECC_GameTraceChannel1, Params);
         }
     }
     else
@@ -241,7 +228,6 @@ FVector AFactoryPlayerController::GetPlacementObjectLocation() const
     }
     
     if (!bHit) return FVector::ZeroVector;
-    
     return CalculateSnappedLocation(HitResult.Location, CurrentPlacePreviewData->GridSize);
 }
 
@@ -249,59 +235,27 @@ FVector AFactoryPlayerController::CalculateSnappedLocation(FVector InRawLocation
 {
     auto SnapValue = [this](float Raw, int32 Size) -> float
     {
-        // 그리드 시작점 (칸의 왼쪽/위쪽 선)
         float GridStart = FMath::FloorToFloat(Raw / GridLength) * GridLength;
-        
-        // 칸수가 홀수면 중앙만큼, 짝수면 0만큼 오프셋
         float Offset = (Size % 2 != 0) ? GridLength * 0.5f : 0.0f;
-        
         return GridStart + Offset;
     };
 
-    FVector Snapped;
-    Snapped.X = SnapValue(InRawLocation.X, GridSize.X);
-    Snapped.Y = SnapValue(InRawLocation.Y, GridSize.Y);
-    Snapped.Z = InRawLocation.Z; // 높이는 바닥에 고정
-
-    return Snapped;
+    return FVector(SnapValue(InRawLocation.X, GridSize.X), SnapValue(InRawLocation.Y, GridSize.Y), InRawLocation.Z);
 }
 
-/**
- * 배치모드에서 고스트를 회전시킴
- */
 void AFactoryPlayerController::RotatePlacementPreview()
 {
-    AFactoryPlacePreview* Preview = CurrentPlacePreview.Get();
-    if (!Preview) return;
-    
-    float CurrentYaw = Preview->GetActorRotation().Yaw;
-    float NextYaw = FMath::GridSnap(CurrentYaw + 90.f, 90.f);
-    NextYaw = FRotator::NormalizeAxis(NextYaw);
-    
-    Preview->SetActorRotation(FRotator(0.f, NextYaw, 0.f));
+    if (!CurrentPlacePreview.IsValid()) return;
+    float NextYaw = FMath::GridSnap(CurrentPlacePreview->GetActorRotation().Yaw + 90.f, 90.f);
+    CurrentPlacePreview->SetActorRotation(FRotator(0.f, FRotator::NormalizeAxis(NextYaw), 0.f));
 }
 
 void AFactoryPlayerController::PlaceObject()
 {
-    AFactoryPlacePreview* Preview = CurrentPlacePreview.Get();
-    
-    // 프리뷰가 있고, 현재 위치가 배치 가능한 상태일 때만 소환
-    if (Preview && Preview->GetPlacementValid() && CurrentPlacePreviewData)
+    if (CurrentPlacePreview.IsValid() && CurrentPlacePreview->GetPlacementValid() && CurrentPlacePreviewData)
     {
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-        FVector Location = Preview->GetActorLocation();
-        FRotator Rotation = Preview->GetActorRotation();
-
-        // 데이터 에셋에 지정된 실제 BP 클래스 소환
-        GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
-            CurrentPlacePreviewData->PlaceObjectBP, 
-            Location, 
-            Rotation, 
-            SpawnParams
-        );
-
+        FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(CurrentPlacePreviewData->PlaceObjectBP, CurrentPlacePreview->GetActorLocation(), CurrentPlacePreview->GetActorRotation(), Params);
         SetCurrentPlacePreview(nullptr);
     }
 }
@@ -311,13 +265,17 @@ void AFactoryPlayerController::CancelPlaceObject()
     SetCurrentPlacePreview(nullptr);
 }
 
+#pragma endregion 
+
+#pragma region 퀵슬롯 시스템
+
 void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 {
     if (bIsPlaceMode) return;
-    
-    if (QuickSlotActionArr.IsValidIndex(SlotIndex) && QuickSlotObjectDataArr[SlotIndex])
+    if (QuickSlotActionArr.IsValidIndex(SlotIndex) && QuickSlotObjectDataArr.IsValidIndex(SlotIndex) && QuickSlotObjectDataArr[SlotIndex])
     {
         SetCurrentPlacePreview(QuickSlotObjectDataArr[SlotIndex]);
     }
 }
 
+#pragma endregion 
