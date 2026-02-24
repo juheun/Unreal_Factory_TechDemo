@@ -24,7 +24,7 @@ void AFactoryItemVisual::UpdateVisual(const UFactoryItemData* ItemData)
 	// TODO : 풀링 서브시스템 구축 후 삭제
 	if (MeshComponent && !MeshComponent->GetStaticMesh())
 	{
-		FString MeshPath = FString::Printf(TEXT("/Game/PlacementData/Mesh/SM_%s"), *ItemData->ItemID.ToString());
+		FString MeshPath = FString::Printf(TEXT("/Game/ItemData/SM_ItemBox"));
         
 		UStaticMesh* LoadedMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *MeshPath));
         
