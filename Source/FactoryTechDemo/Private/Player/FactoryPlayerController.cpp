@@ -1,7 +1,7 @@
 #include "Player/FactoryPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "FactoryInventoryWidget.h"
+#include "Inventory/FactoryInventoryWidget.h"
 #include "Inventory/FactoryInventoryComponent.h"
 #include "Player/FactoryCharacter.h"
 #include "Player/FactoryTopViewPawn.h"
