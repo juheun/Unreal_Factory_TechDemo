@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FactoryInventoryWidget.h"
+#include "Inventory/FactoryInventoryWidget.h"
 
 #include "Components/UniformGridPanel.h"
 #include "Inventory/FactoryInventoryComponent.h"
