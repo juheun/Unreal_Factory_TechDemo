@@ -40,5 +40,5 @@ public:
 	FRecipeIngredient Output;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recipe")
-	float ProductionTime = 2.0f;	//생산에 걸리는 시간 (초)
+	int ProcessingTime = 2;	//생산에 걸리는 시간 (초)
 };
