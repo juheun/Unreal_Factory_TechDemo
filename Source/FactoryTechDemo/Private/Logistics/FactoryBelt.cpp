@@ -92,9 +92,10 @@ bool AFactoryBelt::CanPushItemFromBeforeObject(const UFactoryInputPortComponent*
 	return !PendingItem && !CurrentItem.ItemData;
 }
 
-void AFactoryBelt::PullItemFromInputPorts(FFactoryItemInstance& Item)
+bool AFactoryBelt::PullItemFromInputPorts(FFactoryItemInstance& Item)
 {
 	CurrentItem = Item;
+	return true;
 }
 
 void AFactoryBelt::UpdateSplinePath(EBeltType Type)

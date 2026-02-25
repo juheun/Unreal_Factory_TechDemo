@@ -41,7 +41,7 @@ protected:
 	
 	void UpdateSplinePath(EBeltType Type);
 	void SetSpineDistance(float Alpha);
-	virtual void PullItemFromInputPorts(FFactoryItemInstance& Item) override;
+	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
 	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	const float BeltHeight = 20.f;

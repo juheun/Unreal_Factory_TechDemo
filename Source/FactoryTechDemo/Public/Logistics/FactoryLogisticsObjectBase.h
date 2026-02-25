@@ -41,8 +41,8 @@ protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	// InputPort에 Pending된 아이템을 처리하는 함수 구현. 상속을 받는 설비에 따라 버퍼 공간에 넣거나 가공을 하는 등 행동을 정의 해야함.
-	virtual void PullItemFromInputPorts(FFactoryItemInstance& Item) 
-		PURE_VIRTUAL(AFactoryLogisticsObjectBase::ReceiveItem, ; );
+	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) 
+		PURE_VIRTUAL(AFactoryLogisticsObjectBase::ReceiveItem, return false; );
 	
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UFactoryOutputPortComponent>> LogisticsOutputPortArr;
