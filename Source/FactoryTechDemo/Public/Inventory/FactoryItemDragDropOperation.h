@@ -8,6 +8,7 @@
 
 enum class EFactorySlotType : uint8;
 class UFactorySlotWidget;
+class UFactoryItemData;
 
 /**
  * 아이템을 드래그 할 때 드래그 정보
@@ -25,7 +26,7 @@ public:
 	TObjectPtr<UFactorySlotWidget> SourceSlotWidget;	// 아이템을 드래그 시작한 슬롯 위젯의 참조
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="DragDrop", meta=(ExposeOnSpawn=true))
-	FName ItemID;
+	const UFactoryItemData* ItemData;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="DragDrop", meta=(ExposeOnSpawn=true))
 	int32 DraggedAmount;

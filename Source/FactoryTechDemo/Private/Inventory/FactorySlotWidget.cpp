@@ -8,7 +8,8 @@
 #include "Components/TextBlock.h"
 #include "Inventory/FactoryInventoryComponent.h"
 #include "Inventory/FactoryItemDragDropOperation.h"
-#include "Inventory/FFactoryInventorySlot.h"
+#include "Inventory/FFactorySlot.h"
+#include "Items/FactoryItemData.h"
 
 void UFactorySlotWidget::InitSlot(UFactoryInventoryComponent* InventoryComponent, EFactorySlotType Type, int32 Index)
 {
@@ -22,20 +23,20 @@ void UFactorySlotWidget::InitSlot(UFactoryInventoryComponent* InventoryComponent
 	}
 }
 
-void UFactorySlotWidget::OnSlotDataChanged(int32 UpdatedSlotIndex, FFactoryInventorySlot UpdatedSlotData)
+void UFactorySlotWidget::OnSlotDataChanged(int32 UpdatedSlotIndex, FFactorySlot UpdatedSlotData)
 {
 	if (SlotIndex == UpdatedSlotIndex)
 	{
-		UpdateSlotInfo(UpdatedSlotData.ItemID, UpdatedSlotData.Amount);
+		UpdateSlotInfo(UpdatedSlotData.ItemData, UpdatedSlotData.Amount);
 	}
 }
 
-void UFactorySlotWidget::UpdateSlotInfo(FName ItemID, int32 Amount)
+void UFactorySlotWidget::UpdateSlotInfo(const UFactoryItemData* ItemData, int32 Amount)
 {
-	CurrentItemID = ItemID;
+	CurrentItemData = ItemData;
 	CurrentAmount = Amount;
 	
-	if (CurrentItemID == NAME_None || CurrentAmount <= 0)
+	if (CurrentItemData == nullptr || CurrentAmount <= 0)
 	{
 		if (ItemIcon) ItemIcon->SetVisibility(ESlateVisibility::Hidden);
 		if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
@@ -44,7 +45,10 @@ void UFactorySlotWidget::UpdateSlotInfo(FName ItemID, int32 Amount)
 	{
 		if (ItemIcon)
 		{
-			// TODO : ItemID로 아이템 데이터 찾아서 아이콘 업데이트
+			if (CurrentItemData->ItemICon)
+			{
+				ItemIcon->SetBrushFromTexture(CurrentItemData->ItemICon);
+			}
 			ItemIcon->SetVisibility(ESlateVisibility::Visible);
 		}
 		if (AmountText)
@@ -57,7 +61,7 @@ void UFactorySlotWidget::UpdateSlotInfo(FName ItemID, int32 Amount)
 
 FReply UFactorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && CurrentItemID != NAME_None)
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && CurrentItemData != nullptr)
 	{
 		return UWidgetBlueprintLibrary::DetectDragIfPressed(
 			InMouseEvent, this, EKeys::LeftMouseButton).NativeReply;
@@ -78,7 +82,7 @@ void UFactorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const
 	{
 		DragOperation->SourceType = SlotType;
 		DragOperation->SourceSlotWidget = this;
-		DragOperation->ItemID = CurrentItemID;
+		DragOperation->ItemData = CurrentItemData;
 		DragOperation->DraggedAmount = CurrentAmount;
 		
 		// 마우스 따라다닐 UI

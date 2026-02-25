@@ -3,13 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FFactoryInventorySlot.h"
+#include "FFactorySlot.h"
 #include "Blueprint/UserWidget.h"
 #include "FactorySlotWidget.generated.h"
 
 class UImage;
 class UTextBlock;
 class UFactoryInventoryComponent;
+class UFactoryItemData;
 
 UENUM(BlueprintType)
 enum class EFactorySlotType : uint8
@@ -30,10 +31,10 @@ public:
 	
 protected:
 	UFUNCTION(BlueprintCallable, Category = "FactorySlot")
-	void OnSlotDataChanged(int32 UpdatedSlotIndex, FFactoryInventorySlot UpdatedSlotData);
+	void OnSlotDataChanged(int32 UpdatedSlotIndex, FFactorySlot UpdatedSlotData);
 	
 	UFUNCTION(BlueprintCallable, Category = "FactorySlot")
-	void UpdateSlotInfo(FName ItemID, int32 Amount);
+	void UpdateSlotInfo(const UFactoryItemData* ItemData, int32 Amount);
 	
 	virtual FReply NativeOnMouseButtonDown( const FGeometry& InGeometry, const FPointerEvent& InMouseEvent ) override;
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
@@ -54,7 +55,7 @@ protected:
 	int32 SlotIndex;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "FactorySlot")
-	FName CurrentItemID;
+	TObjectPtr<const UFactoryItemData> CurrentItemData;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "FactorySlot")
 	int32 CurrentAmount;

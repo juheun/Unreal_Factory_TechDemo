@@ -23,22 +23,22 @@ void UFactoryInventoryComponent::InitializeInventory()
 	InventorySlots.SetNum(MaxItemSlotCount);
 }
 
-int32 UFactoryInventoryComponent::AddItemToTargetSlot(int32 SlotIndex, FName ItemID, int32 Amount)
+int32 UFactoryInventoryComponent::AddItemToTargetSlot(int32 SlotIndex, const UFactoryItemData* ItemData, int32 Amount)
 {
-	if (!InventorySlots.IsValidIndex(SlotIndex) || Amount <= 0 || ItemID == NAME_None) return 0;
+	if (!InventorySlots.IsValidIndex(SlotIndex) || Amount <= 0 || ItemData == nullptr) return 0;
 	
-	FFactoryInventorySlot& TargetSlot = InventorySlots[SlotIndex];
+	FFactorySlot& TargetSlot = InventorySlots[SlotIndex];
 	
 	if (TargetSlot.IsEmpty())
 	{
-		TargetSlot.ItemID = ItemID;
-		int32 ClampedAmount = FMath::Clamp(Amount, 0, FFactoryInventorySlot::MaxCapacity);
+		TargetSlot.ItemData = ItemData;
+		int32 ClampedAmount = FMath::Clamp(Amount, 0, FFactorySlot::MaxCapacity);
 		TargetSlot.Amount = ClampedAmount;
 		OnSlotUpdated.Broadcast(SlotIndex, TargetSlot);
 		return ClampedAmount;
 	}
 	
-	if (TargetSlot.ItemID == ItemID)
+	if (TargetSlot.ItemData == ItemData)
 	{
 		int32 AvailableSpace = TargetSlot.GetAvailableSpace();
 		if (AvailableSpace <= 0) return 0; // 슬롯이 이미 가득 찬 경우
@@ -52,18 +52,18 @@ int32 UFactoryInventoryComponent::AddItemToTargetSlot(int32 SlotIndex, FName Ite
 	return 0;
 }
 
-int32 UFactoryInventoryComponent::AutoAddItem(FName ItemID, int32 Amount)
+int32 UFactoryInventoryComponent::AutoAddItem(const UFactoryItemData* ItemData, int32 Amount)
 {
-	if (Amount <= 0 || ItemID == NAME_None) return 0;
+	if (Amount <= 0 || ItemData == nullptr) return 0;
     
 	int32 RemainingAmount = Amount;
 
 	// 기존에 같은 아이템이 있는 덜 찬 슬롯을 찾아 채워넣기
 	for (int i = 0; i < InventorySlots.Num(); i++)
 	{
-		if (InventorySlots[i].ItemID == ItemID && !InventorySlots[i].IsFull())
+		if (InventorySlots[i].ItemData == ItemData && !InventorySlots[i].IsFull())
 		{
-			int32 Added = AddItemToTargetSlot(i, ItemID, RemainingAmount);
+			int32 Added = AddItemToTargetSlot(i, ItemData, RemainingAmount);
 			RemainingAmount -= Added;
 			if (RemainingAmount <= 0) return Amount; // 다 넣었으면 종료
 		}
@@ -74,7 +74,7 @@ int32 UFactoryInventoryComponent::AutoAddItem(FName ItemID, int32 Amount)
 	{
 		if (InventorySlots[i].IsEmpty())
 		{
-			int32 Added = AddItemToTargetSlot(i, ItemID, RemainingAmount);
+			int32 Added = AddItemToTargetSlot(i, ItemData, RemainingAmount);
 			RemainingAmount -= Added;
 			if (RemainingAmount <= 0) return Amount;
 		}
@@ -87,12 +87,12 @@ bool UFactoryInventoryComponent::RemoveItemFromTargetSlot(int32 SlotIndex, int32
 {
 	if (!InventorySlots.IsValidIndex(SlotIndex) || Amount <= 0) return false;
 	
-	FFactoryInventorySlot& TargetSlot = InventorySlots[SlotIndex];
+	FFactorySlot& TargetSlot = InventorySlots[SlotIndex];
 	if (TargetSlot.IsEmpty()) return false;
 	if (TargetSlot.Amount < Amount) return false;
 	
 	TargetSlot.Amount -= Amount;
-	TargetSlot.Amount = FMath::Clamp(TargetSlot.Amount, 0, FFactoryInventorySlot::MaxCapacity);
+	TargetSlot.Amount = FMath::Clamp(TargetSlot.Amount, 0, FFactorySlot::MaxCapacity);
 	if (TargetSlot.Amount == 0)
 	{
 		TargetSlot.Clear();
@@ -102,17 +102,17 @@ bool UFactoryInventoryComponent::RemoveItemFromTargetSlot(int32 SlotIndex, int32
 	return true;
 }
 
-bool UFactoryInventoryComponent::AutoRemoveItem(FName ItemID, int32 Amount)
+bool UFactoryInventoryComponent::AutoRemoveItem(const UFactoryItemData* ItemData, int32 Amount)
 {
-	if (Amount <= 0 || ItemID == NAME_None) return false;
+	if (Amount <= 0 || ItemData == nullptr) return false;
 	
-	if (GetTotalItemAmount(ItemID) < Amount) return false;
+	if (GetTotalItemAmount(ItemData) < Amount) return false;
 	
 	int32 RemainingAmount = Amount;
 	
 	for (int i = InventorySlots.Num() - 1; i >= 0; i--)
 	{
-		if (InventorySlots[i].ItemID == ItemID && !InventorySlots[i].IsEmpty())
+		if (InventorySlots[i].ItemData == ItemData && !InventorySlots[i].IsEmpty())
 		{
 			int32 AmountToRemove = FMath::Min(RemainingAmount, InventorySlots[i].Amount);
 			RemoveItemFromTargetSlot(i, AmountToRemove);
@@ -124,13 +124,13 @@ bool UFactoryInventoryComponent::AutoRemoveItem(FName ItemID, int32 Amount)
 	return true;
 }
 
-int32 UFactoryInventoryComponent::GetTotalItemAmount(FName ItemID) const
+int32 UFactoryInventoryComponent::GetTotalItemAmount(const UFactoryItemData* ItemData) const
 {
 	int32 TotalItemAmount = 0;
 	
-	for (const FFactoryInventorySlot& Slot : InventorySlots)
+	for (const FFactorySlot& Slot : InventorySlots)
 	{
-		if (Slot.ItemID == ItemID)
+		if (Slot.ItemData == ItemData)
 		{
 			TotalItemAmount += Slot.Amount;
 		}
@@ -141,32 +141,39 @@ int32 UFactoryInventoryComponent::GetTotalItemAmount(FName ItemID) const
 
 void UFactoryInventoryComponent::SortInventory()
 {
-	TMap<FName, int32> ItemCountMap;
-	
+	TMap<const UFactoryItemData*, int32> ItemCountMap;
+    
 	for (int i = 0; i < InventorySlots.Num(); i++)
 	{
 		if (InventorySlots[i].IsEmpty()) continue;
-		ItemCountMap.FindOrAdd(InventorySlots[i].ItemID, InventorySlots[i].Amount) += InventorySlots[i].Amount;
+       
+		// FindOrAdd의 기본값을 0으로 두고 더해야 기존 버그 방지
+		ItemCountMap.FindOrAdd(InventorySlots[i].ItemData, 0) += InventorySlots[i].Amount;
 		InventorySlots[i].Clear();
 	}
-	
+    
 	int32 SlotIndex = 0;
 	for (const auto& Pair : ItemCountMap)
 	{
-		FName ItemID = Pair.Key;
+		const UFactoryItemData* ItemData = Pair.Key;
 		int32 TotalAmount = Pair.Value;
-		
+       
 		while (TotalAmount > 0 && SlotIndex < InventorySlots.Num())
 		{
-			int32 AmountToAdd = FMath::Min(TotalAmount, FFactoryInventorySlot::MaxCapacity);
-			InventorySlots[SlotIndex].ItemID = ItemID;
+			int32 AmountToAdd = FMath::Min(TotalAmount, FFactorySlot::MaxCapacity);
+			InventorySlots[SlotIndex].ItemData = ItemData;
 			InventorySlots[SlotIndex].Amount = AmountToAdd;
-			OnSlotUpdated.Broadcast(SlotIndex, InventorySlots[SlotIndex]);
+            
 			TotalAmount -= AmountToAdd;
 			SlotIndex++;
 		}
-		
-		if (SlotIndex >= InventorySlots.Num()) break; // 인벤토리가 가득 찬 경우
+		if (SlotIndex >= InventorySlots.Num()) break;
+	}
+    
+	// 정렬 후 모든 슬롯들의 UI 갱신
+	for (int i = 0; i < InventorySlots.Num(); i++)
+	{
+		OnSlotUpdated.Broadcast(i, InventorySlots[i]);
 	}
 }
 

@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Inventory/FFactoryInventorySlot.h"
+#include "Inventory/FFactorySlot.h"
 #include "FactoryInventoryComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventorySlotUpdated, int32, SlotIndex, FFactoryInventorySlot, SlotData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventorySlotUpdated, int32, SlotIndex, FFactorySlot, SlotData);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FACTORYTECHDEMO_API UFactoryInventoryComponent : public UActorComponent
@@ -25,11 +25,11 @@ protected:
 public:
 	// 아이템을 특정 슬롯에 추가. 추가 아이템 개수 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	int32 AddItemToTargetSlot(int32 SlotIndex, FName ItemID, int32 Amount);
+	int32 AddItemToTargetSlot(int32 SlotIndex, const UFactoryItemData* ItemData, int32 Amount);
 	
 	// 아이템을 인벤토리에 슬롯 지정없이 추가 (필드에서 아이템 획득 등)
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	int32 AutoAddItem(FName ItemID, int32 Amount);
+	int32 AutoAddItem(const UFactoryItemData* ItemData, int32 Amount);
 	
 	// 아이템을 특정 슬롯에서 제거
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -37,11 +37,11 @@ public:
 	
 	// 아이템을 인벤토리에서 슬롯 지정없이 제거
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	bool AutoRemoveItem(FName ItemID, int32 Amount);
+	bool AutoRemoveItem(const UFactoryItemData* ItemData, int32 Amount);
 	
 	// 특정 아이템의 인벤토리 내 총 개수를 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	int32 GetTotalItemAmount (FName ItemID) const;
+	int32 GetTotalItemAmount (const UFactoryItemData* ItemData) const;
 	
 	// 인벤토리 내 아이템 정렬
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -59,7 +59,7 @@ protected:
 	
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Inventory")
-	TArray<FFactoryInventorySlot> InventorySlots;
+	TArray<FFactorySlot> InventorySlots;
 	
 	void InitializeInventory();
 };

@@ -1,26 +1,28 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "FFactoryInventorySlot.generated.h"
+#include "FFactorySlot.generated.h"
+
+class UFactoryItemData;
 
 USTRUCT(BlueprintType)
-struct FFactoryInventorySlot
+struct FFactorySlot
 {
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite , Category = "Inventory")
-	FName ItemID;
+	TObjectPtr<const UFactoryItemData> ItemData;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite , Category = "Inventory")
 	int32 Amount;
 	
 	static const int32 MaxCapacity = 50;
 	
-	FFactoryInventorySlot() : ItemID(NAME_None), Amount(0) {};
-	FFactoryInventorySlot(FName ItemID, int32 Amount) : ItemID(ItemID), Amount(Amount) {};
+	FFactorySlot() : ItemData(nullptr), Amount(0) {};
+	FFactorySlot(const UFactoryItemData* InItemData, int32 InAmount) : ItemData(InItemData), Amount(InAmount) {};
 	
 	// 아이템이 없는 슬롯이거나, 아이템이 있지만 개수가 0인 경우를 모두 빈 슬롯으로 간주
-	bool IsEmpty() const { return ItemID == NAME_None || Amount == 0;}
+	bool IsEmpty() const { return ItemData == nullptr || Amount == 0;}
 	
 	// 슬롯이 가득 찼는지 여부를 판단하는 함수
 	bool IsFull() const { return Amount >= MaxCapacity; }
@@ -31,7 +33,7 @@ struct FFactoryInventorySlot
 	// 슬롯에서 아이템을 비우는 함수
 	void Clear()
 	{
-		ItemID = NAME_None;
+		ItemData = nullptr;
 		Amount = 0;
 	}
 };
