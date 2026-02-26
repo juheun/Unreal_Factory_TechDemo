@@ -4,7 +4,7 @@
 #include "GameFramework/PlayerController.h"
 #include "FactoryPlayerController.generated.h"
 
-// 전방 선언 (Forward Declarations)
+class IFactoryInteractable;
 class UFactoryInventoryComponent;
 class UInputMappingContext;
 class UInputAction;
@@ -80,6 +80,8 @@ protected:
     TObjectPtr<UInputAction> PlaceObjectCancelAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
     TObjectPtr<UInputAction> ToggleInventoryAction;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputAction> InteractAction;
 
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
     TArray<TObjectPtr<UInputAction>> QuickSlotActionArr;
@@ -116,6 +118,12 @@ protected:
 
     // 퀵슬롯 시스템
     void ExecuteQuickSlotAction(int32 SlotIndex);
+    
+    // 상호작용 시스템
+    void OnInteract();
+    TScriptInterface<IFactoryInteractable> FindBestInteractable();
+    UPROPERTY(EditAnywhere, Category = "Factory|Interation")
+    float InteractionRange = 300.f;
 
 private:
     // --- 상수 및 설정값 ---

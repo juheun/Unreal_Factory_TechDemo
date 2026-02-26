@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FactoryMachineBase.h"
+#include "Logistics/FactoryMachineBase.h"
 
 #include "Items/FactoryItemVisual.h"
 #include "Items/FactoryRecipeData.h"
@@ -40,6 +40,12 @@ void AFactoryMachineBase::InitMachine()
 	{
 		AvailableRecipes = DataSubsystem->GetRecipeDatasForFacility(FacilityIdentity);
 	}
+}
+
+
+void AFactoryMachineBase::Interact(AActor* Interactor)
+{
+	//TODO : 추후 UI 오픈 등 상호작용 로직 추가
 }
 
 void AFactoryMachineBase::PlanCycle()

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Interface/FactoryInteractable.h"
 #include "Inventory/FFactorySlot.h"
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "FactoryMachineBase.generated.h"
@@ -12,12 +13,14 @@ class UFactoryRecipeData;
 class UFactoryFacilityItemData;
 
 UCLASS()
-class FACTORYTECHDEMO_API AFactoryMachineBase : public AFactoryLogisticsObjectBase
+class FACTORYTECHDEMO_API AFactoryMachineBase : public AFactoryLogisticsObjectBase, public IFactoryInteractable
 {
 	GENERATED_BODY()
 
 public:
 	AFactoryMachineBase();
+	
+	virtual void Interact(AActor* Interactor) override;
 	
 	virtual void PlanCycle() override;
 	virtual void ExecuteCycle() override;

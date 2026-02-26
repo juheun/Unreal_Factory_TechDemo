@@ -1,6 +1,8 @@
 #include "Player/FactoryPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Engine/OverlapResult.h"
+#include "Interface/FactoryInteractable.h"
 #include "Inventory/FactoryInventoryWidget.h"
 #include "Inventory/FactoryInventoryComponent.h"
 #include "Player/FactoryCharacter.h"
@@ -78,6 +80,7 @@ void AFactoryPlayerController::SetupInputComponent()
         EnhancedInputComponent->BindAction(PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::PlaceObject);
         EnhancedInputComponent->BindAction(PlaceObjectCancelAction, ETriggerEvent::Started, this, &AFactoryPlayerController::CancelPlaceObject);
         EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleInventoryWidget);
+        EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnInteract);
 
         for (int i = 0; i < QuickSlotActionArr.Num(); i++)
         {
@@ -279,3 +282,72 @@ void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 }
 
 #pragma endregion 
+
+#pragma region 상호작용 시스템
+
+void AFactoryPlayerController::OnInteract()
+{
+    if (bIsPlaceMode || bIsInventoryOpen) return;
+    
+    TScriptInterface<IFactoryInteractable> Target = FindBestInteractable();
+    if (Target)
+    {
+        Target->Interact(GetPawn());
+    }
+}
+
+TScriptInterface<IFactoryInteractable> AFactoryPlayerController::FindBestInteractable()
+{
+    if (CurrentViewMode == EFactoryViewModeType::NormalView)
+    {
+        APawn* ControlledPawn = GetPawn();
+        if (!ControlledPawn) return nullptr;
+
+        FVector CharacterLoc = ControlledPawn->GetActorLocation();
+    
+        TArray<FOverlapResult> Overlaps;
+        FCollisionShape Sphere = FCollisionShape::MakeSphere(InteractionRange);
+    
+        // 범위 내 모든 액터 탐색
+        GetWorld()->OverlapMultiByChannel(Overlaps, CharacterLoc, FQuat::Identity, ECC_Visibility, Sphere);
+
+        TScriptInterface<IFactoryInteractable> BestTarget = nullptr;
+        float ClosestDistanceSqr = TNumericLimits<float>::Max(); // 가장 작은 거리를 찾기 위해 최댓값으로 초기화
+
+        for (auto& Result : Overlaps)
+        {
+            AActor* OverlapActor = Result.GetActor();
+            if (OverlapActor && OverlapActor->Implements<UFactoryInteractable>())
+            {
+                // 캐릭터와 타겟 사이의 거리 계산 (비교용이므로 루트 연산이 없는 Squared 버전 사용)
+                float CurrentDistSqr = FVector::DistSquared(CharacterLoc, OverlapActor->GetActorLocation());
+
+                // 현재까지 찾은 대상 중 가장 가까운지 확인
+                if (CurrentDistSqr < ClosestDistanceSqr)
+                {
+                    ClosestDistanceSqr = CurrentDistSqr;
+                    BestTarget = OverlapActor;
+                }
+            }
+        }
+        return BestTarget;
+    }
+    else
+    {
+        FHitResult HitResult;
+        if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult))
+        {
+            if (AActor* HitActor = HitResult.GetActor())
+            {
+                if (HitActor->Implements<UFactoryInteractable>())
+                {
+                    return HitActor;
+                }
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+#pragma endregion

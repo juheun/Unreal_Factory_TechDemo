@@ -13,6 +13,11 @@
 
 void UFactorySlotWidget::InitSlot(UFactoryInventoryComponent* InventoryComponent, EFactorySlotType Type, int32 Index)
 {
+	if (LinkedInventory.IsValid())
+	{
+		LinkedInventory->OnSlotUpdated.RemoveAll(this);
+	}
+	
 	LinkedInventory = InventoryComponent;
 	SlotType = Type;
 	SlotIndex = Index;
@@ -86,9 +91,13 @@ void UFactorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const
 		DragOperation->DraggedAmount = CurrentAmount;
 		
 		// 마우스 따라다닐 UI
-		DragOperation->DefaultDragVisual = this;
+		if (UFactorySlotWidget* VisualWidget = CreateWidget<UFactorySlotWidget>(GetWorld(), GetClass()))
+		{
+			VisualWidget->UpdateSlotInfo(CurrentItemData, CurrentAmount);
+			DragOperation->DefaultDragVisual = VisualWidget;
+		}
+        
 		DragOperation->Pivot = EDragPivot::MouseDown;
-		
 		OutOperation = DragOperation;
 	}
 }
