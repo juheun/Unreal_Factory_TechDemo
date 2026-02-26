@@ -3,6 +3,8 @@
 
 #include "Inventory/FactoryInventoryComponent.h"
 
+#include "Items/FactoryItemData.h"
+
 
 UFactoryInventoryComponent::UFactoryInventoryComponent()
 {
@@ -21,6 +23,75 @@ void UFactoryInventoryComponent::BeginPlay()
 void UFactoryInventoryComponent::InitializeInventory()
 {
 	InventorySlots.SetNum(MaxItemSlotCount);
+}
+
+bool UFactoryInventoryComponent::RequestTransferItem(UFactoryInventoryComponent* SourceInventory, int32 SourceSlotIndex, 
+	int32 TargetSlotIndex)
+{
+	if (!SourceInventory || !SourceInventory->InventorySlots.IsValidIndex(SourceSlotIndex)) return false;
+	if (SourceInventory == this && SourceSlotIndex == TargetSlotIndex) return false; // 같은 슬롯이면 무시
+	
+	const FFactorySlot& SourceSlot = SourceInventory->InventorySlots[SourceSlotIndex];
+	if (SourceSlot.IsEmpty()) return false;	// 옮길 아이템이 없는 경우
+	
+	const UFactoryItemData* ItemInSource = SourceSlot.ItemData;
+	const int32 AmountInSource = FMath::Min(SourceSlot.Amount, FFactorySlot::MaxCapacity);
+	
+	if (TargetSlotIndex < 0)	// 슬롯 미지정. 자동 추가
+	{
+		int32 AddedAmount = AutoAddItem(ItemInSource, AmountInSource);
+		if (AddedAmount > 0)
+		{
+			if (!SourceInventory->RemoveItemFromTargetSlot(SourceSlotIndex, AddedAmount))
+			{
+				AutoRemoveItem(ItemInSource, AddedAmount); // 롤백
+				return false;
+			}
+			return true;
+		}
+		return false;
+	}
+	
+	// 슬롯 지정. 해당 슬롯에 넣을 수 있는지 체크
+	if (!InventorySlots.IsValidIndex(TargetSlotIndex)) return false;
+	FFactorySlot& TargetSlot = InventorySlots[TargetSlotIndex];
+	if (TargetSlot.IsEmpty() || TargetSlot.ItemData == ItemInSource)	// 슬롯이 비어있거나 같은 아이템이 있는 경우
+	{
+		int32 AvailableSpace = TargetSlot.GetAvailableSpace();
+		if (AvailableSpace <= 0) return false; // 슬롯이 이미 가득 찬 경우
+		
+		int32 AmountToTransfer = FMath::Min(AmountInSource, AvailableSpace);
+		
+		if (!SourceInventory->RemoveItemFromTargetSlot(SourceSlotIndex, AmountToTransfer))
+		{
+			return false; // 원본에서 제거 실패
+		}
+		
+		int32 AddedAmount = AddItemToTargetSlot(TargetSlotIndex, ItemInSource, AmountToTransfer);
+		if (AddedAmount < AmountToTransfer)
+		{
+			// 추가 실패한 만큼 원본으로 롤백
+			SourceInventory->AddItemToTargetSlot(SourceSlotIndex, ItemInSource, AmountToTransfer - AddedAmount);
+			return false;
+		}
+		
+		return true;
+	}
+	else
+	{
+		// 다른 아이템이 있는 경우, 서로 아이템을 교환하는 로직
+		if (SourceInventory != this) return false; //	같은 인벤토리에서만 허용
+		FFactorySlot TempSlot = TargetSlot;
+        
+		TargetSlot = SourceSlot;
+		SourceInventory->InventorySlots[SourceSlotIndex] = TempSlot;
+
+		// 양쪽 UI 갱신
+		OnSlotUpdated.Broadcast(TargetSlotIndex, TargetSlot);
+		SourceInventory->OnSlotUpdated.Broadcast(SourceSlotIndex, SourceInventory->InventorySlots[SourceSlotIndex]);
+        
+		return true;
+	}
 }
 
 int32 UFactoryInventoryComponent::AddItemToTargetSlot(int32 SlotIndex, const UFactoryItemData* ItemData, int32 Amount)

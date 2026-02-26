@@ -102,7 +102,11 @@ bool UFactorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDr
 	if (!DragOperation) return false;
 	if (DragOperation->SourceSlotWidget == this) return false;	// 같은 슬롯에서 드래그 시작한 경우 무시
 	
+	UFactoryInventoryComponent* TargetInventory = LinkedInventory.Get();	// 드롭된 슬롯의 인벤토리
+	UFactoryInventoryComponent* SourceInventory = 
+		DragOperation->SourceSlotWidget->LinkedInventory.Get();	// 드래그 시작한 슬롯의 인벤토리
 	
+	if (!TargetInventory || !SourceInventory) return false;
 	
-	return true; 
+	return TargetInventory->RequestTransferItem(SourceInventory, DragOperation->SourceSlotWidget->SlotIndex, SlotIndex);
 }

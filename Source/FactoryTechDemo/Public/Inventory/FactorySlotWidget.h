@@ -46,7 +46,8 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> AmountText;
 	
-	TWeakObjectPtr<UFactoryInventoryComponent> LinkedInventory;
+	UPROPERTY()
+	TWeakObjectPtr<UFactoryInventoryComponent> LinkedInventory;	 // 이 슬롯을 들고 있는 인벤토리 컴포넌트
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FactorySlot")
 	EFactorySlotType SlotType;

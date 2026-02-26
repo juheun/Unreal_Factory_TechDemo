@@ -52,6 +52,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Identity")
 	TObjectPtr<UTexture2D> ItemICon;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Identity")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Identity")
 	EFactoryItemCategory ItemCategory = EFactoryItemCategory::Resource;
 };
