@@ -2,6 +2,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/OverlapResult.h"
+#include "Interation/FactoryInteractionWidget.h"
 #include "Interface/FactoryInteractable.h"
 #include "Inventory/FactoryInventoryWidget.h"
 #include "Inventory/FactoryInventoryComponent.h"
@@ -48,12 +49,18 @@ void AFactoryPlayerController::BeginPlay()
     }
     
     // 4. UI 초기화
-    if (IsLocalController() && InventoryWidgetBP)
+    if (IsLocalController() && InventoryWidgetBP && InteractionPromptWidgetBP)
     {
         InventoryWidget = CreateWidget<UFactoryInventoryWidget>(this, InventoryWidgetBP);
         if (InventoryWidget && InventoryComponent)
         {
             InventoryWidget->InitInventory(InventoryComponent, InventoryColumns);
+        }
+        InteractionPromptWidget = CreateWidget<UFactoryInteractionWidget>(this, InteractionPromptWidgetBP);
+        if (InteractionPromptWidget)
+        {
+            InteractionPromptWidget->AddToViewport();
+            InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
         }
     }
 }
@@ -71,6 +78,21 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
         // 물리 검사 및 시각화 업데이트
         bool bIsValid = CurrentPlacePreview->UpdateOverlapValidity();
         CurrentPlacePreview->SetVisualValidity(bIsValid);
+    }
+    
+    if (!bIsPlaceMode && !bIsInventoryOpen)
+    {
+        if (!InteractionPromptWidget) return;
+        
+        if (TScriptInterface<IFactoryInteractable> BestTarget = FindBestInteractable())
+        {
+            InteractionPromptWidget->SetInteractionText(BestTarget->GetInteractText());
+            InteractionPromptWidget->SetVisibility(ESlateVisibility::Visible);
+        }
+        else
+        {
+            InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
+        }
     }
 }
 

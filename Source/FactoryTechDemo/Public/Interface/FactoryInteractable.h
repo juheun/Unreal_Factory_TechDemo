@@ -19,6 +19,6 @@ class FACTORYTECHDEMO_API IFactoryInteractable
 	GENERATED_BODY()
 
 public:
-	// 플레이어(Interactor)가 상호작용했을 때 실행될 순수 가상 함수
-	virtual void Interact(AActor* Interactor) = 0;
+	virtual void Interact(AActor* Interactor) = 0;	// 플레이어(Interactor)가 상호작용했을 때 실행될 순수 가상 함수
+	virtual FText GetInteractText() const = 0;	// 상호작용 UI에 표시할 텍스트 반환
 };

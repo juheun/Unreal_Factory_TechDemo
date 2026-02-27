@@ -21,6 +21,7 @@ public:
 	AFactoryMachineBase();
 	
 	virtual void Interact(AActor* Interactor) override;
+	virtual FText GetInteractText() const override;
 	
 	virtual void PlanCycle() override;
 	virtual void ExecuteCycle() override;

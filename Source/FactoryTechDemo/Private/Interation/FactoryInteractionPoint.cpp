@@ -4,6 +4,7 @@
 #include "Interation/FactoryInteractionPoint.h"
 
 #include "Inventory/FactoryInventoryComponent.h"
+#include "Items/FactoryItemData.h"
 
 
 // Sets default values
@@ -26,6 +27,11 @@ void AFactoryInteractionPoint::Interact(AActor* Interactor)
 		int32 Added = Inventory->AutoAddItem(ItemToGive.Get(), AmountToGive);
 		UE_LOG(LogTemp, Log, TEXT("Added %d items"), Added);
 	}
+}
+
+FText AFactoryInteractionPoint::GetInteractText() const
+{
+	return InteractText;
 }
 
 

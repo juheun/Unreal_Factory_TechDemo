@@ -20,6 +20,7 @@ public:
 	
 	// 사용자가 액터와 상호작용할 때 호출되는 함수
 	virtual void Interact(AActor* Interactor) override;
+	virtual FText GetInteractText() const override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Factory|InteractionPoint")
@@ -30,4 +31,7 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Factory|Test")
 	int32 AmountToGive = 50;
+	
+	UPROPERTY(EditAnywhere, Category = "Factory|Test")
+	FText InteractText = FText();
 };

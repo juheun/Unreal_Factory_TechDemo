@@ -13,6 +13,7 @@ class AFactoryTopViewPawn;
 class UFactoryObjectData;
 class AFactoryPlacePreview;
 class UFactoryInventoryWidget;
+class UFactoryInteractionWidget;
 
 UENUM(BlueprintType)
 enum class EFactoryViewModeType : uint8
@@ -53,12 +54,16 @@ protected:
     // --- UI 구성 ---
     UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
     TSubclassOf<UFactoryInventoryWidget> InventoryWidgetBP;
-
     UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
     TObjectPtr<UFactoryInventoryWidget> InventoryWidget;
 
     UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
     int32 InventoryColumns = 5;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
+    TSubclassOf<UFactoryInteractionWidget> InteractionPromptWidgetBP;
+    UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+    TObjectPtr<UFactoryInteractionWidget> InteractionPromptWidget;
 
     // --- 입력 에셋 (Enhanced Input) ---
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
