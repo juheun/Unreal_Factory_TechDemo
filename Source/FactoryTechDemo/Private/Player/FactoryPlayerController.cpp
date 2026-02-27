@@ -64,8 +64,13 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
     
     if (bIsPlaceMode && CurrentPlacePreview.IsValid())
     {
+        // 프리뷰 객체 위치 이동
         FVector GhostBuildingLocation = GetPlacementObjectLocation();
         CurrentPlacePreview->SetActorLocation(GhostBuildingLocation);
+
+        // 물리 검사 및 시각화 업데이트
+        bool bIsValid = CurrentPlacePreview->UpdateOverlapValidity();
+        CurrentPlacePreview->SetVisualValidity(bIsValid);
     }
 }
 
@@ -255,10 +260,17 @@ void AFactoryPlayerController::RotatePlacementPreview()
 
 void AFactoryPlayerController::PlaceObject()
 {
-    if (CurrentPlacePreview.IsValid() && CurrentPlacePreview->GetPlacementValid() && CurrentPlacePreviewData)
+    if (CurrentPlacePreview.IsValid() && CurrentPlacePreview->UpdateOverlapValidity() && CurrentPlacePreviewData)
     {
-        FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(CurrentPlacePreviewData->PlaceObjectBP, CurrentPlacePreview->GetActorLocation(), CurrentPlacePreview->GetActorRotation(), Params);
+        FActorSpawnParameters Params; 
+        Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+        GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
+            CurrentPlacePreviewData->PlaceObjectBP, 
+            CurrentPlacePreview->GetActorLocation(), 
+            CurrentPlacePreview->GetActorRotation(), 
+            Params);
+
         SetCurrentPlacePreview(nullptr);
     }
 }

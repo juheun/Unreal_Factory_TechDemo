@@ -13,7 +13,7 @@
 AFactoryPlacePreview::AFactoryPlacePreview()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	
@@ -73,41 +73,14 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 	GridDecalComponent->DecalSize = FVector(200.f, DecalRangeX, DecalRangeY);	// 투사깊이, x, y
 }
 
-void AFactoryPlacePreview::SetPlacementValid(const bool bIsValid)
+bool AFactoryPlacePreview::UpdateOverlapValidity()
 {
-	if (bIsValid == bIsPlacementValid)
-		return;
-	
-	bIsPlacementValid = bIsValid;
-	
-	if (PreviewDynamicMaterial)
-	{
-		FLinearColor TargetColor = bIsValid ? FLinearColor::Gray : FLinearColor::Red;
-		PreviewDynamicMaterial->SetVectorParameterValue(TEXT("Color"), TargetColor);
-	}
-}
-
-// Called when the game starts or when spawned
-void AFactoryPlacePreview::BeginPlay()
-{
-	Super::BeginPlay();
-	
-}
-
-// Called every frame
-void AFactoryPlacePreview::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-	
-	// 물체 겹침 검사
 	TArray<AActor*> OverlappedActors;
 	OverlapBox->GetOverlappingActors(OverlappedActors);
-	
+    
 	bool bIsOverlapping = false;
 	for (AActor* OverlappedActor : OverlappedActors)
 	{
-		// TODO : 배치 객체 클래스를 만든 후 클래스 타입이나 콜리전채널로 검사
-		// 프리뷰 본인이나 바닥이 아닌 객체 감지시 배치 차단
 		if (OverlappedActor->ActorHasTag(TEXT("Player"))) continue;
 		if (OverlappedActor && OverlappedActor != this && !OverlappedActor->ActorHasTag(TEXT("Floor")))
 		{
@@ -115,7 +88,17 @@ void AFactoryPlacePreview::Tick(float DeltaTime)
 			break;
 		}
 	}
-	
-	SetPlacementValid(!bIsOverlapping);
+
+	bIsPlacementValid = !bIsOverlapping;
+	return bIsPlacementValid;
 }
 
+void AFactoryPlacePreview::SetVisualValidity(const bool bIsGlobalValid)
+{
+	if (PreviewDynamicMaterial)
+    {
+        // 전체 경로의 유효성에 따라 색상 변경
+        FLinearColor TargetColor = bIsGlobalValid ? FLinearColor::Gray : FLinearColor::Red;
+        PreviewDynamicMaterial->SetVectorParameterValue(TEXT("Color"), TargetColor);
+    }
+}

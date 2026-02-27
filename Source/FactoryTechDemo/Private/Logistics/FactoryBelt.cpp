@@ -6,6 +6,7 @@
 #include "Components/SplineComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Logistics/FactoryInputPortComponent.h"
+#include "Logistics/FactoryLogisticsTypes.h"
 #include "Items/FactoryItemData.h"
 #include "Items/FactoryItemVisual.h"
 #include "Settings/FactoryBuildingSettings.h"

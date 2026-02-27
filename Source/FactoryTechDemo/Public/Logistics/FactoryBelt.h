@@ -4,13 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "FactoryLogisticsObjectBase.h"
+#include "Logistics/FactoryLogisticsTypes.h"
 #include "FactoryBelt.generated.h"
 
 class USplineComponent;
 class UFactoryItemData;
-
-UENUM(BlueprintType)
-enum class EBeltType : uint8 { Straight, LeftTurn, RightTurn};
 
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryBelt : public AFactoryLogisticsObjectBase

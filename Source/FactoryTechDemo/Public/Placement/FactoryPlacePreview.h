@@ -20,16 +20,12 @@ public:
 	AFactoryPlacePreview();
 	
 	void InitPreview(const UFactoryObjectData* Data); // 데이터 에셋을 받아 메쉬, 데칼 크기 등 설정
-	bool GetPlacementValid() const { return bIsPlacementValid; }
-	const UFactoryObjectData* GetObjectData() const { return ObjectData.Get(); } 
 	
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	bool UpdateOverlapValidity();	// 현재 다른 물체와 겹쳐있는지 여부 검사
+	void SetVisualValidity(bool const bIsValid);	// 배치가능 여부에 따라 색상 변경
+	
+	bool GetPlacementValid() const { return bIsPlacementValid; }
+	const UFactoryObjectData* GetObjectData() const { return ObjectData.Get(); }
 	
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Visual")
@@ -39,10 +35,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Collision")
 	TObjectPtr<UBoxComponent> OverlapBox;
 	
-	
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> PreviewDynamicMaterial;	// 배치불가시 색상변경 위함
-	void SetPlacementValid(bool const bIsValid);	// 배치가능 여부에 따라 색상 변경
 	bool bIsPlacementValid = true;
 	
 	UPROPERTY()
