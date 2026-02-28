@@ -8,6 +8,7 @@
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Subsystems/FactoryDataSubsystem.h"
+#include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
 AFactoryMachineBase::AFactoryMachineBase()
@@ -21,6 +22,29 @@ void AFactoryMachineBase::BeginPlay()
 	Super::BeginPlay();
 	
 	InitMachine();
+}
+
+void AFactoryMachineBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	
+	UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
+	if (!WarehouseSubsystem) return;
+	
+	for (auto& InputBufferSlot : InputBufferSlots)
+	{
+		if (!InputBufferSlot.IsEmpty())
+		{
+			WarehouseSubsystem->StoreItem(
+				const_cast<UFactoryItemData*>(InputBufferSlot.ItemData.Get()), InputBufferSlot.Amount);
+		}
+	}
+	
+	if (!OutputBufferSlot.IsEmpty())
+	{
+		WarehouseSubsystem->StoreItem(
+			const_cast<UFactoryItemData*>(OutputBufferSlot.ItemData.Get()), OutputBufferSlot.Amount);
+	}
 }
 
 void AFactoryMachineBase::InitMachine()

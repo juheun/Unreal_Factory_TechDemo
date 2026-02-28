@@ -11,6 +11,7 @@
 #include "Items/FactoryItemVisual.h"
 #include "Settings/FactoryBuildingSettings.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
+#include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
 AFactoryBelt::AFactoryBelt()
@@ -21,6 +22,42 @@ AFactoryBelt::AFactoryBelt()
 	SplineComponent = CreateDefaultSubobject<USplineComponent>("SplineComponent");
 	
 	SplineComponent->SetupAttachment(RootComponent);
+}
+
+void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	
+	UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
+	if (!WarehouseSubsystem) return;
+	
+	if (CurrentItem.IsValid())
+	{
+		WarehouseSubsystem->StoreItem(
+			const_cast<UFactoryItemData*>(CurrentItem.ItemData.Get()), 1);
+		if (CurrentItem.VisualActor.Get())
+		{
+			// TODO : 풀링 시스템 구축 후 수정
+			CurrentItem.VisualActor->Destroy();
+		}
+	}
+	
+	//Pending된 아이템도 제거
+	if (LogisticsInputPortArr.IsValidIndex(0) && LogisticsInputPortArr[0])
+	{
+		FFactoryItemInstance& PendingItem = LogisticsInputPortArr[0]->PendingItem;
+		if (PendingItem.IsValid())
+		{
+			WarehouseSubsystem->StoreItem(
+				const_cast<UFactoryItemData*>(PendingItem.ItemData.Get()), 1);
+			
+			if (PendingItem.VisualActor.IsValid())
+			{
+				// TODO : 풀링 시스템 구축 후 수정
+				PendingItem.VisualActor->Destroy();
+			}
+		}
+	}
 }
 
 void AFactoryBelt::OnConstruction(const FTransform& Transform)

@@ -8,14 +8,15 @@
 #include "Inventory/FactoryInventoryComponent.h"
 #include "Player/FactoryCharacter.h"
 #include "Player/FactoryTopViewPawn.h"
-#include "Settings/FactoryBuildingSettings.h"
 #include "Placement/FactoryObjectData.h"
 #include "Placement/FactoryPlacePreview.h"
 #include "Placement/FactoryPlaceObjectBase.h"
+#include "Player/Component/FactoryPlacementComponent.h"
 
 AFactoryPlayerController::AFactoryPlayerController()
 {
     InventoryComponent = CreateDefaultSubobject<UFactoryInventoryComponent>(TEXT("InventoryComponent"));
+    PlacementComponent = CreateDefaultSubobject<UFactoryPlacementComponent>(TEXT("PlacementComponent"));
 }
 
 #pragma region 엔진 라이프 사이클
@@ -41,14 +42,9 @@ void AFactoryPlayerController::BeginPlay()
     CachedTopViewPawn = GetWorld()->SpawnActor<AFactoryTopViewPawn>(
         AFactoryTopViewPawn::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
     CachedTopViewPawn->SetActorHiddenInGame(true);
-
-    // 3. 게임 설정 로드
-    if (const UFactoryBuildingSettings* Settings = GetDefault<UFactoryBuildingSettings>())
-    {
-        GridLength = Settings->GetGridLength();
-    }
     
-    // 4. UI 초기화
+    
+    // 3. UI 초기화
     if (IsLocalController() && InventoryWidgetBP && InteractionPromptWidgetBP)
     {
         InventoryWidget = CreateWidget<UFactoryInventoryWidget>(this, InventoryWidgetBP);
@@ -69,15 +65,12 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
     
-    if (bIsPlaceMode && CurrentPlacePreview.IsValid())
+    bool bIsPlaceMode = false;
+    
+    if (PlacementComponent)
     {
-        // 프리뷰 객체 위치 이동
-        FVector GhostBuildingLocation = GetPlacementObjectLocation();
-        CurrentPlacePreview->SetActorLocation(GhostBuildingLocation);
-
-        // 물리 검사 및 시각화 업데이트
-        bool bIsValid = CurrentPlacePreview->UpdateOverlapValidity();
-        CurrentPlacePreview->SetVisualValidity(bIsValid);
+        PlacementComponent->UpdatePreviewState();
+        bIsPlaceMode = PlacementComponent->GetIsPlaceMode();
     }
     
     if (!bIsPlaceMode && !bIsInventoryOpen)
@@ -93,6 +86,10 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
         {
             InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
         }
+    }
+    else
+    {
+        InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
     }
 }
 
@@ -208,98 +205,42 @@ void AFactoryPlayerController::OnToggleViewMode()
     }, BlendTime, false);
 }
 
+
+
 #pragma endregion 
 
-#pragma region 배치 시스템 (Placement)
-
-void AFactoryPlayerController::SetCurrentPlacePreview(UFactoryObjectData* Data)
-{
-    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-    
-    if (!Data)
-    {
-        bIsPlaceMode = false;
-        if (Subsystem && PlacementContext) Subsystem->RemoveMappingContext(PlacementContext);
-        if (CurrentPlacePreview.IsValid()) { CurrentPlacePreview->Destroy(); CurrentPlacePreview = nullptr; }
-        CurrentPlacePreviewData = nullptr;
-        return;
-    }
-
-    bIsPlaceMode = true;
-    if (Subsystem && PlacementContext) Subsystem->AddMappingContext(PlacementContext, 2);
-    
-    CurrentPlacePreviewData = Data;
-    CurrentPlacePreview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
-    if (CurrentPlacePreview.IsValid()) CurrentPlacePreview->InitPreview(Data);
-}
-
-FVector AFactoryPlayerController::GetPlacementObjectLocation() const
-{
-    FHitResult HitResult;
-    bool bHit = false;
-    
-    if (CurrentViewMode == EFactoryViewModeType::NormalView)
-    {
-        FVector CameraLocation; FRotator CameraRotation;
-        GetPlayerViewPoint(CameraLocation, CameraRotation);
-        FVector TraceEnd = CameraLocation + (CameraRotation.Vector() * MaxBuildTraceDistance);
-        
-        FCollisionQueryParams Params; Params.AddIgnoredActor(GetPawn());
-        bHit = GetWorld()->LineTraceSingleByChannel(HitResult, CameraLocation, TraceEnd, ECC_GameTraceChannel1, Params);
-        
-        if (!bHit)
-        {
-            bHit = GetWorld()->LineTraceSingleByChannel(HitResult, TraceEnd, TraceEnd + (FVector::DownVector * MaxBuildTraceDistance), ECC_GameTraceChannel1, Params);
-        }
-    }
-    else
-    {
-        bHit = GetHitResultUnderCursor(ECC_GameTraceChannel1, false, HitResult);
-    }
-    
-    if (!bHit) return FVector::ZeroVector;
-    return CalculateSnappedLocation(HitResult.Location, CurrentPlacePreviewData->GridSize);
-}
-
-FVector AFactoryPlayerController::CalculateSnappedLocation(FVector InRawLocation, FIntPoint GridSize) const
-{
-    auto SnapValue = [this](float Raw, int32 Size) -> float
-    {
-        float GridStart = FMath::FloorToFloat(Raw / GridLength) * GridLength;
-        float Offset = (Size % 2 != 0) ? GridLength * 0.5f : 0.0f;
-        return GridStart + Offset;
-    };
-
-    return FVector(SnapValue(InRawLocation.X, GridSize.X), SnapValue(InRawLocation.Y, GridSize.Y), InRawLocation.Z);
-}
+#pragma region 배치 시스템 래핑
 
 void AFactoryPlayerController::RotatePlacementPreview()
 {
-    if (!CurrentPlacePreview.IsValid()) return;
-    float NextYaw = FMath::GridSnap(CurrentPlacePreview->GetActorRotation().Yaw + 90.f, 90.f);
-    CurrentPlacePreview->SetActorRotation(FRotator(0.f, FRotator::NormalizeAxis(NextYaw), 0.f));
+    if (PlacementComponent) PlacementComponent->RotatePlacementPreview();
 }
 
 void AFactoryPlayerController::PlaceObject()
 {
-    if (CurrentPlacePreview.IsValid() && CurrentPlacePreview->UpdateOverlapValidity() && CurrentPlacePreviewData)
-    {
-        FActorSpawnParameters Params; 
-        Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-        GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
-            CurrentPlacePreviewData->PlaceObjectBP, 
-            CurrentPlacePreview->GetActorLocation(), 
-            CurrentPlacePreview->GetActorRotation(), 
-            Params);
-
-        SetCurrentPlacePreview(nullptr);
-    }
+    if (PlacementComponent) PlacementComponent->PlaceObject();
+    SetPlacementMappingContext(false);
 }
 
 void AFactoryPlayerController::CancelPlaceObject()
 {
-    SetCurrentPlacePreview(nullptr);
+    if (PlacementComponent) PlacementComponent->CancelPlaceObject();
+    SetPlacementMappingContext(false);
+}
+
+void AFactoryPlayerController::SetPlacementMappingContext(bool bEnable) const
+{
+    if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+    {
+        if (bEnable)
+        {
+            Subsystem->AddMappingContext(PlacementContext, 2);
+        }
+        else
+        {
+            Subsystem->RemoveMappingContext(PlacementContext);
+        }
+    }
 }
 
 #pragma endregion 
@@ -308,10 +249,11 @@ void AFactoryPlayerController::CancelPlaceObject()
 
 void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 {
-    if (bIsPlaceMode) return;
+    if (!PlacementComponent || PlacementComponent->GetIsPlaceMode()) return;
     if (QuickSlotActionArr.IsValidIndex(SlotIndex) && QuickSlotObjectDataArr.IsValidIndex(SlotIndex) && QuickSlotObjectDataArr[SlotIndex])
     {
-        SetCurrentPlacePreview(QuickSlotObjectDataArr[SlotIndex]);
+        PlacementComponent->SetFirstPlacePreview(QuickSlotObjectDataArr[SlotIndex]);
+        SetPlacementMappingContext(true);
     }
 }
 
@@ -321,7 +263,8 @@ void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 
 void AFactoryPlayerController::OnInteract()
 {
-    if (bIsPlaceMode || bIsInventoryOpen) return;
+    if (!PlacementComponent || PlacementComponent->GetIsPlaceMode()) return;
+    if (bIsInventoryOpen) return;
     
     TScriptInterface<IFactoryInteractable> Target = FindBestInteractable();
     if (Target)

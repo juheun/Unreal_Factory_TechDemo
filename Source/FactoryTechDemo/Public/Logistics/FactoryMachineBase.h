@@ -31,6 +31,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Factory|Machine")

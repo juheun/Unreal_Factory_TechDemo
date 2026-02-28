@@ -24,6 +24,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	
 	UStaticMesh* GetStaticMesh() const {return MeshComponent->GetStaticMesh();};
+
+	TObjectPtr<const UFactoryObjectData> GetObjectData() const {return DataAsset;}
 	
 protected:
 	// Called when the game starts or when spawned

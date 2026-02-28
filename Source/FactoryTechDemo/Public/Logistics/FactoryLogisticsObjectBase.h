@@ -49,4 +49,5 @@ protected:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UFactoryInputPortComponent>> LogisticsInputPortArr;
+	
 };
