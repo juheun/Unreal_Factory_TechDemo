@@ -8,6 +8,7 @@
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Subsystems/FactoryDataSubsystem.h"
+#include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
@@ -115,17 +116,17 @@ void AFactoryMachineBase::PlanCycle()
 		
 		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort))
 		{
-			//TODO : 추후 풀링 시스템에서 가져오기
+			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+			if (!PoolSubsystem) return;
+			
 			FFactoryItemInstance NewInstance(OutputBufferSlot.ItemData);
-			
-			// 현재 내 Output 포트 위치에 스폰
-			FVector SpawnLocation = LogisticsOutputPortArr[index]->GetComponentLocation(); 
-			NewInstance.VisualActor = GetWorld()->SpawnActor<AFactoryItemVisual>(AFactoryItemVisual::StaticClass(), SpawnLocation, FRotator::ZeroRotator);
-			
-			// 시각적 업데이트
-			if (AFactoryItemVisual* ItemVisual = NewInstance.VisualActor.Get())
+			FVector SpawnLocation = LogisticsOutputPortArr[index]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
+			FRotator SpawnRotation = LogisticsOutputPortArr[index]->GetComponentRotation();
+			AFactoryItemVisual* ItemVisual = PoolSubsystem->GetItemVisualFromPool(
+				OutputBufferSlot.ItemData, SpawnLocation, SpawnRotation);
+			if (ItemVisual)
 			{
-				ItemVisual->UpdateVisual(OutputBufferSlot.ItemData);
+				NewInstance.VisualActor = ItemVisual;
 			}
 
 			// 완성된 인스턴스를 상대방 포트에 전달
@@ -159,12 +160,10 @@ void AFactoryMachineBase::ExecuteCycle()
 			{
 				if (AFactoryItemVisual* VisualActor = LogisticsInputPortArr[index]->PendingItem.VisualActor.Get())
 				{
-					VisualActor->Destroy();
-                 
-					// TODO: 추후 오브젝트 풀링 시스템 도입 후 제거가 아닌 비활성화로 변경
-					// VisualActor->SetActorHiddenInGame(true);
-					// VisualActor->SetActorTickEnabled(false);
-					// ReturnToPool(VisualActor);
+					UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+					if (!PoolSubsystem) return;
+					
+					PoolSubsystem->ReturnItemVisualToPool(VisualActor);
 				}
 				LogisticsInputPortArr[index]->PendingItem = FFactoryItemInstance();
 				InputPortIndex = (index + 1) % MaxPorts;

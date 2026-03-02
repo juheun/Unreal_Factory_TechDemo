@@ -3,7 +3,7 @@
 
 #include "Placement/FactoryPlacePreview.h"
 
-#include "Settings/FactoryBuildingSettings.h"
+#include "Settings/FactoryDeveloperSettings.h"
 #include "Placement/FactoryObjectData.h"
 #include "Placement/FactoryPlaceObjectBase.h"
 #include "Components/BoxComponent.h"
@@ -51,15 +51,15 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 		MeshComponent->SetStaticMesh(PlaceObjectBase->GetStaticMesh());
 	}
 	
-	const UFactoryBuildingSettings* BuildingSettings = GetDefault<UFactoryBuildingSettings>();
-	if (!BuildingSettings) return;
+	const UFactoryDeveloperSettings* DeveloperSettings = GetDefault<UFactoryDeveloperSettings>();
+	if (!DeveloperSettings) return;
 	
-	UMaterialInterface* PreviewMaterial = BuildingSettings->GetPlacePreviewMaterial();
+	UMaterialInterface* PreviewMaterial = DeveloperSettings->GetPlacePreviewMaterial();
 	
 	MeshComponent->SetMaterial(0, PreviewMaterial);
 	PreviewDynamicMaterial = MeshComponent->CreateDynamicMaterialInstance(0);
 	
-	float GridLength = BuildingSettings->GetGridLength();
+	float GridLength = DeveloperSettings->GetGridLength();
 	
 	float BoxX = Data->GridSize.X * GridLength * 0.5f - 1.f;	// 바로 옆 그리드와 붙는것 방지하기 위해 1 빼줌
 	float BoxY = Data->GridSize.Y * GridLength * 0.5f - 1.f;

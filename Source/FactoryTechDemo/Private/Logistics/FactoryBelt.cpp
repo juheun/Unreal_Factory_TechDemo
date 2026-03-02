@@ -9,8 +9,9 @@
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "Items/FactoryItemData.h"
 #include "Items/FactoryItemVisual.h"
-#include "Settings/FactoryBuildingSettings.h"
+#include "Settings/FactoryDeveloperSettings.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
+#include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
@@ -31,14 +32,16 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 	if (!WarehouseSubsystem) return;
 	
+	UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+	if (!PoolSubsystem) return;
+	
 	if (CurrentItem.IsValid())
 	{
 		WarehouseSubsystem->StoreItem(
 			const_cast<UFactoryItemData*>(CurrentItem.ItemData.Get()), 1);
 		if (CurrentItem.VisualActor.Get())
 		{
-			// TODO : 풀링 시스템 구축 후 수정
-			CurrentItem.VisualActor->Destroy();
+			PoolSubsystem->ReturnItemVisualToPool(CurrentItem.VisualActor.Get()); 
 		}
 	}
 	
@@ -53,8 +56,7 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			
 			if (PendingItem.VisualActor.IsValid())
 			{
-				// TODO : 풀링 시스템 구축 후 수정
-				PendingItem.VisualActor->Destroy();
+				PoolSubsystem->ReturnItemVisualToPool(PendingItem.VisualActor.Get()); 
 			}
 		}
 	}
@@ -141,7 +143,7 @@ void AFactoryBelt::UpdateSplinePath(EBeltType Type)
 	if (!SplineComponent) return;
 	SplineComponent->ClearSplinePoints(true);
 	
-	float GridLength = GetDefault<UFactoryBuildingSettings>()->GetGridLength();
+	float GridLength = GetDefault<UFactoryDeveloperSettings>()->GetGridLength();
 	float HalfGridLength = GridLength * 0.5f;
 	float CurveStrength = HalfGridLength; // 곡률의 부드러움 결정 (보통 변의 길이의 절반 정도)
 	

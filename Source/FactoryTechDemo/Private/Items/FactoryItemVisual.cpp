@@ -18,27 +18,7 @@ AFactoryItemVisual::AFactoryItemVisual()
 
 void AFactoryItemVisual::UpdateVisual(const UFactoryItemData* ItemData)
 {
-	if (!GetWorld() || !GetWorld()->IsGameWorld()) return;
-	if (!ItemData || !ItemData->ItemICon) return;
-	
-	// TODO : 풀링 서브시스템 구축 후 삭제
-	if (MeshComponent && !MeshComponent->GetStaticMesh())
-	{
-		FString MeshPath = FString::Printf(TEXT("/Game/ItemData/SM_ItemBox"));
-        
-		UStaticMesh* LoadedMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *MeshPath));
-        
-		if (LoadedMesh)
-		{
-			MeshComponent->SetStaticMesh(LoadedMesh);
-		}
-		else
-		{
-			// 못 찾았을 때 기본 큐브라도 로드 (경로는 /Engine/...)
-			UStaticMesh* CubeMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, TEXT("/Engine/BasicShapes/Cube")));
-			MeshComponent->SetStaticMesh(CubeMesh);
-		}
-	}
+	if (!ItemData || !ItemData->ItemICon || !MeshComponent) return;
 	
 	if (!DynamicMaterial)
 	{

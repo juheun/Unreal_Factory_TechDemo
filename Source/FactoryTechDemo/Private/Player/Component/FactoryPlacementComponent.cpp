@@ -9,7 +9,7 @@
 #include "Placement/FactoryPlaceObjectBase.h"
 #include "Placement/FactoryPlacePreview.h"
 #include "Player/FactoryPlayerController.h"
-#include "Settings/FactoryBuildingSettings.h"
+#include "Settings/FactoryDeveloperSettings.h"
 
 
 UFactoryPlacementComponent::UFactoryPlacementComponent()
@@ -21,7 +21,7 @@ void UFactoryPlacementComponent::BeginPlay()
 {
 	Super::BeginPlay();
     
-    if (const UFactoryBuildingSettings* Settings = GetDefault<UFactoryBuildingSettings>())
+    if (const UFactoryDeveloperSettings* Settings = GetDefault<UFactoryDeveloperSettings>())
     {
         GridLength = Settings->GetGridLength();
     }

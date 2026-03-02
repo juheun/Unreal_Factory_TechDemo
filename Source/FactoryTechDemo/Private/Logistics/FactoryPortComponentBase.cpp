@@ -1,7 +1,7 @@
 ﻿#include "Logistics/FactoryPortComponentBase.h"
 
 #include "Logistics/FactoryLogisticsObjectBase.h"
-#include "Settings/FactoryBuildingSettings.h"
+#include "Settings/FactoryDeveloperSettings.h"
 
 UFactoryPortComponentBase::UFactoryPortComponentBase()
 {
@@ -51,7 +51,7 @@ void UFactoryPortComponentBase::ScanForConnection(FVector Direction, TSubclassOf
 {
 	if (ConnectedPort.Get()) return; // 이미 연결됐으면 스캔 X
 
-	float GridSize = GetDefault<UFactoryBuildingSettings>()->GetGridLength();
+	float GridSize = GetDefault<UFactoryDeveloperSettings>()->GetGridLength();
 	FVector Start = GetComponentLocation();
 	FVector End = Start + (Direction * GridSize * 0.6f);
 

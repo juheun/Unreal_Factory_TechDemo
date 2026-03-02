@@ -6,6 +6,7 @@
 #include "Items/FactoryItemVisual.h"
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
+#include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
@@ -28,15 +29,19 @@ void AFactoryWarehouseExporter::PlanCycle()
 		UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 		if (WarehouseSubsystem && WarehouseSubsystem->TryConsumeItem(ItemData, 1))
 		{
+			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+			if (!PoolSubsystem) return;
+			
 			FFactoryItemInstance NewInstance(ItemData);
-			//TODO : 추후 풀링 시스템에서 가져오기
 			FVector SpawnLocation = TargetPort->GetComponentLocation(); // 일단 포트 위치에 스폰
-			NewInstance.VisualActor = GetWorld()->SpawnActor<AFactoryItemVisual>(AFactoryItemVisual::StaticClass(), SpawnLocation, FRotator::ZeroRotator);
-			if (AFactoryItemVisual* ItemVisual = NewInstance.VisualActor.Get())
+			FRotator SpawnRotation = TargetPort->GetComponentRotation();
+			AFactoryItemVisual* ItemVisual = 
+				PoolSubsystem->GetItemVisualFromPool(ItemData, SpawnLocation, SpawnRotation);
+			if (ItemVisual)
 			{
-				ItemVisual->UpdateVisual(ItemData);
+				NewInstance.VisualActor = ItemVisual;
+				TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
 			}
-			TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
 		}
 	}
 }
