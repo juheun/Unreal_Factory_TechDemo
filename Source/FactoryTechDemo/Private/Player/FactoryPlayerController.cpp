@@ -1,22 +1,20 @@
 #include "Player/FactoryPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "Engine/OverlapResult.h"
-#include "Interation/FactoryInteractionWidget.h"
-#include "Interface/FactoryInteractable.h"
 #include "Inventory/FactoryInventoryWidget.h"
 #include "Inventory/FactoryInventoryComponent.h"
 #include "Player/FactoryCharacter.h"
 #include "Player/FactoryTopViewPawn.h"
-#include "Placement/FactoryObjectData.h"
-#include "Placement/FactoryPlacePreview.h"
-#include "Placement/FactoryPlaceObjectBase.h"
+#include "Player/Component/FactoryInteractionComponent.h"
 #include "Player/Component/FactoryPlacementComponent.h"
+#include "Player/Component/FactoryQuickSlotComponent.h"
 
 AFactoryPlayerController::AFactoryPlayerController()
 {
     InventoryComponent = CreateDefaultSubobject<UFactoryInventoryComponent>(TEXT("InventoryComponent"));
     PlacementComponent = CreateDefaultSubobject<UFactoryPlacementComponent>(TEXT("PlacementComponent"));
+    InteractionComponent = CreateDefaultSubobject<UFactoryInteractionComponent>(TEXT("InteractionComponent"));
+    QuickSlotComponent = CreateDefaultSubobject<UFactoryQuickSlotComponent>(TEXT("QuickSlotComponent"));
 }
 
 #pragma region 엔진 라이프 사이클
@@ -43,20 +41,13 @@ void AFactoryPlayerController::BeginPlay()
         AFactoryTopViewPawn::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
     CachedTopViewPawn->SetActorHiddenInGame(true);
     
-    
     // 3. UI 초기화
-    if (IsLocalController() && InventoryWidgetBP && InteractionPromptWidgetBP)
+    if (IsLocalController() && InventoryWidgetBP)
     {
         InventoryWidget = CreateWidget<UFactoryInventoryWidget>(this, InventoryWidgetBP);
         if (InventoryWidget && InventoryComponent)
         {
             InventoryWidget->InitInventory(InventoryComponent, InventoryColumns);
-        }
-        InteractionPromptWidget = CreateWidget<UFactoryInteractionWidget>(this, InteractionPromptWidgetBP);
-        if (InteractionPromptWidget)
-        {
-            InteractionPromptWidget->AddToViewport();
-            InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
         }
     }
 }
@@ -73,23 +64,9 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
         bIsPlaceMode = PlacementComponent->GetIsPlaceMode();
     }
     
-    if (!bIsPlaceMode && !bIsInventoryOpen)
+    if (InteractionComponent)
     {
-        if (!InteractionPromptWidget) return;
-        
-        if (TScriptInterface<IFactoryInteractable> BestTarget = FindBestInteractable())
-        {
-            InteractionPromptWidget->SetInteractionText(BestTarget->GetInteractText());
-            InteractionPromptWidget->SetVisibility(ESlateVisibility::Visible);
-        }
-        else
-        {
-            InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
-        }
-    }
-    else
-    {
-        InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
+        InteractionComponent->UpdateInteraction(CurrentViewMode, bIsPlaceMode, bIsInventoryOpen);
     }
 }
 
@@ -209,7 +186,7 @@ void AFactoryPlayerController::OnToggleViewMode()
 
 #pragma endregion 
 
-#pragma region 배치 시스템 래핑
+#pragma region 배치 명령 래핑
 
 void AFactoryPlayerController::RotatePlacementPreview()
 {
@@ -245,86 +222,35 @@ void AFactoryPlayerController::SetPlacementMappingContext(bool bEnable) const
 
 #pragma endregion 
 
-#pragma region 퀵슬롯 시스템
+#pragma region 퀵슬롯 명령 래핑
 
 void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 {
     if (!PlacementComponent || PlacementComponent->GetIsPlaceMode()) return;
-    if (QuickSlotActionArr.IsValidIndex(SlotIndex) && QuickSlotObjectDataArr.IsValidIndex(SlotIndex) && QuickSlotObjectDataArr[SlotIndex])
+    if (QuickSlotComponent)
     {
-        PlacementComponent->SetFirstPlacePreview(QuickSlotObjectDataArr[SlotIndex]);
-        SetPlacementMappingContext(true);
+        UFactoryObjectData* QuickSlotData = QuickSlotComponent->GetQuickSlotData(SlotIndex);
+        if (QuickSlotData)
+        {
+            PlacementComponent->SetFirstPlacePreview(QuickSlotData);
+            SetPlacementMappingContext(true);
+        }
     }
 }
 
 #pragma endregion 
 
-#pragma region 상호작용 시스템
+#pragma region 상호작용 명령 래핑
 
 void AFactoryPlayerController::OnInteract()
 {
     if (!PlacementComponent || PlacementComponent->GetIsPlaceMode()) return;
     if (bIsInventoryOpen) return;
     
-    TScriptInterface<IFactoryInteractable> Target = FindBestInteractable();
-    if (Target)
+    if (InteractionComponent)
     {
-        Target->Interact(GetPawn());
+        InteractionComponent->PerformInteraction(GetPawn(), CurrentViewMode);
     }
-}
-
-TScriptInterface<IFactoryInteractable> AFactoryPlayerController::FindBestInteractable()
-{
-    if (CurrentViewMode == EFactoryViewModeType::NormalView)
-    {
-        APawn* ControlledPawn = GetPawn();
-        if (!ControlledPawn) return nullptr;
-
-        FVector CharacterLoc = ControlledPawn->GetActorLocation();
-    
-        TArray<FOverlapResult> Overlaps;
-        FCollisionShape Sphere = FCollisionShape::MakeSphere(InteractionRange);
-    
-        // 범위 내 모든 액터 탐색
-        GetWorld()->OverlapMultiByChannel(Overlaps, CharacterLoc, FQuat::Identity, ECC_Visibility, Sphere);
-
-        TScriptInterface<IFactoryInteractable> BestTarget = nullptr;
-        float ClosestDistanceSqr = TNumericLimits<float>::Max(); // 가장 작은 거리를 찾기 위해 최댓값으로 초기화
-
-        for (auto& Result : Overlaps)
-        {
-            AActor* OverlapActor = Result.GetActor();
-            if (OverlapActor && OverlapActor->Implements<UFactoryInteractable>())
-            {
-                // 캐릭터와 타겟 사이의 거리 계산 (비교용이므로 루트 연산이 없는 Squared 버전 사용)
-                float CurrentDistSqr = FVector::DistSquared(CharacterLoc, OverlapActor->GetActorLocation());
-
-                // 현재까지 찾은 대상 중 가장 가까운지 확인
-                if (CurrentDistSqr < ClosestDistanceSqr)
-                {
-                    ClosestDistanceSqr = CurrentDistSqr;
-                    BestTarget = OverlapActor;
-                }
-            }
-        }
-        return BestTarget;
-    }
-    else
-    {
-        FHitResult HitResult;
-        if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult))
-        {
-            if (AActor* HitActor = HitResult.GetActor())
-            {
-                if (HitActor->Implements<UFactoryInteractable>())
-                {
-                    return HitActor;
-                }
-            }
-        }
-    }
-
-    return nullptr;
 }
 
 #pragma endregion

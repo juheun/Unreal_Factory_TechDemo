@@ -4,6 +4,8 @@
 #include "GameFramework/PlayerController.h"
 #include "FactoryPlayerController.generated.h"
 
+class UFactoryQuickSlotComponent;
+class UFactoryInteractionComponent;
 class IFactoryInteractable;
 class UFactoryInventoryComponent;
 class UFactoryPlacementComponent;
@@ -61,11 +63,6 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
     int32 InventoryColumns = 5;
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
-    TSubclassOf<UFactoryInteractionWidget> InteractionPromptWidgetBP;
-    UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
-    TObjectPtr<UFactoryInteractionWidget> InteractionPromptWidget;
 
     // --- 입력 에셋 (Enhanced Input) ---
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> DefaultMappingContext;
@@ -89,9 +86,10 @@ protected:
     TObjectPtr<UFactoryInventoryComponent> InventoryComponent;
     UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
     TObjectPtr<UFactoryPlacementComponent> PlacementComponent;
-
-    UPROPERTY(EditAnywhere, Category = "Factory|Data")
-    TArray<TObjectPtr<UFactoryObjectData>> QuickSlotObjectDataArr;
+    UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
+    TObjectPtr<UFactoryInteractionComponent> InteractionComponent;
+    UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
+    TObjectPtr<UFactoryQuickSlotComponent> QuickSlotComponent;
 
     UPROPERTY()
     TWeakObjectPtr<AFactoryCharacter> CachedNormalViewCharacter;
@@ -111,9 +109,6 @@ protected:
     // 퀵슬롯 시스템
     void ExecuteQuickSlotAction(int32 SlotIndex);
     
-    // 상호작용 시스템
+    // 상호작용 명령 래핑
     void OnInteract();
-    TScriptInterface<IFactoryInteractable> FindBestInteractable();
-    UPROPERTY(EditAnywhere, Category = "Factory|Interation")
-    float InteractionRange = 300.f;
 };
