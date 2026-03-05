@@ -18,7 +18,7 @@ struct FBeltPlacementData
 	GENERATED_BODY()
 
 	UPROPERTY()
-	FIntPoint GridLocation; // 그리드 좌표 (X, Y)
+	FIntPoint GridPoint; // 그리드 좌표 (X, Y)
 
 	UPROPERTY()
 	FRotator Rotation; // 배치될 회전값
@@ -27,5 +27,5 @@ struct FBeltPlacementData
 	EBeltType Type; // 직선/곡선 여부
 
 	FBeltPlacementData() 
-		: GridLocation(FIntPoint::ZeroValue), Rotation(FRotator::ZeroRotator), Type(EBeltType::Straight) {}
+		: GridPoint(FIntPoint::ZeroValue), Rotation(FRotator::ZeroRotator), Type(EBeltType::Straight) {}
 };

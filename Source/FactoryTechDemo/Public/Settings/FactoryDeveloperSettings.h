@@ -12,7 +12,7 @@ UENUM(BlueprintType)
 enum class EFactoryPoolType : uint8
 {
 	ItemVisual,
-	Belt,
+	BeltPreview,
 };
 
 UCLASS(Config = Game, DefaultConfig, meta=(DisplayName = "Factory Developer Settings"))

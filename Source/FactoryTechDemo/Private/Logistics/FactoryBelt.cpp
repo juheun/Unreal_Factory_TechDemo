@@ -66,7 +66,7 @@ void AFactoryBelt::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 	
-	UpdateSplinePath(BeltType);
+	SetBeltType(BeltType);
 }
 
 void AFactoryBelt::PlanCycle()
@@ -132,6 +132,13 @@ bool AFactoryBelt::CanPushItemFromBeforeObject(const UFactoryInputPortComponent*
 	return !PendingItem && !CurrentItem.ItemData;
 }
 
+void AFactoryBelt::SetBeltType(EBeltType Type)
+{
+	BeltType = Type;
+	UpdateSplinePath(Type);
+	UpdateBeltVisual(Type);
+}
+
 bool AFactoryBelt::PullItemFromInputPorts(FFactoryItemInstance& Item)
 {
 	CurrentItem = Item;
@@ -172,6 +179,19 @@ void AFactoryBelt::UpdateSplinePath(EBeltType Type)
 		EndTangent = FVector(0.0f, CurveStrength * 2.0f, 0.0f);
 		break;
 	}
+	
+	if (LogisticsOutputPortArr.IsValidIndex(0) && LogisticsOutputPortArr[0])
+	{
+		// 타입에 따른 포트 위치,회전값 설정
+		FVector OutPutPort = EndPos;
+		OutPutPort.Z = BeltHeight * 0.5f;
+		LogisticsOutputPortArr[0]->SetRelativeLocation(OutPutPort);
+		float TargetYaw = 0.f;
+		if (Type == EBeltType::LeftTurn) TargetYaw = -90.f;
+		else if (Type == EBeltType::RightTurn) TargetYaw = 90.f;
+		
+		LogisticsOutputPortArr[0]->SetRelativeRotation(FRotator(0, TargetYaw, 0));
+	}
 
 	// 스플라인 포인트 추가 (로컬 좌표계 기준)
 	SplineComponent->AddSplinePoint(StartPos, ESplineCoordinateSpace::Local, true);
@@ -188,6 +208,17 @@ void AFactoryBelt::UpdateSplinePath(EBeltType Type)
 	SplineComponent->bSplineHasBeenEdited = true;
 	
 	TotalSpineLength = SplineComponent->GetSplineLength();
+}
+
+void AFactoryBelt::UpdateBeltVisual(EBeltType Type)
+{
+	if (!MeshComponent) return;
+	TObjectPtr<UStaticMesh>* FoundMesh = BeltMeshMap.Find(Type);
+	
+	if (FoundMesh && *FoundMesh)
+	{
+		MeshComponent->SetStaticMesh(BeltMeshMap[Type]);
+	}
 }
 
 void AFactoryBelt::SetSpineDistance(float Alpha)

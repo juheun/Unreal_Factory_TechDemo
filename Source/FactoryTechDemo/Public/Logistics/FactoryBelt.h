@@ -28,18 +28,24 @@ public:
 	
 	virtual bool CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const override;
 	
+	void SetBeltType(EBeltType Type);
+	
 protected:
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Factory|Movement")
 	EBeltType BeltType;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
+	UPROPERTY(EditDefaultsOnly, Category = "Factory|Movement")
+	TMap<EBeltType, TObjectPtr<UStaticMesh>> BeltMeshMap;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Factory|Movement")
 	TObjectPtr<USplineComponent> SplineComponent;
 	
 	UPROPERTY()
 	FFactoryItemInstance CurrentItem;
 	
 	void UpdateSplinePath(EBeltType Type);
+	void UpdateBeltVisual(EBeltType Type);
 	void SetSpineDistance(float Alpha);
 	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
 	virtual void OnConstruction(const FTransform& Transform) override;

@@ -21,6 +21,7 @@ AFactoryPlacePreview::AFactoryPlacePreview()
 	MeshComponent->SetupAttachment(RootComponent);
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	MeshComponent->SetReceivesDecals(false);
+	MeshComponent->SetForceDisableNanite(true);
 	
 	GridDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("GridDecal"));
 	GridDecalComponent->SetupAttachment(RootComponent);

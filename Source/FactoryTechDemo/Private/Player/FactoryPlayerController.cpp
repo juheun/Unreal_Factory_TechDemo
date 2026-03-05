@@ -61,7 +61,7 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
     if (PlacementComponent)
     {
         PlacementComponent->UpdatePreviewState();
-        bIsPlaceMode = PlacementComponent->GetIsPlaceMode();
+        bIsPlaceMode = PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::None;
     }
     
     if (InteractionComponent)
@@ -81,6 +81,7 @@ void AFactoryPlayerController::SetupInputComponent()
         EnhancedInputComponent->BindAction(PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::PlaceObject);
         EnhancedInputComponent->BindAction(PlaceObjectCancelAction, ETriggerEvent::Started, this, &AFactoryPlayerController::CancelPlaceObject);
         EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleInventoryWidget);
+        EnhancedInputComponent->BindAction(ToggleBeltPlaceModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleBeltPlaceMode);
         EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnInteract);
 
         for (int i = 0; i < QuickSlotActionArr.Num(); i++)
@@ -182,11 +183,18 @@ void AFactoryPlayerController::OnToggleViewMode()
     }, BlendTime, false);
 }
 
-
-
 #pragma endregion 
 
 #pragma region 배치 명령 래핑
+
+void AFactoryPlayerController::ToggleBeltPlaceMode()
+{
+    if (PlacementComponent)
+    {
+        bool bIsBeltPlaceMode = PlacementComponent->ToggleBeltPlaceMode();
+        SetPlacementMappingContext(bIsBeltPlaceMode);
+    }
+}
 
 void AFactoryPlayerController::RotatePlacementPreview()
 {
@@ -195,8 +203,11 @@ void AFactoryPlayerController::RotatePlacementPreview()
 
 void AFactoryPlayerController::PlaceObject()
 {
-    if (PlacementComponent) PlacementComponent->PlaceObject();
-    SetPlacementMappingContext(false);
+    if (PlacementComponent) PlacementComponent->ProcessPlacementAction();
+    if (PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::BeltPlace)
+    {
+        SetPlacementMappingContext(false);
+    }
 }
 
 void AFactoryPlayerController::CancelPlaceObject()
@@ -226,13 +237,13 @@ void AFactoryPlayerController::SetPlacementMappingContext(bool bEnable) const
 
 void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 {
-    if (!PlacementComponent || PlacementComponent->GetIsPlaceMode()) return;
+    if (!PlacementComponent || PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::None) return;
     if (QuickSlotComponent)
     {
         UFactoryObjectData* QuickSlotData = QuickSlotComponent->GetQuickSlotData(SlotIndex);
         if (QuickSlotData)
         {
-            PlacementComponent->SetFirstPlacePreview(QuickSlotData);
+            PlacementComponent->SetPlaceFromDataPreview(QuickSlotData);
             SetPlacementMappingContext(true);
         }
     }
@@ -244,7 +255,7 @@ void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 
 void AFactoryPlayerController::OnInteract()
 {
-    if (!PlacementComponent || PlacementComponent->GetIsPlaceMode()) return;
+    if (!PlacementComponent || PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::None) return;
     if (bIsInventoryOpen) return;
     
     if (InteractionComponent)

@@ -75,6 +75,7 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> PlaceObjectAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> PlaceObjectCancelAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleInventoryAction;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleBeltPlaceModeAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> InteractAction;
 
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
@@ -101,6 +102,7 @@ protected:
     void OnToggleViewMode();
 
     // 배치 명령 래핑
+    void ToggleBeltPlaceMode();
     void RotatePlacementPreview();
     void PlaceObject();
     void CancelPlaceObject();

@@ -8,7 +8,9 @@ void UFactoryPoolSubsystem::ReturnItemToPool(AActor* Actor)
 {
 	if (!Actor) return;
 	
+	Actor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 	Actor->SetActorHiddenInGame(true);
+	Actor->SetActorEnableCollision(false);
 	PoolMap.FindOrAdd(Actor->GetClass()).InactiveItems.Push(Actor);
 }
 
