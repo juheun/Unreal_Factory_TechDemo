@@ -7,9 +7,14 @@
 #include "FactoryDeveloperSettings.generated.h"
 
 class AFactoryItemVisual;
-/**
- * 
- */
+
+UENUM(BlueprintType)
+enum class EFactoryPoolType : uint8
+{
+	ItemVisual,
+	Belt,
+};
+
 UCLASS(Config = Game, DefaultConfig, meta=(DisplayName = "Factory Developer Settings"))
 class FACTORYTECHDEMO_API UFactoryDeveloperSettings : public UDeveloperSettings
 {
@@ -20,7 +25,10 @@ public:
 	
 	UMaterialInterface* GetPlacePreviewMaterial() const {return PreviewObjectMaterial.LoadSynchronous();};
 	
-	TSubclassOf<AFactoryItemVisual> GetItemVisualBP() const {return ItemVisualBP; }
+	TSubclassOf<AActor> GetPoolClass(EFactoryPoolType PoolType) const
+	{
+		return PoolClassMap.Contains(PoolType) ? PoolClassMap[PoolType] : nullptr;
+	}
 	
 	float GetGridLength() const {return GridLength;}
 
@@ -29,7 +37,7 @@ private:
 	TSoftObjectPtr<UMaterialInterface> PreviewObjectMaterial;
 	
 	UPROPERTY(Config, EditAnywhere, Category="Pooling")
-	TSubclassOf<AFactoryItemVisual> ItemVisualBP;
+	TMap<EFactoryPoolType, TSubclassOf<AActor>> PoolClassMap;
 	
 	UPROPERTY(Config, EditAnywhere, Category="Grid")
 	float GridLength = 100.f;

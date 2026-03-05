@@ -122,8 +122,9 @@ void AFactoryMachineBase::PlanCycle()
 			FFactoryItemInstance NewInstance(OutputBufferSlot.ItemData);
 			FVector SpawnLocation = LogisticsOutputPortArr[index]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
 			FRotator SpawnRotation = LogisticsOutputPortArr[index]->GetComponentRotation();
-			AFactoryItemVisual* ItemVisual = PoolSubsystem->GetItemVisualFromPool(
-				OutputBufferSlot.ItemData, SpawnLocation, SpawnRotation);
+			AFactoryItemVisual* ItemVisual = PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(
+				EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
+			ItemVisual->UpdateVisual(OutputBufferSlot.ItemData);
 			if (ItemVisual)
 			{
 				NewInstance.VisualActor = ItemVisual;
@@ -163,7 +164,7 @@ void AFactoryMachineBase::ExecuteCycle()
 					UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
 					if (!PoolSubsystem) return;
 					
-					PoolSubsystem->ReturnItemVisualToPool(VisualActor);
+					PoolSubsystem->ReturnItemToPool(VisualActor);
 				}
 				LogisticsInputPortArr[index]->PendingItem = FFactoryItemInstance();
 				InputPortIndex = (index + 1) % MaxPorts;

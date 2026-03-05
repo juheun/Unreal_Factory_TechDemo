@@ -41,7 +41,7 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			const_cast<UFactoryItemData*>(CurrentItem.ItemData.Get()), 1);
 		if (CurrentItem.VisualActor.Get())
 		{
-			PoolSubsystem->ReturnItemVisualToPool(CurrentItem.VisualActor.Get()); 
+			PoolSubsystem->ReturnItemToPool(CurrentItem.VisualActor.Get()); 
 		}
 	}
 	
@@ -56,7 +56,7 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			
 			if (PendingItem.VisualActor.IsValid())
 			{
-				PoolSubsystem->ReturnItemVisualToPool(PendingItem.VisualActor.Get()); 
+				PoolSubsystem->ReturnItemToPool(PendingItem.VisualActor.Get()); 
 			}
 		}
 	}

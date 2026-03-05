@@ -3,49 +3,34 @@
 
 #include "Subsystems/FactoryPoolSubsystem.h"
 
-#include "Items/FactoryItemVisual.h"
-#include "Settings/FactoryDeveloperSettings.h"
 
-AFactoryItemVisual* UFactoryPoolSubsystem::GetItemVisualFromPool(
-	const UFactoryItemData* ItemData, const FVector& Location, const FRotator& Rotation)
+void UFactoryPoolSubsystem::ReturnItemToPool(AActor* Actor)
 {
-	AFactoryItemVisual* ItemVisual;
-	if (InactiveItemVisuals.Num() > 0)
+	if (!Actor) return;
+	
+	Actor->SetActorHiddenInGame(true);
+	PoolMap.FindOrAdd(Actor->GetClass()).InactiveItems.Push(Actor);
+}
+
+AActor* UFactoryPoolSubsystem::Internal_GetItem(TSubclassOf<AActor> ClassType, const FVector& Location, const FRotator& Rotation)
+{
+	FFactoryPoolStack& ItemStack = PoolMap.FindOrAdd(ClassType);
+	AActor* Actor = nullptr;
+	
+	if (ItemStack.InactiveItems.Num() > 0)
 	{
-		ItemVisual = InactiveItemVisuals.Pop();
+		Actor = ItemStack.InactiveItems.Pop();
 	}
 	else
 	{
-		const UFactoryDeveloperSettings* DeveloperSettings = GetDefault<UFactoryDeveloperSettings>();
-		TSubclassOf<AFactoryItemVisual> VisualBP = DeveloperSettings->GetItemVisualBP();
-		if (VisualBP)
-		{
-			ItemVisual = GetWorld()->SpawnActor<AFactoryItemVisual>(
-				VisualBP, Location, Rotation);
-			
-			if (!ItemVisual)
-			{
-				UE_LOG(LogTemp, Error, TEXT("Factory Item Visual Creation Failed"));
-				return nullptr;
-			}
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("Factory Item Visual Creation Failed"));
-			return nullptr;
-		}
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Actor = GetWorld()->SpawnActor<AActor>(ClassType, Location, Rotation, SpawnParams);
 	}
-	ItemVisual->SetActorLocationAndRotation(Location, Rotation);
-	ItemVisual->UpdateVisual(ItemData);
-	ItemVisual->SetActorHiddenInGame(false);
 	
-	return ItemVisual;
-}
-
-void UFactoryPoolSubsystem::ReturnItemVisualToPool(AFactoryItemVisual* ItemVisual)
-{
-	if (!ItemVisual) return;
+	if (!Actor) return nullptr;
 	
-	ItemVisual->SetActorHiddenInGame(true);
-	InactiveItemVisuals.Push(ItemVisual);
+	Actor->SetActorLocationAndRotation(Location, Rotation);
+	Actor->SetActorHiddenInGame(false);
+	return Actor;
 }

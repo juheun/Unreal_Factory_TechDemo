@@ -36,7 +36,8 @@ void AFactoryWarehouseExporter::PlanCycle()
 			FVector SpawnLocation = TargetPort->GetComponentLocation(); // 일단 포트 위치에 스폰
 			FRotator SpawnRotation = TargetPort->GetComponentRotation();
 			AFactoryItemVisual* ItemVisual = 
-				PoolSubsystem->GetItemVisualFromPool(ItemData, SpawnLocation, SpawnRotation);
+				PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
+			ItemVisual->UpdateVisual(ItemData);
 			if (ItemVisual)
 			{
 				NewInstance.VisualActor = ItemVisual;
