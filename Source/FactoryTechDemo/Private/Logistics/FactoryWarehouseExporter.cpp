@@ -37,9 +37,9 @@ void AFactoryWarehouseExporter::PlanCycle()
 			FRotator SpawnRotation = TargetPort->GetComponentRotation();
 			AFactoryItemVisual* ItemVisual = 
 				PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
-			ItemVisual->UpdateVisual(ItemData);
 			if (ItemVisual)
 			{
+				ItemVisual->UpdateVisual(ItemData);
 				NewInstance.VisualActor = ItemVisual;
 				TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
 			}

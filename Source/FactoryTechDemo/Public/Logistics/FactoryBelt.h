@@ -29,7 +29,9 @@ public:
 	virtual bool CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const override;
 	
 	void SetBeltType(EBeltType Type);
-	
+
+	EBeltType GetBeltType() const {return BeltType;};
+
 protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Factory|Movement")

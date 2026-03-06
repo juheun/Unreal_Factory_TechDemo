@@ -21,6 +21,8 @@ UFactoryPlacementComponent::UFactoryPlacementComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
+#pragma region 엔진 라이프 사이클 및 컨트롤러 소통
+
 void UFactoryPlacementComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -95,19 +97,27 @@ void UFactoryPlacementComponent::ProcessPlacementAction()
 	}
 }
 
+#pragma endregion
+
 #pragma region 프리뷰 제어
 
-void UFactoryPlacementComponent::SetPlaceFromDataPreview(UFactoryObjectData* Data)
+void UFactoryPlacementComponent::SetupSinglePreview(UFactoryObjectData* Data, EPlacementMode Mode)
 {
 	if (!Data) return;
 	ClearAllPreviews();
 	
-	AFactoryPlacePreview* Preview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
-	Preview->InitPreview(Data);
-	ActivePreviews.Add(Preview);
-	
-	CurrentPlacementMode = EPlacementMode::PlaceFromData;
-	StartObjectPlaceMode();
+	AFactoryPlacePreview* Preview = CreateAndInitPreview(Data);
+	if (Preview)
+	{
+		ActivePreviews.Add(Preview);
+		CurrentPlacementMode = Mode;
+		StartObjectPlaceMode();
+	}
+}
+
+void UFactoryPlacementComponent::SetPlaceFromDataPreview(UFactoryObjectData* Data)
+{
+	SetupSinglePreview(Data, EPlacementMode::PlaceFromData);
 }
 
 void UFactoryPlacementComponent::SetMoveObjectToPreviews()
@@ -117,11 +127,20 @@ void UFactoryPlacementComponent::SetMoveObjectToPreviews()
 	
 	for (auto& LogisticsObjectBase : SelectedLogisticsObjectBases)
 	{
-		AFactoryPlacePreview* Preview = GetWorld()->SpawnActor<AFactoryPlacePreview>();
-		Preview->InitPreview(LogisticsObjectBase->GetObjectData());
-		Preview->SetActorLocationAndRotation(
-			LogisticsObjectBase->GetActorLocation(), LogisticsObjectBase->GetActorRotation());
-		ActivePreviews.Add(Preview);
+		const UFactoryObjectData* Data = LogisticsObjectBase->GetObjectData();
+		AFactoryPlacePreview* Preview = CreateAndInitPreview(
+			Data, LogisticsObjectBase->GetActorLocation(), LogisticsObjectBase->GetActorRotation());
+		
+		if (Preview)
+		{
+			if (Preview->IsA(AFactoryBeltPreview::StaticClass()))
+			{
+				AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview);
+				BeltPreview->SetBeltType(Cast<AFactoryBelt>(LogisticsObjectBase)->GetBeltType());
+			}
+			
+			ActivePreviews.Add(Preview);
+		}
 	}
 	
 	CurrentPlacementMode = EPlacementMode::Move;
@@ -197,20 +216,16 @@ void UFactoryPlacementComponent::PlaceObject()
 				Preview->GetActorRotation(), 
 				Params);
 			
-			if (CurrentPlacementMode == EPlacementMode::BeltPlace)
+			if (AFactoryBelt* Belt = Cast<AFactoryBelt>(NewActor))
 			{
 				if (!BeltData)
 				{
 					UE_LOG(LogTemp, Error, TEXT("BeltData is NOT assigned in PlacementComponent!"));
 					return;
 				}
-				
-				if (AFactoryBelt* Belt = Cast<AFactoryBelt>(NewActor))
+				if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
 				{
-					if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
-					{
-						Belt->SetBeltType(BeltPreview->GetBeltType());
-					}
+					Belt->SetBeltType(BeltPreview->GetBeltType());
 				}
 			}
 		}
@@ -237,6 +252,46 @@ void UFactoryPlacementComponent::CancelPlaceObject()
 	CurrentPlacementMode = EPlacementMode::None;
 }
 
+void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
+{
+	if (CurrentPlacementMode == EPlacementMode::BeltPlace && ActivePreviews.IsValidIndex(0))
+	{
+		PlaceObjectPivotGridSize = FIntPoint(1, 1);
+		PlaceObjectPivotActor->SetActorLocation(ActivePreviews[0]->GetActorLocation());
+	}
+	else if (CurrentPlacementMode == EPlacementMode::PlaceFromData && ActivePreviews.IsValidIndex(0))
+	{
+		if (const UFactoryObjectData* Data = ActivePreviews[0]->GetObjectData())
+		{
+			PlaceObjectPivotGridSize = Data->GridSize;
+			PlaceObjectPivotActor->SetActorLocation(ActivePreviews[0]->GetActorLocation());
+		}
+	}
+	else if (CurrentPlacementMode == EPlacementMode::Move && SelectedLogisticsObjectBases.Num() > 0)
+	{
+		// 모든 프리뷰 위치 포함 최소/최대 좌표 계산
+		FVector Min(FLT_MAX), Max(-FLT_MAX);
+		for (const auto& Preview : ActivePreviews)
+		{
+			FVector Loc = Preview->GetActorLocation();
+			Min = Min.ComponentMin(Loc);
+			Max = Max.ComponentMax(Loc);
+		}
+
+		// 중앙 지점으로 피벗 이동
+		FVector Center = (Min + Max) * 0.5f;
+		PlaceObjectPivotActor->SetActorLocation(Center);
+
+		// 전체 그리드 크기 계산
+		int32 SizeX = FMath::RoundToInt((Max.X - Min.X) / GridLength) + 1;
+		int32 SizeY = FMath::RoundToInt((Max.Y - Min.Y) / GridLength) + 1;
+		PlaceObjectPivotGridSize = FIntPoint(SizeX, SizeY);
+	}
+}
+
+#pragma endregion 
+
+#pragma region 벨트 제어
 
 bool UFactoryPlacementComponent::ToggleBeltPlaceMode()
 {
@@ -286,32 +341,21 @@ void UFactoryPlacementComponent::BeltPlacePreviewUpdate(TArray<FBeltPlacementDat
 {
 	if (CurrentPlacementMode != EPlacementMode::BeltPlace || !bIsWaitingDetermineBeltEnd ) return;
 	
-	UFactoryPoolSubsystem* Pool = GetWorld()->GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+	UFactoryPoolSubsystem* Pool = GetPool();
 	if (!Pool) return;
 	
 	for (auto& Preview : ActivePreviews)
 	{
-		if (Preview)
-		{
-			Pool->ReturnItemToPool(Preview);
-		}
+		if (Preview) Pool->ReturnItemToPool(Preview);
 	}
 	ActivePreviews.Empty();
 	
 	for (const FBeltPlacementData& Data : BeltPlacementDatas)
 	{
-		FVector WorldLoc = GridToWorld(Data.GridPoint);
+		AFactoryPlacePreview* Preview = CreateAndInitPreview(BeltData, GridToWorld(Data.GridPoint), Data.Rotation);
 		
-		AFactoryBeltPreview* BeltPreview = Pool->GetItemFromPool<AFactoryBeltPreview>(
-			EFactoryPoolType::BeltPreview, 
-			WorldLoc, 
-			Data.Rotation
-		);
-		
-		if (BeltPreview)
+		if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
 		{
-			BeltPreview->InitPreview(BeltData);
-			BeltPreview->SetActorEnableCollision(true);
 			BeltPreview->SetBeltType(Data.Type);
 			ActivePreviews.Add(BeltPreview);
 		}
@@ -320,138 +364,9 @@ void UFactoryPlacementComponent::BeltPlacePreviewUpdate(TArray<FBeltPlacementDat
 
 void UFactoryPlacementComponent::ResetBeltGuidePreview()
 {
-	ClearAllPreviews();
-	UFactoryPoolSubsystem* Pool = GetWorld()->GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-	if (Pool)
-	{
-		AFactoryBeltPreview* Guide = Pool->GetItemFromPool<AFactoryBeltPreview>(
-			EFactoryPoolType::BeltPreview, FVector::ZeroVector, FRotator::ZeroRotator);
-		if (Guide)
-		{
-			Guide->InitPreview(BeltData);
-			Guide->SetActorEnableCollision(true);
-			ActivePreviews.Add(Guide);
-			StartObjectPlaceMode(); // 피벗에 붙여서 마우스를 따라가게 함
-		}
-	}
+	SetupSinglePreview(BeltData, EPlacementMode::BeltPlace);
+	bIsWaitingDetermineBeltEnd = false;
 }
-
-void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
-{
-	if (CurrentPlacementMode == EPlacementMode::BeltPlace && ActivePreviews.IsValidIndex(0))
-	{
-		PlaceObjectPivotGridSize = FIntPoint(1, 1);
-		PlaceObjectPivotActor->SetActorLocation(ActivePreviews[0]->GetActorLocation());
-	}
-	else if (CurrentPlacementMode == EPlacementMode::PlaceFromData && ActivePreviews.IsValidIndex(0))
-	{
-		if (const UFactoryObjectData* Data = ActivePreviews[0]->GetObjectData())
-		{
-			PlaceObjectPivotGridSize = Data->GridSize;
-			PlaceObjectPivotActor->SetActorLocation(ActivePreviews[0]->GetActorLocation());
-		}
-	}
-	else if (CurrentPlacementMode == EPlacementMode::Move && SelectedLogisticsObjectBases.Num() > 0)
-	{
-		// 모든 프리뷰 위치 포함 최소/최대 좌표 계산
-		FVector Min(FLT_MAX), Max(-FLT_MAX);
-		for (const auto& Preview : ActivePreviews)
-		{
-			FVector Loc = Preview->GetActorLocation();
-			Min = Min.ComponentMin(Loc);
-			Max = Max.ComponentMax(Loc);
-		}
-
-		// 중앙 지점으로 피벗 이동
-		FVector Center = (Min + Max) * 0.5f;
-		PlaceObjectPivotActor->SetActorLocation(Center);
-
-		// 전체 그리드 크기 계산
-		int32 SizeX = FMath::RoundToInt((Max.X - Min.X) / GridLength) + 1;
-		int32 SizeY = FMath::RoundToInt((Max.Y - Min.Y) / GridLength) + 1;
-		PlaceObjectPivotGridSize = FIntPoint(SizeX, SizeY);
-	}
-}
-
-bool UFactoryPlacementComponent::TryGetPointingGridLocation(FVector& OutResultVec) const
-{
-	if (CurrentPlacementMode != EPlacementMode::BeltPlace && ActivePreviews.Num() <= 0) return false;
-
-	FHitResult HitResult;
-	bool bHit = false;
-	
-	if (AFactoryPlayerController* Controller = CachedPlayerController.Get())
-	{
-		if (Controller->GetCurrentViewMode() == EFactoryViewModeType::NormalView)
-		{
-			FVector CameraLocation; FRotator CameraRotation;
-			Controller->GetPlayerViewPoint(CameraLocation, CameraRotation);
-			FVector TraceEnd = CameraLocation + (CameraRotation.Vector() * MaxBuildTraceDistance);
-        
-			FCollisionQueryParams Params; 
-			Params.AddIgnoredActor(Controller->GetPawn());
-			bHit = GetWorld()->LineTraceSingleByChannel(
-				HitResult, CameraLocation, TraceEnd, ECC_GameTraceChannel1, Params);
-        
-			if (!bHit)
-			{
-				bHit = GetWorld()->LineTraceSingleByChannel(
-					HitResult, 
-					TraceEnd, TraceEnd + (FVector::DownVector * MaxBuildTraceDistance),
-					ECC_GameTraceChannel1, Params);
-			}
-		}
-		else
-		{
-			bHit = Controller->GetHitResultUnderCursor(ECC_GameTraceChannel1, false, HitResult);
-		}
-	}
-    
-	if (bHit)
-	{
-		OutResultVec = CalculateSnappedLocation(HitResult.Location, PlaceObjectPivotGridSize);
-	}
-	
-	return bHit;
-}
-
-FVector UFactoryPlacementComponent::CalculateSnappedLocation(FVector RawLocation, FIntPoint GridSize) const
-{
-	auto SnapValue = [this](float Raw, int32 Size) -> float
-	{
-		float GridStart = FMath::FloorToFloat(Raw / GridLength) * GridLength;
-		float Offset = (Size % 2 != 0) ? GridLength * 0.5f : 0.0f;
-		return GridStart + Offset;
-	};
-
-	return FVector(SnapValue(RawLocation.X, GridSize.X), SnapValue(RawLocation.Y, GridSize.Y), RawLocation.Z);
-}
-
-#pragma endregion 
-
-#pragma region 객체 선택
-
-void UFactoryPlacementComponent::SelectObject(AFactoryLogisticsObjectBase* TargetObject)
-{
-	SelectedLogisticsObjectBases.Add(TargetObject);
-	//TODO : 선택된 객체들에 대한 시각적 피드백(예: 하이라이트) 구현
-}
-
-void UFactoryPlacementComponent::DeselectObject(AFactoryLogisticsObjectBase* TargetObject)
-{
-	SelectedLogisticsObjectBases.Remove(TargetObject);
-	//TODO : 선택 해제된 객체에 대한 시각적 피드백 제거 구현
-}
-
-void UFactoryPlacementComponent::ClearObject()
-{
-	for (auto Object : SelectedLogisticsObjectBases)
-	{
-		DeselectObject(Object);
-	}
-}
-
-#pragma endregion
 
 TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
 	const FIntPoint& StartPoint, const FIntPoint& EndPoint, const FVector& StartPointDir) const
@@ -511,25 +426,8 @@ EBeltType UFactoryPlacementComponent::DetermineBeltType(const FVector& StartDir,
 	return EBeltType::Straight;
 }
 
-FIntPoint UFactoryPlacementComponent::WorldToGrid(const FVector& WorldLocation) const
-{
-	return FIntPoint(
-		FMath::FloorToInt(WorldLocation.X / GridLength),
-		FMath::FloorToInt(WorldLocation.Y / GridLength)
-	);
-}
-
-FVector UFactoryPlacementComponent::GridToWorld(const FIntPoint& GridLocation, const float Height) const
-{
-	return FVector(
-		(GridLocation.X * GridLength) + (GridLength * 0.5f),
-		(GridLocation.Y * GridLength) + (GridLength * 0.5f),
-		Height
-	);
-}
-
 bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLocation, 
-	FIntPoint& OutStartGrid, FVector& OutStartDir) const
+                                                     FIntPoint& OutStartGrid, FVector& OutStartDir) const
 {
 	// TODO : AFactoryLogisticsObject가 현재 그리드에 있는지 검사 후 처리하는 로직 추가. collision 활용?
 	
@@ -557,5 +455,139 @@ bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLoca
 	
 	return false;
 }
+
+#pragma endregion
+
+#pragma region 객체 선택
+
+void UFactoryPlacementComponent::SelectObject(AFactoryLogisticsObjectBase* TargetObject)
+{
+	SelectedLogisticsObjectBases.Add(TargetObject);
+	//TODO : 선택된 객체들에 대한 시각적 피드백(예: 하이라이트) 구현
+}
+
+void UFactoryPlacementComponent::DeselectObject(AFactoryLogisticsObjectBase* TargetObject)
+{
+	SelectedLogisticsObjectBases.Remove(TargetObject);
+	//TODO : 선택 해제된 객체에 대한 시각적 피드백 제거 구현
+}
+
+void UFactoryPlacementComponent::ClearObject()
+{
+	for (auto Object : SelectedLogisticsObjectBases)
+	{
+		DeselectObject(Object);
+	}
+}
+
+#pragma endregion
+
+#pragma region 유틸리티
+
+bool UFactoryPlacementComponent::TryGetPointingGridLocation(FVector& OutResultVec) const
+{
+	if (CurrentPlacementMode != EPlacementMode::BeltPlace && ActivePreviews.Num() <= 0) return false;
+
+	FHitResult HitResult;
+	bool bHit = false;
+	
+	if (AFactoryPlayerController* Controller = CachedPlayerController.Get())
+	{
+		if (Controller->GetCurrentViewMode() == EFactoryViewModeType::NormalView)
+		{
+			FVector CameraLocation; FRotator CameraRotation;
+			Controller->GetPlayerViewPoint(CameraLocation, CameraRotation);
+			FVector TraceEnd = CameraLocation + (CameraRotation.Vector() * MaxBuildTraceDistance);
+        
+			FCollisionQueryParams Params; 
+			Params.AddIgnoredActor(Controller->GetPawn());
+			bHit = GetWorld()->LineTraceSingleByChannel(
+				HitResult, CameraLocation, TraceEnd, ECC_GameTraceChannel1, Params);
+        
+			if (!bHit)
+			{
+				bHit = GetWorld()->LineTraceSingleByChannel(
+					HitResult, 
+					TraceEnd, TraceEnd + (FVector::DownVector * MaxBuildTraceDistance),
+					ECC_GameTraceChannel1, Params);
+			}
+		}
+		else
+		{
+			bHit = Controller->GetHitResultUnderCursor(ECC_GameTraceChannel1, false, HitResult);
+		}
+	}
+    
+	if (bHit)
+	{
+		OutResultVec = CalculateSnappedLocation(HitResult.Location, PlaceObjectPivotGridSize);
+	}
+	
+	return bHit;
+}
+
+FVector UFactoryPlacementComponent::CalculateSnappedLocation(FVector RawLocation, FIntPoint GridSize) const
+{
+	auto SnapValue = [this](float Raw, int32 Size) -> float
+	{
+		float GridStart = FMath::FloorToFloat(Raw / GridLength) * GridLength;
+		float Offset = (Size % 2 != 0) ? GridLength * 0.5f : 0.0f;
+		return GridStart + Offset;
+	};
+
+	return FVector(SnapValue(RawLocation.X, GridSize.X), SnapValue(RawLocation.Y, GridSize.Y), RawLocation.Z);
+}
+
+FIntPoint UFactoryPlacementComponent::WorldToGrid(const FVector& WorldLocation) const
+{
+	return FIntPoint(
+		FMath::FloorToInt(WorldLocation.X / GridLength),
+		FMath::FloorToInt(WorldLocation.Y / GridLength)
+	);
+}
+
+FVector UFactoryPlacementComponent::GridToWorld(const FIntPoint& GridLocation, const float Height) const
+{
+	return FVector(
+		(GridLocation.X * GridLength) + (GridLength * 0.5f),
+		(GridLocation.Y * GridLength) + (GridLength * 0.5f),
+		Height
+	);
+}
+
+UFactoryPoolSubsystem* UFactoryPlacementComponent::GetPool() const
+{
+	return GetWorld()->GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+}
+
+AFactoryPlacePreview* UFactoryPlacementComponent::CreateAndInitPreview(
+const UFactoryObjectData* Data, const FVector& Loc, const FRotator& Rot) const
+{
+	if (!Data) return nullptr;
+	
+	AFactoryPlacePreview* Preview = nullptr;
+	UFactoryPoolSubsystem* Pool = GetPool();
+	if (!Pool) return nullptr;
+	
+	if (Data == BeltData)
+	{
+		Preview = Pool->GetItemFromPool<AFactoryBeltPreview>(EFactoryPoolType::BeltPreview, Loc, Rot);
+	}
+	else
+	{
+		Preview = Pool->GetItemFromPool<AFactoryPlacePreview>(AFactoryPlacePreview::StaticClass(), Loc, Rot);
+	}
+	
+	if (Preview)
+	{
+		Preview->InitPreview(Data);
+		Preview->SetActorEnableCollision(true);
+	}
+	
+	return Preview;
+}
+
+#pragma endregion
+
 
 
