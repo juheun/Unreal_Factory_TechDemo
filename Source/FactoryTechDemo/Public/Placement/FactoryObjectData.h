@@ -6,6 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "FactoryObjectData.generated.h"
 
+class UFactoryFacilityItemData;
 class AFactoryPlaceObjectBase;
 
 /**
@@ -25,4 +26,7 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Placement")
 	FIntPoint GridSize = FIntPoint(1, 1);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
+	TObjectPtr<UFactoryFacilityItemData> ItemData;
 };

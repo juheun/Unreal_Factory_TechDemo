@@ -79,7 +79,7 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 	}
 }
 
-void UFactoryPlacementComponent::ProcessPlacementAction()
+void UFactoryPlacementComponent::ProcessClickAction()
 {
 	switch (CurrentPlacementMode)
 	{
@@ -90,6 +90,9 @@ void UFactoryPlacementComponent::ProcessPlacementAction()
 		
 	case EPlacementMode::BeltPlace:
 		HandleBeltPlacementClick();
+		break;
+		
+	case EPlacementMode::Retrieve:
 		break;
 		
 	default:
@@ -216,16 +219,20 @@ void UFactoryPlacementComponent::PlaceObject()
 				Preview->GetActorRotation(), 
 				Params);
 			
-			if (AFactoryBelt* Belt = Cast<AFactoryBelt>(NewActor))
+			if (NewActor)
 			{
-				if (!BeltData)
+				NewActor->InitObject(Preview->GetObjectData());
+				if (AFactoryBelt* Belt = Cast<AFactoryBelt>(NewActor))
 				{
-					UE_LOG(LogTemp, Error, TEXT("BeltData is NOT assigned in PlacementComponent!"));
-					return;
-				}
-				if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
-				{
-					Belt->SetBeltType(BeltPreview->GetBeltType());
+					if (!BeltData)
+					{
+						UE_LOG(LogTemp, Error, TEXT("BeltData is NOT assigned in PlacementComponent!"));
+						return;
+					}
+					if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
+					{
+						Belt->SetBeltType(BeltPreview->GetBeltType());
+					}
 				}
 			}
 		}
@@ -313,6 +320,20 @@ bool UFactoryPlacementComponent::ToggleBeltPlaceMode()
 	
 	ResetBeltGuidePreview();
 	
+	return true;
+}
+
+bool UFactoryPlacementComponent::ToggleRetrieveMode()
+{
+	if (CurrentPlacementMode == EPlacementMode::Retrieve)
+	{
+		CurrentPlacementMode = EPlacementMode::None;
+		// TODO : 선택 오브젝트 전체 취소
+		return false;
+	}
+	
+	CancelPlaceObject();	// 기존 배치 모드 취소
+	CurrentPlacementMode = EPlacementMode::Retrieve;
 	return true;
 }
 
@@ -561,7 +582,7 @@ UFactoryPoolSubsystem* UFactoryPlacementComponent::GetPool() const
 }
 
 AFactoryPlacePreview* UFactoryPlacementComponent::CreateAndInitPreview(
-const UFactoryObjectData* Data, const FVector& Loc, const FRotator& Rot) const
+	const UFactoryObjectData* Data, const FVector& Loc, const FRotator& Rot) const
 {
 	if (!Data) return nullptr;
 	
@@ -588,6 +609,4 @@ const UFactoryObjectData* Data, const FVector& Loc, const FRotator& Rot) const
 }
 
 #pragma endregion
-
-
 

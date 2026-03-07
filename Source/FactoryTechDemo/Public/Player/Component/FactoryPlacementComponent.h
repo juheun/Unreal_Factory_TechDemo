@@ -18,10 +18,11 @@ class AFactoryPlacePreview;
 UENUM()
 enum class EPlacementMode : uint8
 {
-	None UMETA(DisplayName = "None"),
-	PlaceFromData UMETA(DisplayName = "Place From Data"),
-	Move UMETA(DisplayName = "Move"),
-	BeltPlace UMETA(DisplayName = "Belt Place"),
+	None				UMETA(DisplayName = "None"),
+	PlaceFromData		UMETA(DisplayName = "Place From Data"),
+	Move				UMETA(DisplayName = "Move"),
+	BeltPlace			UMETA(DisplayName = "Belt Place"),
+	Retrieve			UMETA(DisplayName = "Retrieve"),
 };
 
 /**
@@ -46,7 +47,7 @@ public:
 	/////
 	
 	///// 컨트롤러 호출 함수 
-	void ProcessPlacementAction();	// 컨트롤러에서 호출하는 액션 함수
+	void ProcessClickAction();		// 컨트롤러에서 클릭 눌렀을 때 호출
 	void RotatePlacementPreview() const;
 	void CancelPlaceObject();
 	/////
@@ -55,6 +56,7 @@ public:
 	void SetPlaceFromDataPreview(UFactoryObjectData* Data);	// 단일 객체 배치 프리뷰 설정
 	void SetMoveObjectToPreviews();	// 이미 설치된 객체의 데이터를 기반으로 프리뷰 생성
 	bool ToggleBeltPlaceMode();
+	bool ToggleRetrieveMode();
 	/////
 	
 	///// 객체 선택 제어

@@ -56,17 +56,17 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
     
-    bool bIsPlaceMode = false;
+    EPlacementMode PlacementMode = EPlacementMode::None;
     
     if (PlacementComponent)
     {
         PlacementComponent->UpdatePreviewState();
-        bIsPlaceMode = PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::None;
+        PlacementMode = PlacementComponent->GetCurrentPlaceMode();
     }
     
     if (InteractionComponent)
     {
-        InteractionComponent->UpdateInteraction(CurrentViewMode, bIsPlaceMode, bIsInventoryOpen);
+        InteractionComponent->UpdateInteraction(CurrentViewMode, PlacementMode, bIsInventoryOpen);
     }
 }
 
@@ -78,10 +78,11 @@ void AFactoryPlayerController::SetupInputComponent()
     {
         EnhancedInputComponent->BindAction(ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
         EnhancedInputComponent->BindAction(PreviewObjectRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
-        EnhancedInputComponent->BindAction(PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::PlaceObject);
+        EnhancedInputComponent->BindAction(PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnPlacementSelectInput);
         EnhancedInputComponent->BindAction(PlaceObjectCancelAction, ETriggerEvent::Started, this, &AFactoryPlayerController::CancelPlaceObject);
         EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleInventoryWidget);
         EnhancedInputComponent->BindAction(ToggleBeltPlaceModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleBeltPlaceMode);
+        EnhancedInputComponent->BindAction(ToggleRetrieveModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleRetrieveMode);
         EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnInteract);
 
         for (int i = 0; i < QuickSlotActionArr.Num(); i++)
@@ -196,14 +197,23 @@ void AFactoryPlayerController::ToggleBeltPlaceMode()
     }
 }
 
+void AFactoryPlayerController::ToggleRetrieveMode()
+{
+    if (PlacementComponent)
+    {
+        bool bIsRetrieveMode = PlacementComponent->ToggleRetrieveMode();
+        //SetPlacementMappingContext(bIsRetrieveMode);
+    }
+}
+
 void AFactoryPlayerController::RotatePlacementPreview()
 {
     if (PlacementComponent) PlacementComponent->RotatePlacementPreview();
 }
 
-void AFactoryPlayerController::PlaceObject()
+void AFactoryPlayerController::OnPlacementSelectInput()
 {
-    if (PlacementComponent) PlacementComponent->ProcessPlacementAction();
+    if (PlacementComponent) PlacementComponent->ProcessClickAction();
     if (PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::BeltPlace)
     {
         SetPlacementMappingContext(false);
@@ -255,12 +265,12 @@ void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
 
 void AFactoryPlayerController::OnInteract()
 {
-    if (!PlacementComponent || PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::None) return;
-    if (bIsInventoryOpen) return;
+    if (bIsInventoryOpen || !PlacementComponent) return;
+    EPlacementMode CurrentMode = PlacementComponent->GetCurrentPlaceMode();
     
     if (InteractionComponent)
     {
-        InteractionComponent->PerformInteraction(GetPawn(), CurrentViewMode);
+        InteractionComponent->PerformInteraction(GetPawn(), CurrentViewMode, CurrentMode);
     }
 }
 

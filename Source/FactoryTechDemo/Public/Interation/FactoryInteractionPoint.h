@@ -19,8 +19,8 @@ public:
 	AFactoryInteractionPoint();
 	
 	// 사용자가 액터와 상호작용할 때 호출되는 함수
-	virtual void Interact(AActor* Interactor) override;
-	virtual FText GetInteractText() const override;
+	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode) override;
+	virtual bool TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Factory|InteractionPoint")

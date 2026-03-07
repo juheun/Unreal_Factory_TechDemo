@@ -11,6 +11,7 @@ class AFactoryPlayerController;
 class UFactoryInteractionWidget;
 class IFactoryInteractable;
 enum class EFactoryViewModeType : uint8;
+enum class EPlacementMode : uint8;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FACTORYTECHDEMO_API UFactoryInteractionComponent : public UActorComponent
@@ -23,9 +24,9 @@ public:
 	virtual void BeginPlay() override;
 	
 	// Controller의 업데이트마다 호출
-	void UpdateInteraction(const EFactoryViewModeType ViewMode, bool bIsPlaceMode, bool bIsInventoryOpen);
+	void UpdateInteraction(const EFactoryViewModeType ViewMode, const EPlacementMode PlacementMode, const bool bIsInventoryOpen);
 	// 상호작용 실행
-	void PerformInteraction(APawn* Interacter, const EFactoryViewModeType ViewMode);
+	void PerformInteraction(APawn* Interacter, const EFactoryViewModeType ViewMode, const EPlacementMode PlacementMode);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
@@ -38,7 +39,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UFactoryInteractionWidget> InteractionPromptWidget;
 	
-	float InteractionRange = 300.f;
+	float InteractionRange = 100.f;
 	
 	UPROPERTY()
 	TWeakObjectPtr<AFactoryPlayerController> CachedPlayerController;

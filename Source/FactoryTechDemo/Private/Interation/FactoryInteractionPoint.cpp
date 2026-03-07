@@ -4,7 +4,7 @@
 #include "Interation/FactoryInteractionPoint.h"
 
 #include "Inventory/FactoryInventoryComponent.h"
-#include "Items/FactoryItemData.h"
+#include "Player/Component/FactoryPlacementComponent.h"
 
 
 // Sets default values
@@ -17,9 +17,11 @@ AFactoryInteractionPoint::AFactoryInteractionPoint()
 	RootComponent = StaticMeshComponent;
 }
 
-void AFactoryInteractionPoint::Interact(AActor* Interactor)
+void AFactoryInteractionPoint::Interact(const AActor* Interactor, const EPlacementMode CurrentMode)
 {
 	if (!ItemToGive || !Interactor || AmountToGive <= 0) return;
+	
+	if (CurrentMode != EPlacementMode::None) return;
 	
 	if (UFactoryInventoryComponent* Inventory = 
 		Cast<APawn>(Interactor)->GetController()->FindComponentByClass<UFactoryInventoryComponent>())
@@ -29,9 +31,15 @@ void AFactoryInteractionPoint::Interact(AActor* Interactor)
 	}
 }
 
-FText AFactoryInteractionPoint::GetInteractText() const
+bool AFactoryInteractionPoint::TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const
 {
-	return InteractText;
+	if (CurrentMode == EPlacementMode::None)
+	{
+		OutText = InteractText;
+		return true;
+	}
+	
+	return false;
 }
 
 

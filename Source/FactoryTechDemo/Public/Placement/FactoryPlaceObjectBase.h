@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interface/FactoryInteractable.h"
 #include "FactoryPlaceObjectBase.generated.h"
 
 class UFactoryObjectData;
@@ -12,28 +13,30 @@ class UFactoryObjectData;
  * 오브젝트 배치에 관한 기능을 가진 클래스
  */
 UCLASS()
-class FACTORYTECHDEMO_API AFactoryPlaceObjectBase : public AActor
+class FACTORYTECHDEMO_API AFactoryPlaceObjectBase : public AActor, public IFactoryInteractable
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AFactoryPlaceObjectBase();
+	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	virtual void InitObject(const UFactoryObjectData* Data);
 	virtual void Tick(float DeltaTime) override;
 	
+	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode) override;
+	virtual bool TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const override;
+	void Retrieve();
+	
 	UStaticMesh* GetStaticMesh() const {return MeshComponent->GetStaticMesh();};
 
-	TObjectPtr<const UFactoryObjectData> GetObjectData() const {return DataAsset;}
+	TObjectPtr<const UFactoryObjectData> GetObjectData() const {return PlacementDataAsset;}
 	
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-	
 	UPROPERTY(EditDefaultsOnly, Category="Visual")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Data")
-	TObjectPtr<const UFactoryObjectData> DataAsset;
+	TObjectPtr<const UFactoryObjectData> PlacementDataAsset;
 };

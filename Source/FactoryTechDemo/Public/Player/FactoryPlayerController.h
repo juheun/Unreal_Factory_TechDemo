@@ -43,6 +43,7 @@ public:
     void ToggleInventoryWidget();   //인벤토리 UI 토글
     
     EFactoryViewModeType GetCurrentViewMode() const { return CurrentViewMode; }
+    UFactoryInventoryComponent* GetInventoryComponent() const {return InventoryComponent;};
 
 protected:
     // --- 엔진 오버라이드 (Protected) ---
@@ -76,6 +77,7 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> PlaceObjectCancelAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleInventoryAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleBeltPlaceModeAction;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleRetrieveModeAction;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> InteractAction;
 
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
@@ -103,8 +105,9 @@ protected:
 
     // 배치 명령 래핑
     void ToggleBeltPlaceMode();
+    void ToggleRetrieveMode();
     void RotatePlacementPreview();
-    void PlaceObject();
+    void OnPlacementSelectInput();
     void CancelPlaceObject();
     void SetPlacementMappingContext(bool bEnable) const;
 

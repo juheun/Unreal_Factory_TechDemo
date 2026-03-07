@@ -7,6 +7,7 @@
 #include "Interation/FactoryInteractionWidget.h"
 #include "Interface/FactoryInteractable.h"
 #include "Player/FactoryPlayerController.h"
+#include "Player/Component/FactoryPlacementComponent.h"
 
 
 UFactoryInteractionComponent::UFactoryInteractionComponent()
@@ -34,17 +35,23 @@ void UFactoryInteractionComponent::BeginPlay()
 	}
 }
 
-void UFactoryInteractionComponent::UpdateInteraction(const EFactoryViewModeType ViewMode, bool bIsPlaceMode,
-                                                   bool bIsInventoryOpen)
+void UFactoryInteractionComponent::UpdateInteraction(const EFactoryViewModeType ViewMode, 
+	const EPlacementMode PlacementMode, const bool bIsInventoryOpen)
 {
-	if (!bIsPlaceMode && !bIsInventoryOpen)
+	// TODO : 여러 상호작용 대상을 찾도록 변경
+	bool bHideInteraction = (PlacementMode == EPlacementMode::PlaceFromData ||
+		PlacementMode == EPlacementMode::BeltPlace || bIsInventoryOpen);
+	
+	if (!bHideInteraction && InteractionPromptWidget)
 	{
-		if (!InteractionPromptWidget) return;
-        
 		if (TScriptInterface<IFactoryInteractable> BestTarget = FindBestInteractable(ViewMode))
 		{
-			InteractionPromptWidget->SetInteractionText(BestTarget->GetInteractText());
-			InteractionPromptWidget->SetVisibility(ESlateVisibility::Visible);
+			FText Text;
+			if (BestTarget->TryGetInteractText(PlacementMode, Text))
+			{
+				InteractionPromptWidget->SetInteractionText(Text);
+				InteractionPromptWidget->SetVisibility(ESlateVisibility::Visible);
+			}
 		}
 		else
 		{
@@ -57,17 +64,19 @@ void UFactoryInteractionComponent::UpdateInteraction(const EFactoryViewModeType 
 	}
 }
 
-void UFactoryInteractionComponent::PerformInteraction(APawn* Interacter, const EFactoryViewModeType ViewMode)
+void UFactoryInteractionComponent::PerformInteraction(APawn* Interacter, const EFactoryViewModeType ViewMode,
+														const EPlacementMode PlacementMode)
 {
 	if (TScriptInterface<IFactoryInteractable> Target = FindBestInteractable(ViewMode))
 	{
-		Target->Interact(Interacter);
+		Target->Interact(Interacter, PlacementMode);
 	}
 }
 
 TScriptInterface<IFactoryInteractable> UFactoryInteractionComponent::FindBestInteractable(
 	const EFactoryViewModeType ViewMode)
 {
+	// TODO : 더 좋은 방식으로 변경
 	AFactoryPlayerController* Controller = CachedPlayerController.Get();
 	if (!Controller) return nullptr;
 	

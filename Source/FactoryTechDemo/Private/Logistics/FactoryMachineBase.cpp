@@ -67,18 +67,6 @@ void AFactoryMachineBase::InitMachine()
 	}
 }
 
-
-void AFactoryMachineBase::Interact(AActor* Interactor)
-{
-	//TODO : 추후 UI 오픈 등 상호작용 로직 추가
-}
-
-FText AFactoryMachineBase::GetInteractText() const
-{
-	//TODO : 추후 UI 오픈 등 상호작용 로직 추가
-	return FText();
-}
-
 void AFactoryMachineBase::PlanCycle()
 {
 	// 가공 로직
