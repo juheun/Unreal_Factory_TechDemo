@@ -164,6 +164,7 @@ void AFactoryBelt::UpdateSplinePath(EBeltType Type)
 	
 	switch (Type)
 	{
+	default:
 	case EBeltType::Straight:
 		EndPos = FVector(HalfGridLength, 0.0f, BeltHeight);
 		EndTangent = FVector(CurveStrength * 2.0f, 0.0f, 0.0f);

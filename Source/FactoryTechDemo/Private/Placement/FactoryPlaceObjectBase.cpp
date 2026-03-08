@@ -23,11 +23,11 @@ void AFactoryPlaceObjectBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 	
-	if (PlacementDataAsset->ItemData)	// ItemData는 무한으로 제공되는 설비 (예: 벨트 등)은 반환이 필요 없기에 일부러 비워둠
+	if (PlacementDataAsset->RetrieveItemData)	// ItemData는 무한으로 제공되는 설비 (예: 벨트 등)은 반환이 필요 없기에 일부러 비워둠
 	{
 		if (AFactoryPlayerController* PlayerController = Cast<AFactoryPlayerController>(GetWorld()->GetFirstPlayerController()))
 		{
-			if (PlayerController->GetInventoryComponent()->AutoAddItem(PlacementDataAsset->ItemData, 1) > 0)
+			if (PlayerController->GetInventoryComponent()->AutoAddItem(PlacementDataAsset->RetrieveItemData, 1) > 0)
 			{
 				return;
 			}
@@ -36,7 +36,7 @@ void AFactoryPlaceObjectBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 		if (!WarehouseSubsystem) return;
 	
-		WarehouseSubsystem->StoreItem(PlacementDataAsset->ItemData, 1);
+		WarehouseSubsystem->StoreItem(PlacementDataAsset->RetrieveItemData, 1);
 	}
 }
 
