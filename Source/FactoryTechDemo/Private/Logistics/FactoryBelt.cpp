@@ -127,8 +127,8 @@ void AFactoryBelt::Tick(float DeltaSeconds)
 
 bool AFactoryBelt::CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const
 {
-	if (!LogisticsInputPortArr.IsValidIndex(0)) return false;
-	const UFactoryItemData* PendingItem = LogisticsInputPortArr[0]->PendingItem.ItemData;
+	if (!RequestPort || !LogisticsInputPortArr.IsValidIndex(0)) return false;
+	const UFactoryItemData* PendingItem = RequestPort->PendingItem.ItemData;
 	return !PendingItem && !CurrentItem.ItemData;
 }
 
