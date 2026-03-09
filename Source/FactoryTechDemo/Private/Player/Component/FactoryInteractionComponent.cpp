@@ -3,16 +3,24 @@
 
 #include "Player/Component/FactoryInteractionComponent.h"
 
+#include "EnhancedInputComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Interation/FactoryInteractionWidget.h"
 #include "Interface/FactoryInteractable.h"
 #include "Player/FactoryPlayerController.h"
 #include "Player/Component/FactoryPlacementComponent.h"
+#include "Player/Input/FactoryInputConfig.h"
 
 
 UFactoryInteractionComponent::UFactoryInteractionComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+}
+
+void UFactoryInteractionComponent::SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp,
+	const UFactoryInputConfig* InputConfig)
+{
+	PlayerInputComp->BindAction(InputConfig->InteractAction, ETriggerEvent::Started, this, &UFactoryInteractionComponent::PerformInteraction);
 }
 
 void UFactoryInteractionComponent::BeginPlay()
@@ -35,10 +43,16 @@ void UFactoryInteractionComponent::BeginPlay()
 	}
 }
 
-void UFactoryInteractionComponent::UpdateInteraction(const EFactoryViewModeType ViewMode, 
-	const EPlacementMode PlacementMode, const bool bIsInventoryOpen)
+void UFactoryInteractionComponent::UpdateInteraction() const
 {
 	// TODO : 여러 상호작용 대상을 찾도록 변경
+	AFactoryPlayerController* Controller = CachedPlayerController.Get();
+	if (!Controller) return;
+
+	EPlacementMode PlacementMode = Controller->GetCurrentPlacementMode();
+	bool bIsInventoryOpen = Controller->GetIsInventoryOpen();
+	EFactoryViewModeType ViewMode = Controller->GetCurrentViewMode();
+	
 	bool bHideInteraction = (PlacementMode == EPlacementMode::PlaceFromData ||
 		PlacementMode == EPlacementMode::BeltPlace || bIsInventoryOpen);
 	
@@ -64,17 +78,19 @@ void UFactoryInteractionComponent::UpdateInteraction(const EFactoryViewModeType 
 	}
 }
 
-void UFactoryInteractionComponent::PerformInteraction(APawn* Interacter, const EFactoryViewModeType ViewMode,
-														const EPlacementMode PlacementMode)
+void UFactoryInteractionComponent::PerformInteraction()
 {
-	if (TScriptInterface<IFactoryInteractable> Target = FindBestInteractable(ViewMode))
+	if (AFactoryPlayerController* Controller = CachedPlayerController.Get())
 	{
-		Target->Interact(Interacter, PlacementMode);
+		if (TScriptInterface<IFactoryInteractable> Target = FindBestInteractable(Controller->GetCurrentViewMode()))
+		{
+			Target->Interact(Controller->GetPawn(), Controller->GetCurrentPlacementMode());
+		}
 	}
 }
 
 TScriptInterface<IFactoryInteractable> UFactoryInteractionComponent::FindBestInteractable(
-	const EFactoryViewModeType ViewMode)
+	const EFactoryViewModeType ViewMode) const
 {
 	// TODO : 더 좋은 방식으로 변경
 	AFactoryPlayerController* Controller = CachedPlayerController.Get();
@@ -115,7 +131,8 @@ TScriptInterface<IFactoryInteractable> UFactoryInteractionComponent::FindBestInt
 		return BestTarget;
 	}
 	else
-	{
+	{	
+		// 탑뷰모드
 		FHitResult HitResult;
 		
 		if (Controller->GetHitResultUnderCursor(ECC_Visibility, false, HitResult))

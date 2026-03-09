@@ -3,12 +3,26 @@
 
 #include "Player/Component/FactoryQuickSlotComponent.h"
 
+#include "EnhancedInputComponent.h"
 #include "Player/FactoryPlayerController.h"
+#include "Player/Input/FactoryInputConfig.h"
 
 
 UFactoryQuickSlotComponent::UFactoryQuickSlotComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+}
+
+void UFactoryQuickSlotComponent::SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp,
+	const UFactoryInputConfig* InputConfig)
+{
+	for (int i = 0; i < InputConfig->QuickSlotActionArr.Num(); i++)
+	{
+		if (InputConfig->QuickSlotActionArr[i])
+		{
+			PlayerInputComp->BindAction(InputConfig->QuickSlotActionArr[i], ETriggerEvent::Started, this, &UFactoryQuickSlotComponent::ExecuteQuickSlotData, i);
+		}
+	}
 }
 
 void UFactoryQuickSlotComponent::BeginPlay()
@@ -23,9 +37,13 @@ void UFactoryQuickSlotComponent::BeginPlay()
 	}
 }
 
-UFactoryObjectData* UFactoryQuickSlotComponent::GetQuickSlotData(int Index)
+void UFactoryQuickSlotComponent::ExecuteQuickSlotData(int Index)
 {
-	return QuickSlotObjectDataArr.IsValidIndex(Index) ? QuickSlotObjectDataArr[Index] : nullptr;
+	UFactoryObjectData* ObjectData = QuickSlotObjectDataArr.IsValidIndex(Index) ? QuickSlotObjectDataArr[Index] : nullptr;
+	if (ObjectData)
+	{
+		OnQuickSlotExecuted.Broadcast(ObjectData);
+	}
 }
 
 

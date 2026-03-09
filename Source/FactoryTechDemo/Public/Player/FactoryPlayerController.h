@@ -1,16 +1,17 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Player/Component/FactoryPlacementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "FactoryPlayerController.generated.h"
 
+class UFactoryInputConfig;
 class UFactoryQuickSlotComponent;
 class UFactoryInteractionComponent;
 class IFactoryInteractable;
 class UFactoryInventoryComponent;
 class UFactoryPlacementComponent;
 class UInputMappingContext;
-class UInputAction;
 class AFactoryCharacter;
 class AFactoryTopViewPawn;
 class UFactoryObjectData;
@@ -43,12 +44,25 @@ public:
     void ToggleInventoryWidget();   //인벤토리 UI 토글
     
     EFactoryViewModeType GetCurrentViewMode() const { return CurrentViewMode; }
+    EPlacementMode GetCurrentPlacementMode() const {return PlacementComponent ? PlacementComponent->GetCurrentPlaceMode() : EPlacementMode::None;}
+    bool GetIsInventoryOpen() const { return bIsInventoryOpen; }
     UFactoryInventoryComponent* GetInventoryComponent() const {return InventoryComponent;};
+    
+    UFactoryInputConfig* GetInputConfig() const { return InputConfig; }
 
 protected:
     // --- 엔진 오버라이드 (Protected) ---
     virtual void BeginPlay() override;
     virtual void SetupInputComponent() override;
+    
+    // --- 내부 로직 제어 ---
+    void UpdateInputState();
+    void OnToggleViewMode();
+    
+    UFUNCTION()
+    void SetPlacementMappingContext(EPlacementMode PlacementMode);
+    UFUNCTION()
+    void ExecuteQuickSlotAction(UFactoryObjectData* ObjectData);
 
     // --- 상태 정보 (State) ---
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Factory|State")
@@ -68,21 +82,14 @@ protected:
     // --- 입력 에셋 (Enhanced Input) ---
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> DefaultMappingContext;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> MouseMappingContext;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> NormalViewContext;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> TopViewContext;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> QuickSlotContext;
     UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> PlacementContext;
-
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleViewModeAction;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> PreviewObjectRotateAction;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> PlaceObjectAction;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> PlaceObjectCancelAction;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleInventoryAction;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleBeltPlaceModeAction;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> ToggleRetrieveModeAction;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputAction> InteractAction;
-
-    UPROPERTY(EditAnywhere, Category = "Factory|Input")
-    TArray<TObjectPtr<UInputAction>> QuickSlotActionArr;
-
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Factory|Input")
+    TObjectPtr<UFactoryInputConfig> InputConfig;
+    
     // --- 시스템 데이터 및 캐싱 ---
         // 컴포넌트
     UPROPERTY(EditDefaultsOnly, Category = "Factory|Component")
@@ -98,22 +105,4 @@ protected:
     TWeakObjectPtr<AFactoryCharacter> CachedNormalViewCharacter;
     UPROPERTY()
     TWeakObjectPtr<AFactoryTopViewPawn> CachedTopViewPawn;
-
-    // --- 내부 로직 제어 ---
-    void UpdateInputState();
-    void OnToggleViewMode();
-
-    // 배치 명령 래핑
-    void ToggleBeltPlaceMode();
-    void ToggleRetrieveMode();
-    void RotatePlacementPreview();
-    void OnPlacementSelectInput();
-    void CancelPlaceObject();
-    void SetPlacementMappingContext(bool bEnable) const;
-
-    // 퀵슬롯 시스템
-    void ExecuteQuickSlotAction(int32 SlotIndex);
-    
-    // 상호작용 명령 래핑
-    void OnInteract();
 };

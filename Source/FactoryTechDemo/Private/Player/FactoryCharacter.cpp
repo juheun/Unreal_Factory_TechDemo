@@ -5,21 +5,19 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "InputActionValue.h"
+#include "Player/FactoryPlayerController.h"
+#include "Player/Input/FactoryInputConfig.h"
 
-// Sets default values
 AFactoryCharacter::AFactoryCharacter()
 {
-    // Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
 }
 
-// Called when the game starts or when spawned
 void AFactoryCharacter::BeginPlay()
 {
     Super::BeginPlay();
 }
 
-// Called every frame
 void AFactoryCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -32,15 +30,15 @@ void AFactoryCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
     if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
     {
-        // 점프
-        EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-        EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-
-        // 이동
-        EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AFactoryCharacter::Move);
-
-        // 시점 회전
-        EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AFactoryCharacter::Look);
+        AFactoryPlayerController* PlayerController = Cast<AFactoryPlayerController>(GetController());
+        if (!PlayerController || !PlayerController->GetInputConfig()) return;
+        
+        UFactoryInputConfig* Config = PlayerController->GetInputConfig();
+        
+        EnhancedInputComponent->BindAction(Config->NormalViewMoveAction, ETriggerEvent::Triggered, this, &AFactoryCharacter::Move);
+        EnhancedInputComponent->BindAction(Config->NormalViewLookAction, ETriggerEvent::Triggered, this, &AFactoryCharacter::Look);
+        EnhancedInputComponent->BindAction(Config->NormalViewJumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+        EnhancedInputComponent->BindAction(Config->NormalViewJumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
     }
 }
 
@@ -50,7 +48,6 @@ void AFactoryCharacter::Move(const FInputActionValue& Value)
 
     if (Controller != nullptr)
     {
-        // 카메라의 방향을 기준으로 이동 방향 계산 (유니티의 transform.forward와 유사)
         const FRotator Rotation = Controller->GetControlRotation();
         const FRotator YawRotation(0, Rotation.Yaw, 0);
 

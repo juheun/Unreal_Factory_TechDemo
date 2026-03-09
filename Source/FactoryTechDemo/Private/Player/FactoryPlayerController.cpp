@@ -8,6 +8,7 @@
 #include "Player/Component/FactoryInteractionComponent.h"
 #include "Player/Component/FactoryPlacementComponent.h"
 #include "Player/Component/FactoryQuickSlotComponent.h"
+#include "Player/Input/FactoryInputConfig.h"
 
 AFactoryPlayerController::AFactoryPlayerController()
 {
@@ -50,6 +51,16 @@ void AFactoryPlayerController::BeginPlay()
             InventoryWidget->InitInventory(InventoryComponent, InventoryColumns);
         }
     }
+    
+    // 4. 델리게이트 등록
+    if (PlacementComponent)
+    {
+        PlacementComponent->OnPlacementModeChanged.AddDynamic(this, &AFactoryPlayerController::SetPlacementMappingContext);
+    }
+    if (QuickSlotComponent)
+    {
+        QuickSlotComponent->OnQuickSlotExecuted.AddDynamic(this, &AFactoryPlayerController::ExecuteQuickSlotAction);
+    }
 }
 
 void AFactoryPlayerController::PlayerTick(float DeltaTime)
@@ -66,7 +77,7 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
     
     if (InteractionComponent)
     {
-        InteractionComponent->UpdateInteraction(CurrentViewMode, PlacementMode, bIsInventoryOpen);
+        InteractionComponent->UpdateInteraction();
     }
 }
 
@@ -76,28 +87,29 @@ void AFactoryPlayerController::SetupInputComponent()
 
     if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent))
     {
-        EnhancedInputComponent->BindAction(ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
-        EnhancedInputComponent->BindAction(PreviewObjectRotateAction, ETriggerEvent::Started, this, &AFactoryPlayerController::RotatePlacementPreview);
-        EnhancedInputComponent->BindAction(PlaceObjectAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnPlacementSelectInput);
-        EnhancedInputComponent->BindAction(PlaceObjectCancelAction, ETriggerEvent::Started, this, &AFactoryPlayerController::CancelPlaceObject);
-        EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleInventoryWidget);
-        EnhancedInputComponent->BindAction(ToggleBeltPlaceModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleBeltPlaceMode);
-        EnhancedInputComponent->BindAction(ToggleRetrieveModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleRetrieveMode);
-        EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnInteract);
-
-        for (int i = 0; i < QuickSlotActionArr.Num(); i++)
+        if (!InputConfig) return;
+        
+        EnhancedInputComponent->BindAction(InputConfig->ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
+        EnhancedInputComponent->BindAction(InputConfig->ToggleInventoryAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleInventoryWidget);
+        
+        if (PlacementComponent)
         {
-            if (QuickSlotActionArr[i])
-            {
-                EnhancedInputComponent->BindAction(QuickSlotActionArr[i], ETriggerEvent::Started, this, &AFactoryPlayerController::ExecuteQuickSlotAction, i);
-            }
+            PlacementComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
+        }
+        
+        if (InteractionComponent)
+        {
+            InteractionComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
+        }
+        
+        if (QuickSlotComponent)
+        {
+            QuickSlotComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
         }
     }
 }
 
 #pragma endregion 
-
-#pragma region UI 및 입력 상태 제어
 
 void AFactoryPlayerController::ToggleInventoryWidget()
 {
@@ -133,10 +145,6 @@ void AFactoryPlayerController::UpdateInputState()
         }
     }
 }
-
-#pragma endregion 
-
-#pragma region 뷰 모드 전환
 
 void AFactoryPlayerController::OnToggleViewMode()
 {
@@ -184,94 +192,27 @@ void AFactoryPlayerController::OnToggleViewMode()
     }, BlendTime, false);
 }
 
-#pragma endregion 
-
-#pragma region 배치 명령 래핑
-
-void AFactoryPlayerController::ToggleBeltPlaceMode()
-{
-    if (PlacementComponent)
-    {
-        bool bIsBeltPlaceMode = PlacementComponent->ToggleBeltPlaceMode();
-        SetPlacementMappingContext(bIsBeltPlaceMode);
-    }
-}
-
-void AFactoryPlayerController::ToggleRetrieveMode()
-{
-    if (PlacementComponent)
-    {
-        bool bIsRetrieveMode = PlacementComponent->ToggleRetrieveMode();
-        //SetPlacementMappingContext(bIsRetrieveMode);
-    }
-}
-
-void AFactoryPlayerController::RotatePlacementPreview()
-{
-    if (PlacementComponent) PlacementComponent->RotatePlacementPreview();
-}
-
-void AFactoryPlayerController::OnPlacementSelectInput()
-{
-    if (PlacementComponent) PlacementComponent->ProcessClickAction();
-    if (PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::BeltPlace)
-    {
-        SetPlacementMappingContext(false);
-    }
-}
-
-void AFactoryPlayerController::CancelPlaceObject()
-{
-    if (PlacementComponent) PlacementComponent->CancelPlaceObject();
-    SetPlacementMappingContext(false);
-}
-
-void AFactoryPlayerController::SetPlacementMappingContext(bool bEnable) const
+void AFactoryPlayerController::SetPlacementMappingContext(EPlacementMode PlacementMode)
 {
     if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
     {
-        if (bEnable)
-        {
-            Subsystem->AddMappingContext(PlacementContext, 2);
-        }
-        else
+        if (PlacementMode == EPlacementMode::None)
         {
             Subsystem->RemoveMappingContext(PlacementContext);
         }
-    }
-}
-
-#pragma endregion 
-
-#pragma region 퀵슬롯 명령 래핑
-
-void AFactoryPlayerController::ExecuteQuickSlotAction(int32 SlotIndex)
-{
-    if (!PlacementComponent || PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::None) return;
-    if (QuickSlotComponent)
-    {
-        UFactoryObjectData* QuickSlotData = QuickSlotComponent->GetQuickSlotData(SlotIndex);
-        if (QuickSlotData)
+        else
         {
-            PlacementComponent->SetPlaceFromDataPreview(QuickSlotData);
-            SetPlacementMappingContext(true);
+            Subsystem->AddMappingContext(PlacementContext, 2);
         }
     }
 }
 
-#pragma endregion 
-
-#pragma region 상호작용 명령 래핑
-
-void AFactoryPlayerController::OnInteract()
+void AFactoryPlayerController::ExecuteQuickSlotAction(UFactoryObjectData* ObjectData)
 {
-    if (bIsInventoryOpen || !PlacementComponent) return;
-    EPlacementMode CurrentMode = PlacementComponent->GetCurrentPlaceMode();
-    
-    if (InteractionComponent)
+    if (!PlacementComponent || PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::None) return;
+    if (ObjectData)
     {
-        InteractionComponent->PerformInteraction(GetPawn(), CurrentViewMode, CurrentMode);
+        PlacementComponent->SetPlaceFromDataPreview(ObjectData);
     }
 }
 
-#pragma endregion

@@ -8,7 +8,6 @@
 #include "FactoryCharacter.generated.h"
 
 struct FInputActionValue;
-class UInputAction;
 
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryCharacter : public ACharacter
@@ -31,15 +30,6 @@ public:
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-    TObjectPtr<UInputAction> MoveAction;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-    TObjectPtr<UInputAction> LookAction;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-    TObjectPtr<UInputAction> JumpAction;
-
     void Move(const FInputActionValue& Value);
     void Look(const FInputActionValue& Value);
 };

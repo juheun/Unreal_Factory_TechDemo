@@ -3,6 +3,7 @@
 
 #include "Player/Component/FactoryPlacementComponent.h"
 
+#include "EnhancedInputComponent.h"
 #include "Logistics/FactoryBelt.h"
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "Logistics/FactoryLogisticsTypes.h"
@@ -12,6 +13,7 @@
 #include "Placement/FactoryPlaceObjectBase.h"
 #include "Placement/FactoryPlacePreview.h"
 #include "Player/FactoryPlayerController.h"
+#include "Player/Input/FactoryInputConfig.h"
 #include "Settings/FactoryDeveloperSettings.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 
@@ -22,6 +24,17 @@ UFactoryPlacementComponent::UFactoryPlacementComponent()
 }
 
 #pragma region 엔진 라이프 사이클 및 컨트롤러 소통
+
+void UFactoryPlacementComponent::SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp,
+	const UFactoryInputConfig* InputConfig)
+{
+	PlayerInputComp->BindAction(InputConfig->PlaceObjectAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::ProcessClickAction);
+	PlayerInputComp->BindAction(InputConfig->PlaceObjectCancelAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::CancelPlaceObject);
+	PlayerInputComp->BindAction(InputConfig->PlaceObjectRotateAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::RotatePlacementPreview);
+	PlayerInputComp->BindAction(InputConfig->ToggleBeltPlaceModeAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::ToggleBeltPlaceMode);
+	PlayerInputComp->BindAction(InputConfig->ToggleRetrieveModeAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::ToggleRetrieveMode);
+	//PlayerInputComp->BindAction(InputConfig->EnterMoveModeAction, ETriggerEvent::Completed, this, &UFactoryPlacementComponent::ToggleRetrieveMode);
+}
 
 void UFactoryPlacementComponent::BeginPlay()
 {
@@ -79,6 +92,10 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 	}
 }
 
+#pragma endregion
+
+#pragma region 인터페이스, 모드 토글
+
 void UFactoryPlacementComponent::ProcessClickAction()
 {
 	switch (CurrentPlacementMode)
@@ -100,9 +117,52 @@ void UFactoryPlacementComponent::ProcessClickAction()
 	}
 }
 
+
+void UFactoryPlacementComponent::ToggleBeltPlaceMode()
+{
+	if (CurrentPlacementMode == EPlacementMode::BeltPlace)
+	{
+		CancelPlaceObject();
+		CurrentPlacementMode = EPlacementMode::None;
+	}
+	else
+	{
+		// 먼저 벨트모드로 변경해야 TryGetPointingGridLocation의 가드에 걸리지 않음
+		CurrentPlacementMode = EPlacementMode::BeltPlace;
+		bIsWaitingDetermineBeltEnd = false;
+       
+		FVector NewLocation;
+		if (!TryGetPointingGridLocation(NewLocation))
+		{
+			CurrentPlacementMode = EPlacementMode::None;
+			OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
+			return;
+		}
+       
+		ResetBeltGuidePreview();
+	}
+	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
+}
+
+void UFactoryPlacementComponent::ToggleRetrieveMode()
+{
+	if (CurrentPlacementMode == EPlacementMode::Retrieve)
+	{
+		CurrentPlacementMode = EPlacementMode::None;
+	}
+	else
+	{
+		CancelPlaceObject();	// 기존 배치 모드 취소
+		CurrentPlacementMode = EPlacementMode::Retrieve;
+	}
+	
+	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
+}
+
+
 #pragma endregion
 
-#pragma region 프리뷰 제어
+#pragma region 배치 및 프리뷰 제어
 
 void UFactoryPlacementComponent::SetupSinglePreview(UFactoryObjectData* Data, EPlacementMode Mode)
 {
@@ -114,6 +174,7 @@ void UFactoryPlacementComponent::SetupSinglePreview(UFactoryObjectData* Data, EP
 	{
 		ActivePreviews.Add(Preview);
 		CurrentPlacementMode = Mode;
+		OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 		StartObjectPlaceMode();
 	}
 }
@@ -147,6 +208,7 @@ void UFactoryPlacementComponent::SetMoveObjectToPreviews()
 	}
 	
 	CurrentPlacementMode = EPlacementMode::Move;
+	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 	StartObjectPlaceMode();
 }
 
@@ -191,13 +253,15 @@ void UFactoryPlacementComponent::StartObjectPlaceMode()
 	}
 }
 
-void UFactoryPlacementComponent::RotatePlacementPreview() const
+void UFactoryPlacementComponent::RotatePlacementPreview()
 {
 	if (!PlaceObjectPivotActor) return;
 	// 피벗 자체를 돌리면 자식 프리뷰들이 함께 회전함
 	float NextYaw = FMath::GridSnap(PlaceObjectPivotActor->GetActorRotation().Yaw + 90.f, 90.f);
 	PlaceObjectPivotActor->SetActorRotation(FRotator(0.f, FRotator::NormalizeAxis(NextYaw), 0.f));
 }
+
+
 
 void UFactoryPlacementComponent::PlaceObject()
 {
@@ -250,6 +314,7 @@ void UFactoryPlacementComponent::PlaceObject()
 			LogisticsObjectBase->Destroy();
 		}
 	}
+	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
 
 void UFactoryPlacementComponent::CancelPlaceObject()
@@ -257,6 +322,7 @@ void UFactoryPlacementComponent::CancelPlaceObject()
 	ClearAllPreviews();
 	bIsWaitingDetermineBeltEnd = false;
 	CurrentPlacementMode = EPlacementMode::None;
+	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
 
 void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
@@ -299,43 +365,6 @@ void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
 #pragma endregion 
 
 #pragma region 벨트 제어
-
-bool UFactoryPlacementComponent::ToggleBeltPlaceMode()
-{
-	if (CurrentPlacementMode == EPlacementMode::BeltPlace)
-	{
-		CancelPlaceObject();
-		return false;
-	}
-	
-	CurrentPlacementMode = EPlacementMode::BeltPlace;
-	bIsWaitingDetermineBeltEnd = false;
-	
-	FVector NewLocation;
-	if (!TryGetPointingGridLocation(NewLocation))
-	{
-		CurrentPlacementMode = EPlacementMode::None;
-		return false;
-	}
-	
-	ResetBeltGuidePreview();
-	
-	return true;
-}
-
-bool UFactoryPlacementComponent::ToggleRetrieveMode()
-{
-	if (CurrentPlacementMode == EPlacementMode::Retrieve)
-	{
-		CurrentPlacementMode = EPlacementMode::None;
-		// TODO : 선택 오브젝트 전체 취소
-		return false;
-	}
-	
-	CancelPlaceObject();	// 기존 배치 모드 취소
-	CurrentPlacementMode = EPlacementMode::Retrieve;
-	return true;
-}
 
 void UFactoryPlacementComponent::HandleBeltPlacementClick()
 {

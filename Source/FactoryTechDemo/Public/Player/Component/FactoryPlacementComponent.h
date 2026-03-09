@@ -8,6 +8,7 @@
 #include "FactoryPlacementComponent.generated.h"
 
 //전방선언
+class UFactoryInputConfig;
 class UFactoryPoolSubsystem;
 class AFactoryLogisticsObjectBase;
 struct FBeltPlacementData;
@@ -28,6 +29,7 @@ enum class EPlacementMode : uint8
 /**
  * 오브젝트 배치 관련 로직을 담당하는 컴포넌트
  */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlacementModeChangedSignature, EPlacementMode, NewMode);
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FACTORYTECHDEMO_API UFactoryPlacementComponent : public UActorComponent
 {
@@ -35,28 +37,31 @@ class FACTORYTECHDEMO_API UFactoryPlacementComponent : public UActorComponent
 
 public:
 	UFactoryPlacementComponent();
+	
+	// 외부 호출 함수 모음
+	void SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp, const UFactoryInputConfig* InputConfig);
+	void UpdatePreviewState();
+	void SetPlaceFromDataPreview(UFactoryObjectData* Data);	// 단일 객체 배치 프리뷰 설정
+	
+	EPlacementMode GetCurrentPlaceMode() const { return CurrentPlacementMode; }
 
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Placement")
+	FOnPlacementModeChangedSignature OnPlacementModeChanged;
+	
 protected:
 	virtual void BeginPlay() override;
-
-public:
 	
-	///// 엔진 라이프 사이클 및 상태
-	void UpdatePreviewState();
-	EPlacementMode GetCurrentPlaceMode() const { return CurrentPlacementMode; }
-	/////
+	UPROPERTY(EditDefaultsOnly, Category = "Factory|Data")
+	TObjectPtr<UFactoryObjectData> BeltData;
 	
-	///// 컨트롤러 호출 함수 
-	void ProcessClickAction();		// 컨트롤러에서 클릭 눌렀을 때 호출
-	void RotatePlacementPreview() const;
-	void CancelPlaceObject();
-	/////
-	
+private:
 	///// 모드 진입
-	void SetPlaceFromDataPreview(UFactoryObjectData* Data);	// 단일 객체 배치 프리뷰 설정
+	void ProcessClickAction();		// 컨트롤러에서 클릭 눌렀을 때 호출
+	void RotatePlacementPreview();
+	void CancelPlaceObject();
 	void SetMoveObjectToPreviews();	// 이미 설치된 객체의 데이터를 기반으로 프리뷰 생성
-	bool ToggleBeltPlaceMode();
-	bool ToggleRetrieveMode();
+	void ToggleBeltPlaceMode();
+	void ToggleRetrieveMode();
 	/////
 	
 	///// 객체 선택 제어
@@ -65,12 +70,6 @@ public:
 	void ClearObject();
 	/////
 	
-	
-protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Factory")
-	TObjectPtr<UFactoryObjectData> BeltData;
-	
-private:
 	///// 내부 핵심 로직
 	void PlaceObject();
 	void HandleBeltPlacementClick();

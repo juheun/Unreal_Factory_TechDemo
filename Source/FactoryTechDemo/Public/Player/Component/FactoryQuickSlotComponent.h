@@ -6,24 +6,27 @@
 #include "Components/ActorComponent.h"
 #include "FactoryQuickSlotComponent.generated.h"
 
+class UFactoryInputConfig;
 class AFactoryPlayerController;
 class UFactoryInventoryWidget;
 class UFactoryObjectData;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnQuickSlotExecuteSignature, UFactoryObjectData*, ObjectData);
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FACTORYTECHDEMO_API UFactoryQuickSlotComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
 	UFactoryQuickSlotComponent();
+	void SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp, const UFactoryInputConfig* InputConfig);
 	
-	UFactoryObjectData* GetQuickSlotData(int Index);
+	UPROPERTY(BlueprintAssignable)
+	FOnQuickSlotExecuteSignature OnQuickSlotExecuted;
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
+	void ExecuteQuickSlotData(int Index);
 	
 	UPROPERTY(EditAnywhere, Category = "Factory|Data")
 	TArray<TObjectPtr<UFactoryObjectData>> QuickSlotObjectDataArr;

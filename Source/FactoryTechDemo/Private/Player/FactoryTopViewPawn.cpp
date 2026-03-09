@@ -1,8 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Player/FactoryTopViewPawn.h"
+
+#include "EnhancedInputComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Player/FactoryPlayerController.h"
+#include "Player/Input/FactoryInputConfig.h"
 
 // Sets default values
 AFactoryTopViewPawn::AFactoryTopViewPawn()
@@ -23,26 +27,35 @@ AFactoryTopViewPawn::AFactoryTopViewPawn()
     Camera->ProjectionMode = ECameraProjectionMode::Orthographic;
     Camera->OrthoWidth = CamWidth;
 
-    SetActorTickEnabled(false);
     SetActorEnableCollision(false);
 }
 
-// Called when the game starts or when spawned
+void AFactoryTopViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+    
+    if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
+    {
+        AFactoryPlayerController* PlayerController = Cast<AFactoryPlayerController>(GetController());
+        if (!PlayerController || !PlayerController->GetInputConfig()) return;
+        
+        UFactoryInputConfig* Config = PlayerController->GetInputConfig();
+        
+        // TODO : 구현
+        // EnhancedInputComponent->BindAction(InputConfig->TopViewDragMoveAction, ETriggerEvent::Triggered, this, &AFactoryTopViewPawn::);
+        // EnhancedInputComponent->BindAction(InputConfig->TopViewRotateAction, ETriggerEvent::Triggered, this, &AFactoryTopViewPawn::);
+        // EnhancedInputComponent->BindAction(InputConfig->TopViewZoomAction, ETriggerEvent::Triggered, this, &AFactoryTopViewPawn::);
+    }
+}
+
 void AFactoryTopViewPawn::BeginPlay()
 {
     Super::BeginPlay();
 }
 
-// Called every frame
 void AFactoryTopViewPawn::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-}
-
-// Called to bind functionality to input
-void AFactoryTopViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
 void AFactoryTopViewPawn::SetCameraPerspective(bool bIsPerspective)
