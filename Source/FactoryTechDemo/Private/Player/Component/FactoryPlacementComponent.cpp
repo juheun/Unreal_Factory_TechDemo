@@ -125,6 +125,10 @@ void UFactoryPlacementComponent::ToggleBeltPlaceMode()
 		CancelPlaceObject();
 		CurrentPlacementMode = EPlacementMode::None;
 	}
+	else if (CurrentPlacementMode != EPlacementMode::None)
+	{
+		return;	// 벨트 토글을 받을 상황이 아니므로 입력을 무시
+	}
 	else
 	{
 		// 먼저 벨트모드로 변경해야 TryGetPointingGridLocation의 가드에 걸리지 않음
@@ -149,6 +153,10 @@ void UFactoryPlacementComponent::ToggleRetrieveMode()
 	if (CurrentPlacementMode == EPlacementMode::Retrieve)
 	{
 		CurrentPlacementMode = EPlacementMode::None;
+	}
+	else if (CurrentPlacementMode != EPlacementMode::None)
+	{
+		return;	// 수납모드 토글을 받을 상황이 아니므로 입력을 무시
 	}
 	else
 	{
@@ -205,6 +213,9 @@ void UFactoryPlacementComponent::SetMoveObjectToPreviews()
 			
 			ActivePreviews.Add(Preview);
 		}
+		
+		LogisticsObjectBase->SetActorHiddenInGame(true);
+		LogisticsObjectBase->SetActorEnableCollision(false);
 	}
 	
 	CurrentPlacementMode = EPlacementMode::Move;
@@ -319,6 +330,21 @@ void UFactoryPlacementComponent::PlaceObject()
 
 void UFactoryPlacementComponent::CancelPlaceObject()
 {
+	// 이동 모드 취소 시 숨겼던 원본을 다시 복구
+	if (CurrentPlacementMode == EPlacementMode::Move)
+	{
+		for (auto& Obj : SelectedLogisticsObjectBases)
+		{
+			if (Obj)
+			{
+				Obj->SetActorHiddenInGame(false);
+				Obj->SetActorEnableCollision(true);
+			}
+		}
+		// TODO : 상황에 따라 선택 배열이 남아있어야 할수도 있는 부분 체크
+		ClearObject(); // 선택 배열 비우기
+	}
+	
 	ClearAllPreviews();
 	bIsWaitingDetermineBeltEnd = false;
 	CurrentPlacementMode = EPlacementMode::None;

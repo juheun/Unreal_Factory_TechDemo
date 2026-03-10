@@ -17,47 +17,45 @@ class FACTORYTECHDEMO_API UFactoryInputConfig : public UDataAsset
 	GENERATED_BODY()
 	
 public:
-	// 글로벌 액션
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global")
+	// Global Idle (기본 대기 상태)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Idle")
 	TObjectPtr<UInputAction> ToggleViewModeAction;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Idle")
 	TObjectPtr<UInputAction> ToggleInventoryAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Global Idle") 
+	TObjectPtr<UInputAction> ToggleBeltPlaceModeAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Global Idle") 
+	TArray<TObjectPtr<UInputAction>> QuickSlotActionArr;
 	
-	// NormalView 이동 제어
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalViewMove")
+	// BaseView - NormalView 이동 제어
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BaseView|Normal")
 	TObjectPtr<UInputAction> NormalViewMoveAction;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalViewMove")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BaseView|Normal")
 	TObjectPtr<UInputAction> NormalViewLookAction;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalViewMove")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BaseView|Normal")
 	TObjectPtr<UInputAction> NormalViewJumpAction;
-	
-	// TopView 이동 제어
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "TopViewMove")
+	// BaseView - TopView 이동 제어
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BaseView|Top")
 	TObjectPtr<UInputAction>  TopViewDragMoveAction;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "TopViewMove")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BaseView|Top")
 	TObjectPtr<UInputAction>  TopViewRotateAction;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "TopViewMove")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BaseView|Top")
 	TObjectPtr<UInputAction>  TopViewZoomAction;
 	
-	// 건설 및 물류망 제어
+	// Specific - Normal
+	UPROPERTY(EditAnywhere, Category = "Specific|Normal") 
+	TObjectPtr<UInputAction> InteractAction;
+	UPROPERTY(EditAnywhere, Category = "Specific|Normal") 
+	TObjectPtr<UInputAction> ToggleRetrieveModeAction;
+	// Specific - Top
+	UPROPERTY(EditAnywhere, Category = "Specific|Top") 
+	TObjectPtr<UInputAction> EnterMoveModeAction;	// 설비 롱탭
+	
+	// 배치모드 공통 액션
 	UPROPERTY(EditAnywhere, Category = "Placement") 
 	TObjectPtr<UInputAction> PlaceObjectAction;
 	UPROPERTY(EditAnywhere, Category = "Placement") 
 	TObjectPtr<UInputAction> PlaceObjectCancelAction;
 	UPROPERTY(EditAnywhere, Category = "Placement") 
 	TObjectPtr<UInputAction> PlaceObjectRotateAction;
-	UPROPERTY(EditAnywhere, Category = "Placement") 
-	TObjectPtr<UInputAction> ToggleBeltPlaceModeAction;
-	UPROPERTY(EditAnywhere, Category = "Placement") 
-	TObjectPtr<UInputAction> ToggleRetrieveModeAction;
-	UPROPERTY(EditAnywhere, Category = "Placement") 
-	TObjectPtr<UInputAction> EnterMoveModeAction;
-	
-	// 상호작용 제어
-	UPROPERTY(EditAnywhere, Category = "interaction") 
-	TObjectPtr<UInputAction> InteractAction;
-	
-	// 퀵슬롯
-	UPROPERTY(EditAnywhere, Category = "QuickSlot")
-	TArray<TObjectPtr<UInputAction>> QuickSlotActionArr;
 };

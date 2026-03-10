@@ -24,15 +24,7 @@ void AFactoryPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
-    // 1. 인풋 서브시스템 설정
-    if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
-    {
-        if (DefaultMappingContext) Subsystem->AddMappingContext(DefaultMappingContext, 0);
-        if (MouseMappingContext) Subsystem->AddMappingContext(MouseMappingContext, 1);
-        if (QuickSlotContext) Subsystem->AddMappingContext(QuickSlotContext, 1);
-    }
-    
-    // 2. 액터 캐싱 및 생성
+    // 액터 캐싱 및 생성
     CachedNormalViewCharacter = Cast<AFactoryCharacter>(GetCharacter());
     
     FActorSpawnParameters SpawnParams;
@@ -42,7 +34,7 @@ void AFactoryPlayerController::BeginPlay()
         AFactoryTopViewPawn::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
     CachedTopViewPawn->SetActorHiddenInGame(true);
     
-    // 3. UI 초기화
+    // UI 초기화
     if (IsLocalController() && InventoryWidgetBP)
     {
         InventoryWidget = CreateWidget<UFactoryInventoryWidget>(this, InventoryWidgetBP);
@@ -52,15 +44,17 @@ void AFactoryPlayerController::BeginPlay()
         }
     }
     
-    // 4. 델리게이트 등록
+    // 델리게이트 등록
     if (PlacementComponent)
     {
-        PlacementComponent->OnPlacementModeChanged.AddDynamic(this, &AFactoryPlayerController::SetPlacementMappingContext);
+        PlacementComponent->OnPlacementModeChanged.AddDynamic(this, &AFactoryPlayerController::OnPlacementModeChangedCallback);
     }
     if (QuickSlotComponent)
     {
-        QuickSlotComponent->OnQuickSlotExecuted.AddDynamic(this, &AFactoryPlayerController::ExecuteQuickSlotAction);
+        QuickSlotComponent->OnQuickSlotExecuted.AddDynamic(this, &AFactoryPlayerController::QuickSlotExecuteCallback);
     }
+    
+    UpdateInputMappingContext();
 }
 
 void AFactoryPlayerController::PlayerTick(float DeltaTime)
@@ -189,25 +183,62 @@ void AFactoryPlayerController::OnToggleViewMode()
         CurrentViewMode = NewMode; 
         UpdateInputState();
         EnableInput(this);
+        UpdateInputMappingContext();
     }, BlendTime, false);
 }
 
-void AFactoryPlayerController::SetPlacementMappingContext(EPlacementMode PlacementMode)
+void AFactoryPlayerController::UpdateInputMappingContext() const
 {
-    if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+    if (!Subsystem)
     {
-        if (PlacementMode == EPlacementMode::None)
+        UE_LOG(LogTemp, Error, TEXT("UEnhancedInputLocalPlayerSubsystem is Null"));
+        return;
+    }
+    
+    Subsystem->RemoveMappingContext(BaseNormalViewContext);
+    Subsystem->RemoveMappingContext(BaseTopViewContext);
+    
+    Subsystem->RemoveMappingContext(NormalViewIdleActionContext);
+    Subsystem->RemoveMappingContext(TopViewIdleActionContext);
+    
+    Subsystem->RemoveMappingContext(GlobalIdleContext);
+    Subsystem->RemoveMappingContext(PlacementModeContext);
+    
+    if (CurrentViewMode == EFactoryViewModeType::NormalView)
+    {
+        Subsystem->AddMappingContext(BaseNormalViewContext, 0);
+    }
+    else
+    {
+        Subsystem->AddMappingContext(BaseTopViewContext, 0);
+    }
+    
+    if (GetCurrentPlacementMode() == EPlacementMode::None)
+    {
+        
+        if (CurrentViewMode == EFactoryViewModeType::NormalView)
         {
-            Subsystem->RemoveMappingContext(PlacementContext);
+            Subsystem->AddMappingContext(NormalViewIdleActionContext, 1);
         }
         else
         {
-            Subsystem->AddMappingContext(PlacementContext, 2);
+            Subsystem->AddMappingContext(TopViewIdleActionContext, 1);
         }
+        Subsystem->AddMappingContext(GlobalIdleContext, 2);
+    }
+    else
+    {
+        Subsystem->AddMappingContext(PlacementModeContext, 2);
     }
 }
 
-void AFactoryPlayerController::ExecuteQuickSlotAction(UFactoryObjectData* ObjectData)
+void AFactoryPlayerController::OnPlacementModeChangedCallback(EPlacementMode PlacementMode)
+{
+    UpdateInputMappingContext();
+}
+
+void AFactoryPlayerController::QuickSlotExecuteCallback(UFactoryObjectData* ObjectData)
 {
     if (!PlacementComponent || PlacementComponent->GetCurrentPlaceMode() != EPlacementMode::None) return;
     if (ObjectData)

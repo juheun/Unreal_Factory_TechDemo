@@ -59,10 +59,11 @@ protected:
     void UpdateInputState();
     void OnToggleViewMode();
     
+    void UpdateInputMappingContext() const;
     UFUNCTION()
-    void SetPlacementMappingContext(EPlacementMode PlacementMode);
+    void OnPlacementModeChangedCallback(EPlacementMode PlacementMode);
     UFUNCTION()
-    void ExecuteQuickSlotAction(UFactoryObjectData* ObjectData);
+    void QuickSlotExecuteCallback(UFactoryObjectData* ObjectData);
 
     // --- 상태 정보 (State) ---
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Factory|State")
@@ -80,12 +81,20 @@ protected:
     int32 InventoryColumns = 5;
 
     // --- 입력 에셋 (Enhanced Input) ---
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> DefaultMappingContext;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> MouseMappingContext;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> NormalViewContext;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> TopViewContext;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> QuickSlotContext;
-    UPROPERTY(EditAnywhere, Category = "Factory|Input") TObjectPtr<UInputMappingContext> PlacementContext;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> BaseNormalViewContext;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> BaseTopViewContext;
+    
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> NormalViewIdleActionContext;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> TopViewIdleActionContext;
+    
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> GlobalIdleContext;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> PlacementModeContext;
     
     UPROPERTY(EditDefaultsOnly, Category = "Factory|Input")
     TObjectPtr<UFactoryInputConfig> InputConfig;
