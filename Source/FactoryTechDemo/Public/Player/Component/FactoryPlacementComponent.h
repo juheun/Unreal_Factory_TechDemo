@@ -62,6 +62,7 @@ private:
 	void SetMoveObjectToPreviews();	// 이미 설치된 객체의 데이터를 기반으로 프리뷰 생성
 	void ToggleBeltPlaceMode();
 	void ToggleRetrieveMode();
+	void TryEnterMoveMode();
 	/////
 	
 	///// 객체 선택 제어

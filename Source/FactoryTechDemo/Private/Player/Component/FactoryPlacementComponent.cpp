@@ -33,7 +33,7 @@ void UFactoryPlacementComponent::SetUpInputComponent(UEnhancedInputComponent* Pl
 	PlayerInputComp->BindAction(InputConfig->PlaceObjectRotateAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::RotatePlacementPreview);
 	PlayerInputComp->BindAction(InputConfig->ToggleBeltPlaceModeAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::ToggleBeltPlaceMode);
 	PlayerInputComp->BindAction(InputConfig->ToggleRetrieveModeAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::ToggleRetrieveMode);
-	//PlayerInputComp->BindAction(InputConfig->EnterMoveModeAction, ETriggerEvent::Completed, this, &UFactoryPlacementComponent::ToggleRetrieveMode);
+	PlayerInputComp->BindAction(InputConfig->EnterMoveModeAction, ETriggerEvent::Triggered, this, &UFactoryPlacementComponent::TryEnterMoveMode);
 }
 
 void UFactoryPlacementComponent::BeginPlay()
@@ -167,6 +167,26 @@ void UFactoryPlacementComponent::ToggleRetrieveMode()
 	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
 
+void UFactoryPlacementComponent::TryEnterMoveMode()
+{
+	if (CurrentPlacementMode != EPlacementMode::None) return;
+
+	if (AFactoryPlayerController* Controller = CachedPlayerController.Get())
+	{
+		if (Controller->GetCurrentViewMode() != EFactoryViewModeType::TopView) return;
+
+		FHitResult HitResult;
+		if (Controller->GetHitResultUnderCursor(ECC_Visibility, false, HitResult)) 
+		{
+			if (AFactoryLogisticsObjectBase* HitObject = Cast<AFactoryLogisticsObjectBase>(HitResult.GetActor()))
+			{
+				SelectObject(HitObject);
+				SetMoveObjectToPreviews();
+			}
+		}
+	}
+}
+
 
 #pragma endregion
 
@@ -272,8 +292,6 @@ void UFactoryPlacementComponent::RotatePlacementPreview()
 	PlaceObjectPivotActor->SetActorRotation(FRotator(0.f, FRotator::NormalizeAxis(NextYaw), 0.f));
 }
 
-
-
 void UFactoryPlacementComponent::PlaceObject()
 {
 	bool bGlobalValid = true;
@@ -281,6 +299,15 @@ void UFactoryPlacementComponent::PlaceObject()
 	
 	if (bGlobalValid && ActivePreviews.Num() > 0)
 	{
+		if (CurrentPlacementMode == EPlacementMode::Move)
+		{
+			for (auto& LogisticsObjectBase : SelectedLogisticsObjectBases)
+			{
+				LogisticsObjectBase->Destroy();
+			}
+			SelectedLogisticsObjectBases.Empty();
+		}
+		
 		for (auto Preview : ActivePreviews)
 		{
 			if (!Preview || !Preview->GetObjectData()) continue;
@@ -318,13 +345,6 @@ void UFactoryPlacementComponent::PlaceObject()
 		}
 	}
 	
-	if (CurrentPlacementMode == EPlacementMode::Move)
-	{
-		for (auto& LogisticsObjectBase : SelectedLogisticsObjectBases)
-		{
-			LogisticsObjectBase->Destroy();
-		}
-	}
 	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
 
@@ -538,13 +558,19 @@ bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLoca
 
 void UFactoryPlacementComponent::SelectObject(AFactoryLogisticsObjectBase* TargetObject)
 {
-	SelectedLogisticsObjectBases.Add(TargetObject);
+	if (TargetObject)
+	{
+		SelectedLogisticsObjectBases.Add(TargetObject);
+	}
 	//TODO : 선택된 객체들에 대한 시각적 피드백(예: 하이라이트) 구현
 }
 
 void UFactoryPlacementComponent::DeselectObject(AFactoryLogisticsObjectBase* TargetObject)
 {
-	SelectedLogisticsObjectBases.Remove(TargetObject);
+	if (TargetObject)
+	{
+		SelectedLogisticsObjectBases.Remove(TargetObject);
+	}
 	//TODO : 선택 해제된 객체에 대한 시각적 피드백 제거 구현
 }
 
@@ -552,8 +578,9 @@ void UFactoryPlacementComponent::ClearObject()
 {
 	for (auto Object : SelectedLogisticsObjectBases)
 	{
-		DeselectObject(Object);
+		//TODO : 선택 해제된 객체에 대한 시각적 피드백 제거 구현
 	}
+	SelectedLogisticsObjectBases.Empty();
 }
 
 #pragma endregion
