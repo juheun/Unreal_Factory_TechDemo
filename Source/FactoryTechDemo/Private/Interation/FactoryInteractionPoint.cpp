@@ -3,43 +3,138 @@
 
 #include "Interation/FactoryInteractionPoint.h"
 
+#include "Components/WidgetComponent.h"
 #include "Inventory/FactoryInventoryComponent.h"
+#include "Items/FactoryItemData.h"
 #include "Player/Component/FactoryPlacementComponent.h"
+#include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
-// Sets default values
 AFactoryInteractionPoint::AFactoryInteractionPoint()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	
 	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	RootComponent = StaticMeshComponent;
+	
+	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComponent"));
+	WidgetComponent->SetupAttachment(RootComponent);
+	WidgetComponent->SetWidgetSpace(EWidgetSpace::World);
+	WidgetComponent->SetDrawSize(FVector2D(400.0f, 100.0f));
+	WidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 50.0f));
+}
+
+void AFactoryInteractionPoint::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	
+	if (WidgetComponent)
+	{
+		if (!WidgetComponent->GetUserWidgetObject())
+		{
+			WidgetComponent->InitWidget();
+		}
+		FText DisplayText;
+		if (TryGetInteractText(EPlacementMode::None, DisplayText))
+		{
+			UpdateWidgetText(DisplayText);
+		}
+	}
+}
+
+void AFactoryInteractionPoint::BeginPlay()
+{
+	Super::BeginPlay();
+	if (WidgetComponent)
+	{
+		FText DisplayText;
+		if (TryGetInteractText(EPlacementMode::None, DisplayText))
+		{
+			UpdateWidgetText(DisplayText);
+		}
+	}
 }
 
 void AFactoryInteractionPoint::Interact(const AActor* Interactor, const EPlacementMode CurrentMode)
 {
-	if (!ItemToGive || !Interactor || AmountToGive <= 0) return;
-	
+	if (!ItemData || !Interactor || Amount <= 0) return;
 	if (CurrentMode != EPlacementMode::None) return;
 	
-	if (UFactoryInventoryComponent* Inventory = 
-		Cast<APawn>(Interactor)->GetController()->FindComponentByClass<UFactoryInventoryComponent>())
+	UFactoryInventoryComponent* Inventory = Cast<APawn>(Interactor)->GetController()->FindComponentByClass<UFactoryInventoryComponent>();
+	UFactoryWarehouseSubsystem* Warehouse = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
+	
+	switch (PointType)
 	{
-		int32 Added = Inventory->AutoAddItem(ItemToGive.Get(), AmountToGive);
-		UE_LOG(LogTemp, Log, TEXT("Added %d items"), Added);
+	case EInteractionPointType::GiveToInventory:
+		if (Inventory)
+		{
+			int32 Added = Inventory->AutoAddItem(ItemData.Get(), Amount);
+			UE_LOG(LogTemp, Log, TEXT("Inventory : Added %d %s"), Added, *ItemData->ItemName.ToString());
+		}
+		break;
+	case EInteractionPointType::TakeToInventory:
+		if (Inventory)
+		{
+			if (Inventory->AutoRemoveItem(ItemData.Get(), Amount))
+			{
+				UE_LOG(LogTemp, Log, TEXT("Inventory : Removed %d %s"), Amount, *ItemData->ItemName.ToString());
+			}
+		}
+		break;
+	case EInteractionPointType::GiveToWarehouse:
+		if (Warehouse)
+		{
+			int32 Added = Warehouse->AddItem(ItemData, Amount);
+			UE_LOG(LogTemp, Log, TEXT("Warehouse : Added %d %s"), Added, *ItemData->ItemName.ToString());
+		}
+		break;
+	case EInteractionPointType::TakeToWarehouse:
+		if (Warehouse)
+		{
+			if (Warehouse->TryRemoveItem(ItemData.Get(), Amount))
+			{
+				UE_LOG(LogTemp, Log, TEXT("Warehouse : Removed %d %s"), Amount, *ItemData->ItemName.ToString());
+			}
+		}
+		break;
 	}
 }
 
 bool AFactoryInteractionPoint::TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const
 {
-	if (CurrentMode == EPlacementMode::None)
+	if (CurrentMode != EPlacementMode::None) return false;
+	
+	if (!InteractText.IsEmpty())
 	{
 		OutText = InteractText;
-		return true;
 	}
-	
-	return false;
+	else
+	{
+		if (!ItemData) return false;
+		FString TargetStr, ModeStr;
+		switch (PointType)
+		{
+		case EInteractionPointType::GiveToInventory:
+			TargetStr = TEXT("인벤토리");
+			ModeStr = TEXT("증가");
+			break;
+		case EInteractionPointType::TakeToInventory:
+			TargetStr = TEXT("인벤토리");
+			ModeStr = TEXT("감소");
+			break;
+		case EInteractionPointType::GiveToWarehouse:
+			TargetStr = TEXT("창고");
+			ModeStr = TEXT("증가");
+			break;
+		case EInteractionPointType::TakeToWarehouse:
+			TargetStr = TEXT("창고");
+			ModeStr = TEXT("감소");
+			break;
+		}
+		OutText = FText::FromString(FString::Printf(
+			TEXT("%s에 %s %d개 %s"), *TargetStr, *ItemData->ItemName.ToString(), Amount, *ModeStr));
+	}
+	return true;
 }
 
 

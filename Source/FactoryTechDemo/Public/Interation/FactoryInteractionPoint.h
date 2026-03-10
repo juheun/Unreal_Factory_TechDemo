@@ -7,7 +7,17 @@
 #include "Interface/FactoryInteractable.h"
 #include "FactoryInteractionPoint.generated.h"
 
+class UWidgetComponent;
 class UFactoryItemData;
+
+UENUM(BlueprintType)
+enum class EInteractionPointType : uint8
+{
+	GiveToInventory		UMETA(DisplayName="Give to Inventory"),
+	TakeToInventory		UMETA(DisplayName="Take to Inventory"),
+	GiveToWarehouse		UMETA(DisplayName="Give to Warehouse"),
+	TakeToWarehouse		UMETA(DisplayName="Take to Warehouse"),
+};
 
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryInteractionPoint : public AActor, public IFactoryInteractable
@@ -15,23 +25,34 @@ class FACTORYTECHDEMO_API AFactoryInteractionPoint : public AActor, public IFact
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AFactoryInteractionPoint();
+	
+	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void BeginPlay() override;
 	
 	// 사용자가 액터와 상호작용할 때 호출되는 함수
 	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode) override;
 	virtual bool TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const override;
 
 protected:
+	UFUNCTION(BlueprintImplementableEvent, Category = "Factory|InteractionPoint")
+	void UpdateWidgetText(const FText& NewText);
+	
 	UPROPERTY(VisibleAnywhere, Category = "Factory|InteractionPoint")
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
 	
-	UPROPERTY(EditAnywhere, Category="Factory|Test")
-	TObjectPtr<UFactoryItemData> ItemToGive;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Factory|InteractionPoint")
+	TObjectPtr<UWidgetComponent> WidgetComponent;
 	
 	UPROPERTY(EditAnywhere, Category="Factory|Test")
-	int32 AmountToGive = 50;
+	EInteractionPointType PointType = EInteractionPointType::GiveToInventory;
+	
+	UPROPERTY(EditAnywhere, Category="Factory|Test")
+	TObjectPtr<const UFactoryItemData> ItemData;
+	
+	UPROPERTY(EditAnywhere, Category="Factory|Test")
+	int32 Amount = 50;
 	
 	UPROPERTY(EditAnywhere, Category = "Factory|Test")
-	FText InteractText = FText();
+	FText InteractText;
 };
