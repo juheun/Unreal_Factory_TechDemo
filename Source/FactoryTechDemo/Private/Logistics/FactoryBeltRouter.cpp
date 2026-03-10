@@ -30,7 +30,7 @@ void AFactoryBeltRouter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	
 	if (CurrentItem.IsValid())
 	{
-		WarehouseSubsystem->StoreItem(
+		WarehouseSubsystem->AddItem(
 			const_cast<UFactoryItemData*>(CurrentItem.ItemData.Get()), 1);
 		if (CurrentItem.VisualActor.Get())
 		{
@@ -43,7 +43,7 @@ void AFactoryBeltRouter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		if (Port && Port->PendingItem.IsValid())
 		{
-			WarehouseSubsystem->StoreItem(
+			WarehouseSubsystem->AddItem(
 				const_cast<UFactoryItemData*>(Port->PendingItem.ItemData.Get()), 1);
 			if (Port->PendingItem.VisualActor.IsValid())
 			{

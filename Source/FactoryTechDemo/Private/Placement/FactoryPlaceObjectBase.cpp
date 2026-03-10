@@ -36,7 +36,7 @@ void AFactoryPlaceObjectBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 		if (!WarehouseSubsystem) return;
 	
-		WarehouseSubsystem->StoreItem(PlacementDataAsset->RetrieveItemData, 1);
+		WarehouseSubsystem->AddItem(PlacementDataAsset->RetrieveItemData, 1);
 	}
 }
 

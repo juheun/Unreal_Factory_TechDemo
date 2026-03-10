@@ -3,40 +3,35 @@
 
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 
-void UFactoryWarehouseSubsystem::StoreItem(UFactoryItemData* ItemData, const int32 Amount)
+int32 UFactoryWarehouseSubsystem::AddItem(const UFactoryItemData* ItemData, const int32 Amount)
 {
-	if (!ItemData) return;
+	if (!ItemData) return 0;
 	
 	int32& StoredAmount = WarehouseInventory.FindOrAdd(ItemData);
-	
 	StoredAmount = FMath::Clamp(StoredAmount + Amount, 0, MaxItemAmount);
-}
-
-bool UFactoryWarehouseSubsystem::TryConsumeItem(UFactoryItemData* ItemData, const int32 Amount)
-{
-	//TODO:테스트 후 제거
-	return true;
 	
-	// if (!ItemData) return false;
-	//
-	// int32* StoredAmount = WarehouseInventory.Find(ItemData);
-	//
-	// if (StoredAmount == nullptr || *StoredAmount < Amount)
-	// {
-	// 	return false;
-	// }
-	// *StoredAmount -= Amount;
-	// return true;
+	OnWarehouseItemChanged.Broadcast(ItemData, StoredAmount);
+	return StoredAmount;
 }
 
-int32 UFactoryWarehouseSubsystem::GetItemAmount(UFactoryItemData* ItemData) const
+bool UFactoryWarehouseSubsystem::TryRemoveItem(const UFactoryItemData* ItemData, const int32 Amount)
+{
+	if (!ItemData || Amount <= 0) return false;
+	
+	int32* StoredAmount = WarehouseInventory.Find(ItemData);
+	if (StoredAmount == nullptr || *StoredAmount < Amount)
+	{
+		return false;
+	}
+	*StoredAmount -= Amount;
+	OnWarehouseItemChanged.Broadcast(ItemData, *StoredAmount);
+	return true;
+}
+
+int32 UFactoryWarehouseSubsystem::GetItemAmount(const UFactoryItemData* ItemData) const
 {
 	if (!ItemData) return 0;
 	
 	const int32* StoredAmount = WarehouseInventory.Find(ItemData);
-	if (StoredAmount == nullptr)
-	{
-		return 0;
-	}
-	return *StoredAmount;
+	return StoredAmount ? *StoredAmount : 0;
 }

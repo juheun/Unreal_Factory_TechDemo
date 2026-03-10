@@ -42,7 +42,7 @@ void AFactoryBeltBridge::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		if (CurrentItems[i].IsValid())
 		{
-			WarehouseSubsystem->StoreItem(
+			WarehouseSubsystem->AddItem(
 				const_cast<UFactoryItemData*>(CurrentItems[i].ItemData.Get()), 1);
 			if (CurrentItems[i].VisualActor.Get())
 			{
@@ -56,7 +56,7 @@ void AFactoryBeltBridge::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		if (Port && Port->PendingItem.IsValid())
 		{
-			WarehouseSubsystem->StoreItem(
+			WarehouseSubsystem->AddItem(
 				const_cast<UFactoryItemData*>(Port->PendingItem.ItemData.Get()), 1);
 			if (Port->PendingItem.VisualActor.IsValid())
 			{

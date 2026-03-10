@@ -27,7 +27,7 @@ void AFactoryWarehouseExporter::PlanCycle()
 	if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort))
 	{
 		UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
-		if (WarehouseSubsystem && WarehouseSubsystem->TryConsumeItem(ItemData, 1))
+		if (WarehouseSubsystem && WarehouseSubsystem->TryRemoveItem(ItemData, 1))
 		{
 			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
 			if (!PoolSubsystem) return;

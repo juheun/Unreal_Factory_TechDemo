@@ -37,7 +37,7 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	
 	if (CurrentItem.IsValid())
 	{
-		WarehouseSubsystem->StoreItem(
+		WarehouseSubsystem->AddItem(
 			const_cast<UFactoryItemData*>(CurrentItem.ItemData.Get()), 1);
 		if (CurrentItem.VisualActor.Get())
 		{
@@ -51,7 +51,7 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		FFactoryItemInstance& PendingItem = LogisticsInputPortArr[0]->PendingItem;
 		if (PendingItem.IsValid())
 		{
-			WarehouseSubsystem->StoreItem(
+			WarehouseSubsystem->AddItem(
 				const_cast<UFactoryItemData*>(PendingItem.ItemData.Get()), 1);
 			
 			if (PendingItem.VisualActor.IsValid())

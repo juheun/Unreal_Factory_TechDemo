@@ -36,14 +36,14 @@ void AFactoryMachineBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		if (!InputBufferSlot.IsEmpty())
 		{
-			WarehouseSubsystem->StoreItem(
+			WarehouseSubsystem->AddItem(
 				const_cast<UFactoryItemData*>(InputBufferSlot.ItemData.Get()), InputBufferSlot.Amount);
 		}
 	}
 	
 	if (!OutputBufferSlot.IsEmpty())
 	{
-		WarehouseSubsystem->StoreItem(
+		WarehouseSubsystem->AddItem(
 			const_cast<UFactoryItemData*>(OutputBufferSlot.ItemData.Get()), OutputBufferSlot.Amount);
 	}
 }
