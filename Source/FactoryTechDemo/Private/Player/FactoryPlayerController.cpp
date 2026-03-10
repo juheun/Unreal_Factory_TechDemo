@@ -216,7 +216,6 @@ void AFactoryPlayerController::UpdateInputMappingContext() const
     
     if (GetCurrentPlacementMode() == EPlacementMode::None)
     {
-        
         if (CurrentViewMode == EFactoryViewModeType::NormalView)
         {
             Subsystem->AddMappingContext(NormalViewIdleActionContext, 1);
