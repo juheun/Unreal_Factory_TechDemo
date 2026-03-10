@@ -36,6 +36,8 @@ public:
 	TObjectPtr<UInputAction> NormalViewJumpAction;
 	// BaseView - TopView 이동 제어
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BaseView|Top")
+	TObjectPtr<UInputAction>  TopViewMoveAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BaseView|Top")
 	TObjectPtr<UInputAction>  TopViewDragMoveAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BaseView|Top")
 	TObjectPtr<UInputAction>  TopViewRotateAction;
