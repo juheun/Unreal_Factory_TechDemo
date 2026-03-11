@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Inventory/FFactorySlot.h"
+#include "UI/Core/FFactorySlot.h"
 #include "FactoryInventoryComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventorySlotUpdated, int32, SlotIndex, FFactorySlot, SlotData);

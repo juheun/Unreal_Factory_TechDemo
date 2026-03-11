@@ -1,10 +1,10 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Interation/FactoryInteractionPoint.h"
+#include "Interaction/FactoryInteractionPoint.h"
 
 #include "Components/WidgetComponent.h"
-#include "Inventory/FactoryInventoryComponent.h"
+#include "Player/Component/FactoryInventoryComponent.h"
 #include "Items/FactoryItemData.h"
 #include "Player/Component/FactoryPlacementComponent.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"

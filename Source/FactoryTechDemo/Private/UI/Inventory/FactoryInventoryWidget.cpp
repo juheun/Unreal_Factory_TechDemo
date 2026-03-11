@@ -1,11 +1,11 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Inventory/FactoryInventoryWidget.h"
+#include "UI/Inventory/FactoryInventoryWidget.h"
 
 #include "Components/UniformGridPanel.h"
-#include "Inventory/FactoryInventoryComponent.h"
-#include "Inventory/FactorySlotWidget.h"
+#include "Player/Component/FactoryInventoryComponent.h"
+#include "UI/Inventory/FactorySlotWidget.h"
 
 void UFactoryInventoryWidget::InitInventory(UFactoryInventoryComponent* InventoryComponent, int32 Columns)
 {

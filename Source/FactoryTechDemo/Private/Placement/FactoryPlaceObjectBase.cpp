@@ -3,7 +3,7 @@
 
 #include "Placement/FactoryPlaceObjectBase.h"
 
-#include "Inventory/FactoryInventoryComponent.h"
+#include "Player/Component/FactoryInventoryComponent.h"
 #include "Items/FactoryFacilityItemData.h"
 #include "Placement/FactoryObjectData.h"
 #include "Player/FactoryPlayerController.h"

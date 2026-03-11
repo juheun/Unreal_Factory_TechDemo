@@ -5,7 +5,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "Engine/OverlapResult.h"
-#include "Interation/FactoryInteractionWidget.h"
+#include "UI/Interaction/FactoryInteractionWidget.h"
 #include "Interface/FactoryInteractable.h"
 #include "Player/FactoryPlayerController.h"
 #include "Player/Component/FactoryPlacementComponent.h"

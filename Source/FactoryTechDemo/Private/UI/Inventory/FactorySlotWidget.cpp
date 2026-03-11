@@ -1,14 +1,14 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Inventory/FactorySlotWidget.h"
+#include "UI/Inventory/FactorySlotWidget.h"
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
-#include "Inventory/FactoryInventoryComponent.h"
-#include "Inventory/FactoryItemDragDropOperation.h"
-#include "Inventory/FFactorySlot.h"
+#include "Player/Component/FactoryInventoryComponent.h"
+#include "UI/Core/FactoryItemDragDropOperation.h"
+#include "UI/Core/FFactorySlot.h"
 #include "Items/FactoryItemData.h"
 
 void UFactorySlotWidget::InitSlot(UFactoryInventoryComponent* InventoryComponent, EFactorySlotType Type, int32 Index)

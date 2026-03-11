@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Inventory/FactoryInventoryComponent.h"
+#include "Player/Component//FactoryInventoryComponent.h"
 
 #include "Items/FactoryItemData.h"
 

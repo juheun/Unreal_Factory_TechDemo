@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Inventory/FFactorySlot.h"
+#include "UI/Core/FFactorySlot.h"
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "FactoryMachineBase.generated.h"
 

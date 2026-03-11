@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FFactorySlot.h"
+#include "UI/Core/FFactorySlot.h"
 #include "Blueprint/UserWidget.h"
 #include "FactorySlotWidget.generated.h"
 
