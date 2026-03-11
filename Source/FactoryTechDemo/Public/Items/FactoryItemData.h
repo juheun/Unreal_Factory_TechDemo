@@ -50,7 +50,7 @@ public:
 	FName ItemID;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Identity")
-	TObjectPtr<UTexture2D> ItemICon;
+	TObjectPtr<UTexture2D> ItemIcon;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Identity")
 	EFactoryItemCategory ItemCategory = EFactoryItemCategory::Resource;

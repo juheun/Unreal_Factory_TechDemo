@@ -5,7 +5,7 @@
 
 #include "Components/UniformGridPanel.h"
 #include "Player/Component/FactoryInventoryComponent.h"
-#include "UI/Inventory/FactorySlotWidget.h"
+#include "UI/Inventory/FactoryInventorySlotWidget.h"
 
 void UFactoryInventoryWidget::InitInventory(UFactoryInventoryComponent* InventoryComponent, int32 Columns)
 {
@@ -17,9 +17,9 @@ void UFactoryInventoryWidget::InitInventory(UFactoryInventoryComponent* Inventor
 	int32 MaxSlots = InventoryComponent->GetMaxItemSlotCount();
 	for (int i = 0; i < MaxSlots; i++)
 	{
-		if (UFactorySlotWidget* NewSlotWidget = CreateWidget<UFactorySlotWidget>(this, SlotWidgetBP))
+		if (UFactoryInventorySlotWidget* NewSlotWidget = CreateWidget<UFactoryInventorySlotWidget>(this, SlotWidgetBP))
 		{
-			NewSlotWidget->InitSlot(InventoryComponent, EFactorySlotType::Inventory, i);
+			NewSlotWidget->InitInventorySlot(InventoryComponent, i);
 			int32 Row = i / Columns;
 			int32 Column = i % Columns;
 			InventoryGridPanel->AddChildToUniformGrid(NewSlotWidget, Row, Column);

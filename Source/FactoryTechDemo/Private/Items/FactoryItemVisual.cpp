@@ -18,7 +18,7 @@ AFactoryItemVisual::AFactoryItemVisual()
 
 void AFactoryItemVisual::UpdateVisual(const UFactoryItemData* ItemData)
 {
-	if (!ItemData || !ItemData->ItemICon || !MeshComponent) return;
+	if (!ItemData || !ItemData->ItemIcon || !MeshComponent) return;
 	
 	if (!DynamicMaterial)
 	{
@@ -27,7 +27,7 @@ void AFactoryItemVisual::UpdateVisual(const UFactoryItemData* ItemData)
 	
 	if (DynamicMaterial)
 	{
-		DynamicMaterial->SetTextureParameterValue(FName("ItemIcon"), ItemData->ItemICon);
+		DynamicMaterial->SetTextureParameterValue(FName("ItemIcon"), ItemData->ItemIcon);
 	}
 }
 

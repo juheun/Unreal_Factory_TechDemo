@@ -7,7 +7,7 @@
 #include "FactoryInventoryWidget.generated.h"
 
 class UFactoryInventoryComponent;
-class UFactorySlotWidget;
+class UFactoryInventorySlotWidget;
 class UUniformGridPanel;
 
 /**
@@ -24,11 +24,11 @@ public:
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UFactorySlotWidget> SlotWidgetBP;
+	TSubclassOf<UFactoryInventorySlotWidget> SlotWidgetBP;
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UUniformGridPanel> InventoryGridPanel;
 	
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<UFactorySlotWidget>> SlotWidgets;
+	TArray<TObjectPtr<UFactoryInventorySlotWidget>> SlotWidgets;
 };
