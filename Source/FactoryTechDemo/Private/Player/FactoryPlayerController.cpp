@@ -34,16 +34,6 @@ void AFactoryPlayerController::BeginPlay()
         AFactoryTopViewPawn::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
     CachedTopViewPawn->SetActorHiddenInGame(true);
     
-    // UI 초기화
-    if (IsLocalController() && InventoryWidgetBP)
-    {
-        InventoryWidget = CreateWidget<UFactoryInventoryWidget>(this, InventoryWidgetBP);
-        if (InventoryWidget && InventoryComponent)
-        {
-            InventoryWidget->InitInventory(InventoryComponent, InventoryColumns);
-        }
-    }
-    
     // 델리게이트 등록
     if (PlacementComponent)
     {
@@ -53,6 +43,10 @@ void AFactoryPlayerController::BeginPlay()
     {
         QuickSlotComponent->OnQuickSlotExecuted.AddDynamic(this, &AFactoryPlayerController::QuickSlotExecuteCallback);
     }
+    if (InventoryComponent)
+    {
+        InventoryComponent->OnInventoryToggled.AddDynamic(this, &AFactoryPlayerController::HandleInventoryToggled);
+    }
     
     UpdateInputMappingContext();
 }
@@ -61,14 +55,10 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
     
-    EPlacementMode PlacementMode = EPlacementMode::None;
-    
     if (PlacementComponent)
     {
         PlacementComponent->UpdatePreviewState();
-        PlacementMode = PlacementComponent->GetCurrentPlaceMode();
     }
-    
     if (InteractionComponent)
     {
         InteractionComponent->UpdateInteraction();
@@ -84,35 +74,19 @@ void AFactoryPlayerController::SetupInputComponent()
         if (!InputConfig) return;
         
         EnhancedInputComponent->BindAction(InputConfig->ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
-        EnhancedInputComponent->BindAction(InputConfig->ToggleInventoryAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleInventoryWidget);
         
-        if (PlacementComponent)
-        {
-            PlacementComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
-        }
-        
-        if (InteractionComponent)
-        {
-            InteractionComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
-        }
-        
-        if (QuickSlotComponent)
-        {
-            QuickSlotComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
-        }
+        if (PlacementComponent) PlacementComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
+        if (InventoryComponent) InventoryComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
+        if (InteractionComponent) InteractionComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
+        if (QuickSlotComponent) QuickSlotComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
     }
 }
 
-#pragma endregion 
 
-void AFactoryPlayerController::ToggleInventoryWidget()
+#pragma endregion 
+void AFactoryPlayerController::HandleInventoryToggled(bool bIsOpen)
 {
-    if (InventoryWidget)
-    {
-        if (bIsInventoryOpen) InventoryWidget->RemoveFromParent();
-        else InventoryWidget->AddToViewport();
-    }
-    bIsInventoryOpen = !bIsInventoryOpen;
+    bIsInventoryOpen = bIsOpen;
     UpdateInputState();
 }
 
@@ -121,7 +95,10 @@ void AFactoryPlayerController::UpdateInputState()
     if (bIsInventoryOpen)
     {
         FInputModeGameAndUI InputMode;
-        if (InventoryWidget) InputMode.SetWidgetToFocus(InventoryWidget->TakeWidget());
+        if (InventoryComponent && InventoryComponent->GetInventoryWidget())
+        {
+            InputMode.SetWidgetToFocus(InventoryComponent->GetInventoryWidget()->TakeWidget());
+        }
         SetInputMode(InputMode);
         bShowMouseCursor = true;
     }

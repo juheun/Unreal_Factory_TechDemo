@@ -7,22 +7,30 @@
 #include "UI/Core/FFactorySlot.h"
 #include "FactoryInventoryComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventorySlotUpdated, int32, SlotIndex, FFactorySlot, SlotData);
+class UFactoryInputConfig;
+class UFactoryInventoryWidget;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryToggled, bool, bIsOpen);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventorySlotUpdated, int32, SlotIndex, FFactorySlot, SlotData);
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FACTORYTECHDEMO_API UFactoryInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
 	UFactoryInventoryComponent();
-
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
-
-public:
+	
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Inventory")
+	FOnInventoryToggled OnInventoryToggled;
+	
+	void SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp, const UFactoryInputConfig* InputConfig);
+	
+	UFUNCTION(BlueprintCallable, Category = "Factory|UI")
+	void ToggleInventoryWidget();
+	
+	bool GetIsInventoryOpen() const { return bIsInventoryOpen; }
+	UFactoryInventoryWidget* GetInventoryWidget() const { return InventoryWidget; }
+	
 	/**
 	 * 인벤토리 간 아이템 이동 요청
 	 * @param SourceInventory - 아이템을 옮길 원본 인벤토리
@@ -63,8 +71,18 @@ public:
 	int32 GetMaxItemSlotCount() const { return MaxItemSlotCount; }
 	
 protected:
+	virtual void BeginPlay() override;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
+	TSubclassOf<UFactoryInventoryWidget> InventoryWidgetBP;
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactoryInventoryWidget> InventoryWidget;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Factory|Inventory")
+	int32 InventoryColumns = 5;
+	
 	// 인벤토리의 슬롯 총 갯수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Factory|Inventory")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Factory|Inventory")
 	int32 MaxItemSlotCount = 20;
 	
 private:
@@ -72,4 +90,6 @@ private:
 	TArray<FFactorySlot> InventorySlots;
 	
 	void InitializeInventory();
+	
+	bool bIsInventoryOpen = false;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Component/FactoryInventoryComponent.h"
 #include "Player/Component/FactoryPlacementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "FactoryPlayerController.generated.h"
@@ -16,8 +17,6 @@ class AFactoryCharacter;
 class AFactoryTopViewPawn;
 class UFactoryObjectData;
 class AFactoryPlacePreview;
-class UFactoryInventoryWidget;
-class UFactoryInteractionWidget;
 
 UENUM(BlueprintType)
 enum class EFactoryViewModeType : uint8
@@ -40,12 +39,9 @@ public:
     // --- 엔진 오버라이드 ---
     virtual void PlayerTick(float DeltaTime) override;
 
-    // --- 외부 인터페이스 ---
-    void ToggleInventoryWidget();   //인벤토리 UI 토글
-    
     EFactoryViewModeType GetCurrentViewMode() const { return CurrentViewMode; }
     EPlacementMode GetCurrentPlacementMode() const {return PlacementComponent ? PlacementComponent->GetCurrentPlaceMode() : EPlacementMode::None;}
-    bool GetIsInventoryOpen() const { return bIsInventoryOpen; }
+    bool GetIsInventoryOpen() const { return InventoryComponent ? InventoryComponent->GetIsInventoryOpen() : false; }
     UFactoryInventoryComponent* GetInventoryComponent() const {return InventoryComponent;};
     
     UFactoryInputConfig* GetInputConfig() const { return InputConfig; }
@@ -56,6 +52,8 @@ protected:
     virtual void SetupInputComponent() override;
     
     // --- 내부 로직 제어 ---
+    UFUNCTION(BlueprintCallable)
+    void HandleInventoryToggled(bool bIsOpen);
     void UpdateInputState();
     void OnToggleViewMode();
     
@@ -68,17 +66,6 @@ protected:
     // --- 상태 정보 (State) ---
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Factory|State")
     EFactoryViewModeType CurrentViewMode = EFactoryViewModeType::NormalView;
-
-    bool bIsInventoryOpen = false;
-
-    // --- UI 구성 ---
-    UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
-    TSubclassOf<UFactoryInventoryWidget> InventoryWidgetBP;
-    UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
-    TObjectPtr<UFactoryInventoryWidget> InventoryWidget;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
-    int32 InventoryColumns = 5;
 
     // --- 입력 에셋 (Enhanced Input) ---
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
@@ -114,4 +101,6 @@ protected:
     TWeakObjectPtr<AFactoryCharacter> CachedNormalViewCharacter;
     UPROPERTY()
     TWeakObjectPtr<AFactoryTopViewPawn> CachedTopViewPawn;
+    
+    bool bIsInventoryOpen = false;
 };

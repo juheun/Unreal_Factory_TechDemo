@@ -28,5 +28,8 @@ public:
 	FIntPoint GridSize = FIntPoint(1, 1);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
-	TObjectPtr<UFactoryFacilityItemData> RetrieveItemData;		// 아이템 수납시 사용될 아이템 정체성 데이터
+	TObjectPtr<UFactoryFacilityItemData> RepresentingItemData;		// 아이템 수납시 사용될 아이템 정체성 데이터
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
+	bool bRefundItemOnDestroy = true;
 };

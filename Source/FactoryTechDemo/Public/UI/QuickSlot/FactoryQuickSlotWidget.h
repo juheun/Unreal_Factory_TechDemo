@@ -20,6 +20,9 @@ public:
 protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> HotkeyText;
+	
+	UFUNCTION()
+	void OnDataChanged(int32 Index, UFactoryObjectData* Data);
 
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 

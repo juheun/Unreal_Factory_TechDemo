@@ -1,9 +1,13 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Player/Component//FactoryInventoryComponent.h"
+#include "Player/Component/FactoryInventoryComponent.h"
 
+#include "EnhancedInputComponent.h"
+#include "Blueprint/UserWidget.h"
 #include "Items/FactoryItemData.h"
+#include "Player/Input/FactoryInputConfig.h"
+#include "UI/Inventory/FactoryInventoryWidget.h"
 
 
 UFactoryInventoryComponent::UFactoryInventoryComponent()
@@ -11,18 +15,45 @@ UFactoryInventoryComponent::UFactoryInventoryComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-
-// Called when the game starts
 void UFactoryInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	
 	InitializeInventory();
+	
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetOwner()))
+	{
+		if (PlayerController->IsLocalController() && InventoryWidgetBP)
+		{
+			InventoryWidget = CreateWidget<UFactoryInventoryWidget>(PlayerController, InventoryWidgetBP);
+			if (InventoryWidget)
+			{
+				InventoryWidget->InitInventory(this, InventoryColumns);
+			}
+		}
+	}
 }
 
 void UFactoryInventoryComponent::InitializeInventory()
 {
 	InventorySlots.SetNum(MaxItemSlotCount);
+}
+
+void UFactoryInventoryComponent::SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp,
+	const UFactoryInputConfig* InputConfig)
+{
+    PlayerInputComp->BindAction(InputConfig->ToggleInventoryAction, ETriggerEvent::Started, this, &UFactoryInventoryComponent::ToggleInventoryWidget);
+}
+
+void UFactoryInventoryComponent::ToggleInventoryWidget()
+{
+	if (InventoryWidget)
+	{
+		if (bIsInventoryOpen) InventoryWidget->RemoveFromParent();
+		else InventoryWidget->AddToViewport();
+	}
+	bIsInventoryOpen = !bIsInventoryOpen;
+	OnInventoryToggled.Broadcast(bIsInventoryOpen);
 }
 
 bool UFactoryInventoryComponent::RequestTransferItem(UFactoryInventoryComponent* SourceInventory, int32 SourceSlotIndex, 
