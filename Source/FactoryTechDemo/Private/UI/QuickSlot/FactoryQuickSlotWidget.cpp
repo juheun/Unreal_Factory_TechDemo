@@ -50,21 +50,30 @@ void UFactoryQuickSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData,
 			}
 			ItemIcon->SetVisibility(ESlateVisibility::Visible);
 			
-			if (CurrentAmount <= 0)
+			if (CurrentAmount < 0)
+			{
+				ItemIcon->SetRenderOpacity(1.0f);
+				if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
+			}
+			else if (CurrentAmount == 0)
 			{
 				ItemIcon->SetRenderOpacity(0.5f);
+				if (AmountText)
+				{
+					AmountText->SetText(FText::AsNumber(CurrentAmount));
+					AmountText->SetVisibility(ESlateVisibility::Visible);
+				}
 			}
 			else
 			{
 				ItemIcon->SetRenderOpacity(1.0f);
+				if (AmountText)
+				{
+					// 수량이 0이어도 0이라고 표시해줌
+					AmountText->SetText(FText::AsNumber(CurrentAmount));
+					AmountText->SetVisibility(ESlateVisibility::Visible);
+				}
 			}
-		}
-        
-		if (AmountText)
-		{
-			// 수량이 0이어도 0이라고 표시해줌
-			AmountText->SetText(FText::AsNumber(CurrentAmount));
-			AmountText->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
 }
@@ -75,7 +84,12 @@ void UFactoryQuickSlotWidget::OnDataChanged(int32 Index, UFactoryObjectData* Dat
 	{
 		const UFactoryItemData* DisplayItem = Data ? Data->RepresentingItemData : nullptr;
         
-		UpdateSlotVisual(DisplayItem, Amount);
+		int32 DisplayAmount = Amount;
+		if (Data && !Data->bRefundItemOnDestroy)
+		{
+			DisplayAmount = -1;
+		}
+		UpdateSlotVisual(DisplayItem, DisplayAmount);
 	}
 }
 
