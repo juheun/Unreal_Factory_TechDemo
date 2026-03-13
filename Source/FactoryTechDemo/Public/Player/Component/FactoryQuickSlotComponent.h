@@ -6,13 +6,14 @@
 #include "Components/ActorComponent.h"
 #include "FactoryQuickSlotComponent.generated.h"
 
+class UFactoryInventoryComponent;
+struct FFactorySlot;
 class UFactoryQuickBarWidget;
 class UFactoryInputConfig;
 class AFactoryPlayerController;
-class UFactoryInventoryWidget;
 class UFactoryObjectData;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnQuickSlotDataChangedSignature, int32, Index, UFactoryObjectData*, ObjectData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnQuickSlotDataChangedSignature, int32, Index, UFactoryObjectData*, ObjectData, int32, Amount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnQuickSlotExecuteSignature, UFactoryObjectData*, ObjectData);
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FACTORYTECHDEMO_API UFactoryQuickSlotComponent : public UActorComponent
@@ -29,11 +30,17 @@ public:
 	FOnQuickSlotDataChangedSignature OnQuickSlotDataChanged;
 	
 	void SetQuickSlotData(int32 Index, UFactoryObjectData* InData);
+	void SwapQuickSlotData(int32 IndexA, int32 IndexB);
+	void BroadcastQuickSlotChange(int32 Index);
 
 	const TArray<TObjectPtr<UFactoryObjectData>>& GetQuickSlotDataArray() const {return QuickSlotObjectDataArr;}
 	
 protected:
 	virtual void BeginPlay() override;
+	
+	UFUNCTION()
+	void HandleInventoryUpdated(int32 SlotIndex, FFactorySlot SlotData);
+	
 	void ExecuteQuickSlotData(int Index);
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
@@ -48,4 +55,7 @@ protected:
 private:
 	UPROPERTY()
 	TWeakObjectPtr<AFactoryPlayerController> CachedPlayerController;
+	
+	UPROPERTY()
+	TWeakObjectPtr<UFactoryInventoryComponent> CachedInventory;
 };

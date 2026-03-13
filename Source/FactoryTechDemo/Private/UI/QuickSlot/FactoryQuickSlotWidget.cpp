@@ -2,12 +2,13 @@
 
 
 #include "UI/QuickSlot/FactoryQuickSlotWidget.h"
+
+#include "Components/Image.h"
 #include "Player/Component/FactoryQuickSlotComponent.h"
 #include "UI/Core/FactoryItemDragDropOperation.h"
 #include "Components/TextBlock.h"
 #include "Items/FactoryFacilityItemData.h"
 #include "Placement/FactoryObjectData.h"
-#include "Player/Component/FactoryInventoryComponent.h"
 
 void UFactoryQuickSlotWidget::InitQuickSlot(UFactoryQuickSlotComponent* QuickSlotComp, int32 InHotkeyIndex)
 {
@@ -25,37 +26,56 @@ void UFactoryQuickSlotWidget::InitQuickSlot(UFactoryQuickSlotComponent* QuickSlo
 		Comp->OnQuickSlotDataChanged.AddDynamic(this, &UFactoryQuickSlotWidget::OnDataChanged);
 
 		// 생성 직후 현재 컴포넌트가 가진 데이터로 초기 렌더링
-		const TArray<TObjectPtr<UFactoryObjectData>>& DataArr = Comp->GetQuickSlotDataArray();
-		if (DataArr.IsValidIndex(HotkeyIndex))
+		Comp->BroadcastQuickSlotChange(HotkeyIndex);
+	}
+}
+
+void UFactoryQuickSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, int32 Amount)
+{
+	CurrentItemData = ItemData;
+	CurrentAmount = Amount;
+	
+	if (CurrentItemData == nullptr)
+	{
+		if (ItemIcon) ItemIcon->SetVisibility(ESlateVisibility::Hidden);
+		if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
+	}
+	else
+	{
+		if (ItemIcon)
 		{
-			OnDataChanged(HotkeyIndex, DataArr[HotkeyIndex]);
+			if (CurrentItemData->ItemIcon)
+			{
+				ItemIcon->SetBrushFromTexture(CurrentItemData->ItemIcon);
+			}
+			ItemIcon->SetVisibility(ESlateVisibility::Visible);
+			
+			if (CurrentAmount <= 0)
+			{
+				ItemIcon->SetRenderOpacity(0.5f);
+			}
+			else
+			{
+				ItemIcon->SetRenderOpacity(1.0f);
+			}
+		}
+        
+		if (AmountText)
+		{
+			// 수량이 0이어도 0이라고 표시해줌
+			AmountText->SetText(FText::AsNumber(CurrentAmount));
+			AmountText->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
 }
 
-void UFactoryQuickSlotWidget::OnDataChanged(int32 Index, UFactoryObjectData* Data)
+void UFactoryQuickSlotWidget::OnDataChanged(int32 Index, UFactoryObjectData* Data, int32 Amount)
 {
 	if (Index == HotkeyIndex)
 	{
-		// ObjectData에서 시각화용 ItemData 추출
 		const UFactoryItemData* DisplayItem = Data ? Data->RepresentingItemData : nullptr;
         
-		int32 TotalAmount = 0;
-        
-		// 인벤토리를 찾아서 총합 개수를 가져옵니다.
-		if (DisplayItem)
-		{
-			if (APlayerController* PC = GetOwningPlayer())
-			{
-				if (UFactoryInventoryComponent* InvComp = PC->FindComponentByClass<UFactoryInventoryComponent>())
-				{
-					TotalAmount = InvComp->GetTotalItemAmount(DisplayItem);
-				}
-			}
-		}
-        
-		// TODO : 추후 갯수가 0개여도 아이콘 사라지지 않게 수정
-		UpdateSlotVisual(DisplayItem, DisplayItem ? FMath::Max(1, TotalAmount) : 0);
+		UpdateSlotVisual(DisplayItem, Amount);
 	}
 }
 
@@ -65,7 +85,17 @@ bool UFactoryQuickSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FD
 	
 	UFactoryItemDragDropOperation* DragOperation = Cast<UFactoryItemDragDropOperation>(InOperation);
 	if (!DragOperation) return false;
-
+	
+	// 다른 퀵슬롯에서 온 경우 스왑
+	if (UFactoryQuickSlotWidget* SourceQuickSlot = Cast<UFactoryQuickSlotWidget>(DragOperation->SourceSlotWidget))
+	{
+		if (SourceQuickSlot != this && LinkedQuickSlotComp.IsValid())
+		{
+			LinkedQuickSlotComp->SwapQuickSlotData(SourceQuickSlot->HotkeyIndex, this->HotkeyIndex);
+		}
+		return true;
+	}
+	
 	const UFactoryFacilityItemData* FacilityData = Cast<UFactoryFacilityItemData>(DragOperation->ItemData);
 	if (FacilityData && FacilityData->PlacementData)
 	{
