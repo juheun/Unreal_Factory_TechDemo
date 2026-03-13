@@ -120,10 +120,11 @@ void UFactoryQuickSlotComponent::HandleInventoryUpdated(int32 SlotIndex, FFactor
 
 void UFactoryQuickSlotComponent::ExecuteQuickSlotData(int Index)
 {
-	UFactoryObjectData* ObjectData = QuickSlotObjectDataArr.IsValidIndex(Index) ? QuickSlotObjectDataArr[Index] : nullptr;
-	if (ObjectData)
+	if (!QuickSlotObjectDataArr.IsValidIndex(Index) || !QuickSlotObjectDataArr[Index]) return;
+	if (!QuickSlotObjectDataArr[Index]->bRefundItemOnDestroy ||
+		CachedInventory->GetTotalItemAmount(QuickSlotObjectDataArr[Index]->RepresentingItemData) > 0)
 	{
-		OnQuickSlotExecuted.Broadcast(ObjectData);
+		OnQuickSlotExecuted.Broadcast(QuickSlotObjectDataArr[Index]);
 	}
 }
 

@@ -53,7 +53,7 @@ void UFactoryInteractionComponent::UpdateInteraction() const
 	bool bIsInventoryOpen = Controller->GetIsInventoryOpen();
 	EFactoryViewModeType ViewMode = Controller->GetCurrentViewMode();
 	
-	bool bHideInteraction = (PlacementMode == EPlacementMode::PlaceFromData ||
+	bool bHideInteraction = (PlacementMode == EPlacementMode::PlaceFromInventory ||
 		PlacementMode == EPlacementMode::BeltPlace || bIsInventoryOpen);
 	
 	if (!bHideInteraction && InteractionPromptWidget)

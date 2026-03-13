@@ -7,6 +7,7 @@
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "FactoryPlacementComponent.generated.h"
 
+class UFactoryItemData;
 //전방선언
 class UFactoryInputConfig;
 class UFactoryPoolSubsystem;
@@ -20,7 +21,7 @@ UENUM()
 enum class EPlacementMode : uint8
 {
 	None				UMETA(DisplayName = "None"),
-	PlaceFromData		UMETA(DisplayName = "Place From Data"),
+	PlaceFromInventory	UMETA(DisplayName = "Place From Inventory"),
 	Move				UMETA(DisplayName = "Move"),
 	BeltPlace			UMETA(DisplayName = "Belt Place"),
 	Retrieve			UMETA(DisplayName = "Retrieve"),
@@ -29,6 +30,7 @@ enum class EPlacementMode : uint8
 /**
  * 오브젝트 배치 관련 로직을 담당하는 컴포넌트
  */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnObjectPlacedFromInventorySignature, const UFactoryFacilityItemData*, ItemData, int32, Amount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlacementModeChangedSignature, EPlacementMode, NewMode);
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FACTORYTECHDEMO_API UFactoryPlacementComponent : public UActorComponent
@@ -47,6 +49,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Factory|Placement")
 	FOnPlacementModeChangedSignature OnPlacementModeChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Placement")
+	FOnObjectPlacedFromInventorySignature OnObjectPlacedFromInventorySignature;
 	
 protected:
 	virtual void BeginPlay() override;

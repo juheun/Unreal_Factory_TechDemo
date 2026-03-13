@@ -1,6 +1,7 @@
 #include "Player/FactoryPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Items/FactoryFacilityItemData.h"
 #include "UI/Inventory/FactoryInventoryWidget.h"
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Player/FactoryCharacter.h"
@@ -38,6 +39,7 @@ void AFactoryPlayerController::BeginPlay()
     if (PlacementComponent)
     {
         PlacementComponent->OnPlacementModeChanged.AddDynamic(this, &AFactoryPlayerController::OnPlacementModeChangedCallback);
+        PlacementComponent->OnObjectPlacedFromInventorySignature.AddDynamic(this, &AFactoryPlayerController::HandleObjectPlacedFromInventory);
     }
     if (QuickSlotComponent)
     {
@@ -88,6 +90,15 @@ void AFactoryPlayerController::HandleInventoryToggled(bool bIsOpen)
 {
     bIsInventoryOpen = bIsOpen;
     UpdateInputState();
+}
+
+void AFactoryPlayerController::HandleObjectPlacedFromInventory(const UFactoryFacilityItemData* FacilityItemData,
+    int32 Amount)
+{
+    if (InventoryComponent && FacilityItemData)
+    {
+        InventoryComponent->AutoRemoveItem(FacilityItemData, Amount);
+    }
 }
 
 void AFactoryPlayerController::UpdateInputState()

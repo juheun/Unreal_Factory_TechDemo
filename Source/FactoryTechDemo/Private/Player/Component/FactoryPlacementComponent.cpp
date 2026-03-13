@@ -100,7 +100,7 @@ void UFactoryPlacementComponent::ProcessClickAction()
 {
 	switch (CurrentPlacementMode)
 	{
-	case EPlacementMode::PlaceFromData:
+	case EPlacementMode::PlaceFromInventory:
 	case EPlacementMode::Move:
 		PlaceObject();
 		break;
@@ -209,7 +209,7 @@ void UFactoryPlacementComponent::SetupSinglePreview(UFactoryObjectData* Data, EP
 
 void UFactoryPlacementComponent::SetPlaceFromDataPreview(UFactoryObjectData* Data)
 {
-	SetupSinglePreview(Data, EPlacementMode::PlaceFromData);
+	SetupSinglePreview(Data, EPlacementMode::PlaceFromInventory);
 }
 
 void UFactoryPlacementComponent::SetMoveObjectToPreviews()
@@ -336,6 +336,11 @@ void UFactoryPlacementComponent::PlaceObject()
 						Belt->SetBeltType(BeltPreview->GetBeltType());
 					}
 				}
+				
+				if (CurrentPlacementMode == EPlacementMode::PlaceFromInventory && NewActor->GetObjectData()->bRefundItemOnDestroy)
+				{
+					OnObjectPlacedFromInventorySignature.Broadcast(NewActor->GetObjectData()->RepresentingItemData, 1);
+				}
 			}
 		}
 		ClearAllPreviews();
@@ -378,7 +383,7 @@ void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
 		PlaceObjectPivotGridSize = FIntPoint(1, 1);
 		PlaceObjectPivotActor->SetActorLocation(ActivePreviews[0]->GetActorLocation());
 	}
-	else if (CurrentPlacementMode == EPlacementMode::PlaceFromData && ActivePreviews.IsValidIndex(0))
+	else if (CurrentPlacementMode == EPlacementMode::PlaceFromInventory && ActivePreviews.IsValidIndex(0))
 	{
 		if (const UFactoryObjectData* Data = ActivePreviews[0]->GetObjectData())
 		{

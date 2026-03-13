@@ -17,6 +17,7 @@ class AFactoryCharacter;
 class AFactoryTopViewPawn;
 class UFactoryObjectData;
 class AFactoryPlacePreview;
+class UFactoryFacilityItemData;
 
 UENUM(BlueprintType)
 enum class EFactoryViewModeType : uint8
@@ -54,6 +55,8 @@ protected:
     // --- 내부 로직 제어 ---
     UFUNCTION(BlueprintCallable)
     void HandleInventoryToggled(bool bIsOpen);
+    UFUNCTION()
+    void HandleObjectPlacedFromInventory(const UFactoryFacilityItemData* FacilityItemData, int32 Amount);
     void UpdateInputState();
     void OnToggleViewMode();
     
