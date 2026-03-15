@@ -56,8 +56,17 @@ void UFactoryInventoryComponent::ToggleInventoryWidget()
 	OnInventoryToggled.Broadcast(bIsInventoryOpen);
 }
 
+FFactorySlot UFactoryInventoryComponent::GetSlotData(int32 Index) const
+{
+	if (InventorySlots.IsValidIndex(Index))
+	{
+		return InventorySlots[Index];
+	}
+	return FFactorySlot(); // 유효하지 않은 인덱스면 빈 슬롯 반환
+}
+
 bool UFactoryInventoryComponent::RequestTransferItem(UFactoryInventoryComponent* SourceInventory, int32 SourceSlotIndex, 
-	int32 TargetSlotIndex)
+                                                     int32 TargetSlotIndex)
 {
 	if (!SourceInventory || !SourceInventory->InventorySlots.IsValidIndex(SourceSlotIndex)) return false;
 	if (SourceInventory == this && SourceSlotIndex == TargetSlotIndex) return false; // 같은 슬롯이면 무시

@@ -27,6 +27,8 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Factory|UI")
 	void ToggleInventoryWidget();
+	UFUNCTION(BlueprintCallable, Category = "Factory|Inventory")
+	FFactorySlot GetSlotData(int32 Index) const;
 	
 	bool GetIsInventoryOpen() const { return bIsInventoryOpen; }
 	UFactoryInventoryWidget* GetInventoryWidget() const { return InventoryWidget; }

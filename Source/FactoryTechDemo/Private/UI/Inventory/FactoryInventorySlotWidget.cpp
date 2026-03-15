@@ -18,6 +18,10 @@ void UFactoryInventorySlotWidget::InitInventorySlot(UFactoryInventoryComponent* 
 	if (UFactoryInventoryComponent* Inventory = LinkedInventory.Get())
 	{
 		Inventory->OnSlotUpdated.AddDynamic(this, &UFactoryInventorySlotWidget::OnSlotDataChanged);
+		
+		// UI 생성 직후 데이터를 한번 불러와서 한번 비주얼을 동기화시킴.
+		FFactorySlot CurrentSlotData = Inventory->GetSlotData(Index);
+		UpdateSlotVisual(CurrentSlotData.ItemData, CurrentSlotData.Amount);
 	}
 }
 
