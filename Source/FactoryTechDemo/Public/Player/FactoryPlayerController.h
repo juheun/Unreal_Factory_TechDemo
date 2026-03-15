@@ -18,6 +18,7 @@ class AFactoryTopViewPawn;
 class UFactoryObjectData;
 class AFactoryPlacePreview;
 class UFactoryFacilityItemData;
+class UFactoryPlayerContextHUDComponent;
 
 UENUM(BlueprintType)
 enum class EFactoryViewModeType : uint8
@@ -29,6 +30,7 @@ enum class EFactoryViewModeType : uint8
 /**
  * 팩토리 건설 및 시점 제어를 담당하는 컨트롤러
  */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewModeChangedSignature, EFactoryViewModeType, NewViewMode);
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryPlayerController : public APlayerController
 {
@@ -36,6 +38,8 @@ class FACTORYTECHDEMO_API AFactoryPlayerController : public APlayerController
 
 public:
     AFactoryPlayerController();
+    
+    FOnViewModeChangedSignature OnViewModeChanged;
 
     // --- 엔진 오버라이드 ---
     virtual void PlayerTick(float DeltaTime) override;
@@ -43,7 +47,7 @@ public:
     EFactoryViewModeType GetCurrentViewMode() const { return CurrentViewMode; }
     EPlacementMode GetCurrentPlacementMode() const {return PlacementComponent ? PlacementComponent->GetCurrentPlaceMode() : EPlacementMode::None;}
     bool GetIsInventoryOpen() const { return InventoryComponent ? InventoryComponent->GetIsInventoryOpen() : false; }
-    UFactoryInventoryComponent* GetInventoryComponent() const {return InventoryComponent;};
+    UFactoryInventoryComponent* GetInventoryComponent() const { return InventoryComponent; };
     
     UFactoryInputConfig* GetInputConfig() const { return InputConfig; }
 
@@ -91,7 +95,7 @@ protected:
     
     // --- 시스템 데이터 및 캐싱 ---
         // 컴포넌트
-    UPROPERTY(EditDefaultsOnly, Category = "Factory|Component")
+    UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
     TObjectPtr<UFactoryInventoryComponent> InventoryComponent;
     UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
     TObjectPtr<UFactoryPlacementComponent> PlacementComponent;
@@ -99,6 +103,8 @@ protected:
     TObjectPtr<UFactoryInteractionComponent> InteractionComponent;
     UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
     TObjectPtr<UFactoryQuickSlotComponent> QuickSlotComponent;
+    UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
+    TObjectPtr<UFactoryPlayerContextHUDComponent> ContextHUDComponent;
 
     UPROPERTY()
     TWeakObjectPtr<AFactoryCharacter> CachedNormalViewCharacter;

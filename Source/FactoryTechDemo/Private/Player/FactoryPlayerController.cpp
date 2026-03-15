@@ -8,6 +8,7 @@
 #include "Player/FactoryTopViewPawn.h"
 #include "Player/Component/FactoryInteractionComponent.h"
 #include "Player/Component/FactoryPlacementComponent.h"
+#include "Player/Component/FactoryPlayerContextHUDComponent.h"
 #include "Player/Component/FactoryQuickSlotComponent.h"
 #include "Player/Input/FactoryInputConfig.h"
 
@@ -17,6 +18,7 @@ AFactoryPlayerController::AFactoryPlayerController()
     PlacementComponent = CreateDefaultSubobject<UFactoryPlacementComponent>(TEXT("PlacementComponent"));
     InteractionComponent = CreateDefaultSubobject<UFactoryInteractionComponent>(TEXT("InteractionComponent"));
     QuickSlotComponent = CreateDefaultSubobject<UFactoryQuickSlotComponent>(TEXT("QuickSlotComponent"));
+    ContextHUDComponent = CreateDefaultSubobject<UFactoryPlayerContextHUDComponent>(TEXT("ContextHUDComponent"));
 }
 
 #pragma region 엔진 라이프 사이클
@@ -169,6 +171,7 @@ void AFactoryPlayerController::OnToggleViewMode()
         }
 
         CurrentViewMode = NewMode; 
+        OnViewModeChanged.Broadcast(CurrentViewMode);
         UpdateInputState();
         EnableInput(this);
         UpdateInputMappingContext();
@@ -222,6 +225,7 @@ void AFactoryPlayerController::UpdateInputMappingContext() const
 
 void AFactoryPlayerController::OnPlacementModeChangedCallback(EPlacementMode PlacementMode)
 {
+    ContextHUDComponent->OnPlacementModeChanged(PlacementMode);
     UpdateInputMappingContext();
 }
 
