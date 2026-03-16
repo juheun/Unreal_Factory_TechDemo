@@ -13,7 +13,7 @@ void UFactoryBaseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, 
 	CurrentItemData = ItemData;
 	CurrentAmount = Amount;
 	
-	if (CurrentItemData == nullptr || CurrentAmount <= 0)
+	if (CurrentItemData == nullptr)
 	{
 		if (ItemIcon) ItemIcon->SetVisibility(ESlateVisibility::Hidden);
 		if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
@@ -27,6 +27,7 @@ void UFactoryBaseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, 
 				ItemIcon->SetBrushFromTexture(CurrentItemData->ItemIcon);
 			}
 			ItemIcon->SetVisibility(ESlateVisibility::Visible);
+			ItemIcon->SetRenderOpacity(1.0f);
 		}
 		if (AmountText)
 		{

@@ -32,47 +32,20 @@ void UFactoryQuickSlotWidget::InitQuickSlot(UFactoryQuickSlotComponent* QuickSlo
 
 void UFactoryQuickSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, int32 Amount)
 {
-	CurrentItemData = ItemData;
-	CurrentAmount = Amount;
+	Super::UpdateSlotVisual(ItemData, Amount);
 	
-	if (CurrentItemData == nullptr)
+	if (CurrentItemData != nullptr)
 	{
-		if (ItemIcon) ItemIcon->SetVisibility(ESlateVisibility::Hidden);
-		if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
-	}
-	else
-	{
-		if (ItemIcon)
+		if (CurrentAmount < 0)	// 설비가 무한히 제공되는 경우
 		{
-			if (CurrentItemData->ItemIcon)
+			if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
+		}
+		else if (CurrentAmount == 0)
+		{
+			ItemIcon->SetRenderOpacity(0.5f);
+			if (AmountText)
 			{
-				ItemIcon->SetBrushFromTexture(CurrentItemData->ItemIcon);
-			}
-			ItemIcon->SetVisibility(ESlateVisibility::Visible);
-			
-			if (CurrentAmount < 0)
-			{
-				ItemIcon->SetRenderOpacity(1.0f);
-				if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
-			}
-			else if (CurrentAmount == 0)
-			{
-				ItemIcon->SetRenderOpacity(0.5f);
-				if (AmountText)
-				{
-					AmountText->SetText(FText::AsNumber(CurrentAmount));
-					AmountText->SetVisibility(ESlateVisibility::Visible);
-				}
-			}
-			else
-			{
-				ItemIcon->SetRenderOpacity(1.0f);
-				if (AmountText)
-				{
-					// 수량이 0이어도 0이라고 표시해줌
-					AmountText->SetText(FText::AsNumber(CurrentAmount));
-					AmountText->SetVisibility(ESlateVisibility::Visible);
-				}
+				AmountText->SetText(FText::AsNumber(CurrentAmount));
 			}
 		}
 	}

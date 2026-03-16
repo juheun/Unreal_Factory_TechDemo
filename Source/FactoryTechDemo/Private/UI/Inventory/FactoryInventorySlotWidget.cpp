@@ -39,16 +39,20 @@ bool UFactoryInventorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, cons
 	
 	UFactoryItemDragDropOperation* DragOperation = Cast<UFactoryItemDragDropOperation>(InOperation);
 	if (!DragOperation) return false;
-	
-	// 상대방이 인벤토리 슬롯인지 확인
-	UFactoryInventorySlotWidget* SourceSlot = Cast<UFactoryInventorySlotWidget>(DragOperation->SourceSlotWidget);
-	if (!SourceSlot || SourceSlot == this) return false;
+	if (DragOperation->SourceSlotWidget == this) return false;	// 자기 자신에게 드롭한 경우 무시
 	
 	UFactoryInventoryComponent* TargetInventory = LinkedInventory.Get();
-	UFactoryInventoryComponent* SourceInventory = SourceSlot->LinkedInventory.Get();
+	if (!TargetInventory) return false;
 	
-	if (!TargetInventory || !SourceInventory) return false;
+	// 출발지가 인벤토리 슬롯인 경우 (같은 인벤토리 내 이동 혹은 다른 인벤토리에서 이동)
+	if (UFactoryInventorySlotWidget* SourceSlot = Cast<UFactoryInventorySlotWidget>(DragOperation->SourceSlotWidget))
+	{
+		if (UFactoryInventoryComponent* SourceInventory = SourceSlot->LinkedInventory.Get())
+		{
+			return TargetInventory->RequestTransferItem(SourceInventory, SourceSlot->SlotIndex, SlotIndex);
+		}
+	}
 	
-	// 진짜 물리적인 아이템 자리 교체!
-	return TargetInventory->RequestTransferItem(SourceInventory, SourceSlot->SlotIndex, SlotIndex);
+	// TODO : 출발지가 창고 슬롯인 경우
+	return false;
 }
