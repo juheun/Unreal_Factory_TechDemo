@@ -10,10 +10,10 @@
 
 void UFactoryBaseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, int32 Amount)
 {
-	CurrentItemData = ItemData;
-	CurrentAmount = Amount;
+	SlotItemData = ItemData;
+	SlotAmount = Amount;
 	
-	if (CurrentItemData == nullptr)
+	if (SlotItemData == nullptr)
 	{
 		if (ItemIcon) ItemIcon->SetVisibility(ESlateVisibility::Hidden);
 		if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
@@ -22,16 +22,16 @@ void UFactoryBaseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, 
 	{
 		if (ItemIcon)
 		{
-			if (CurrentItemData->ItemIcon)
+			if (SlotItemData->ItemIcon)
 			{
-				ItemIcon->SetBrushFromTexture(CurrentItemData->ItemIcon);
+				ItemIcon->SetBrushFromTexture(SlotItemData->ItemIcon);
 			}
 			ItemIcon->SetVisibility(ESlateVisibility::Visible);
 			ItemIcon->SetRenderOpacity(1.0f);
 		}
 		if (AmountText)
 		{
-			AmountText->SetText(FText::AsNumber(CurrentAmount));
+			AmountText->SetText(FText::AsNumber(SlotAmount));
 			AmountText->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
@@ -39,7 +39,7 @@ void UFactoryBaseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, 
 
 FReply UFactoryBaseSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && CurrentItemData != nullptr)
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && SlotItemData != nullptr)
 	{
 		return UWidgetBlueprintLibrary::DetectDragIfPressed(InMouseEvent, this, EKeys::LeftMouseButton).NativeReply;
 	}
@@ -56,13 +56,13 @@ void UFactoryBaseSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, c
 	if (DragOperation)
 	{
 		DragOperation->SourceSlotWidget = this;
-		DragOperation->ItemData = CurrentItemData;
-		DragOperation->DraggedAmount = CurrentAmount;
+		DragOperation->ItemData = SlotItemData;
+		DragOperation->DraggedAmount = SlotAmount;
 		
 		// 마우스 따라다닐 UI
 		if (UFactoryBaseSlotWidget* VisualWidget = CreateWidget<UFactoryBaseSlotWidget>(GetWorld(), GetClass()))
 		{
-			VisualWidget->UpdateSlotVisual(CurrentItemData, CurrentAmount);
+			VisualWidget->UpdateSlotVisual(SlotItemData, SlotAmount);
 			DragOperation->DefaultDragVisual = VisualWidget;
 		}
 		

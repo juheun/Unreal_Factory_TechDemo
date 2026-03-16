@@ -25,6 +25,9 @@ public:
 	bool TryRemoveItem(const UFactoryItemData* ItemData, const int32 Amount);
 	int32 GetItemAmount(const UFactoryItemData* ItemData) const;
 	
+	int32 GetMaxItemAmount() const { return MaxItemAmount; }
+	const TMap<TObjectPtr<const UFactoryItemData>, int32>& GetWarehouseInventory() const { return WarehouseInventory; }
+	
 private:
 	UPROPERTY()
 	TMap<TObjectPtr<const UFactoryItemData>, int32> WarehouseInventory;

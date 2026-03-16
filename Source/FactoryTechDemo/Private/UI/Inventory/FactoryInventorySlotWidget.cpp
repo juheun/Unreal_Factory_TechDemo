@@ -3,7 +3,9 @@
 
 #include "UI/Inventory/FactoryInventorySlotWidget.h"
 #include "Player/Component/FactoryInventoryComponent.h"
+#include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/Core/FactoryItemDragDropOperation.h"
+#include "UI/Warehouse/FactoryWarehouseSlotWidget.h"
 
 void UFactoryInventorySlotWidget::InitInventorySlot(UFactoryInventoryComponent* InventoryComponent, int32 Index)
 {
@@ -41,18 +43,41 @@ bool UFactoryInventorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, cons
 	if (!DragOperation) return false;
 	if (DragOperation->SourceSlotWidget == this) return false;	// 자기 자신에게 드롭한 경우 무시
 	
+	const UFactoryItemData* DraggedItemData = DragOperation->ItemData;
+	int32 DraggedAmount = DragOperation->DraggedAmount;
+	
 	UFactoryInventoryComponent* TargetInventory = LinkedInventory.Get();
 	if (!TargetInventory) return false;
 	
 	// 출발지가 인벤토리 슬롯인 경우 (같은 인벤토리 내 이동 혹은 다른 인벤토리에서 이동)
-	if (UFactoryInventorySlotWidget* SourceSlot = Cast<UFactoryInventorySlotWidget>(DragOperation->SourceSlotWidget))
+	if (UFactoryInventorySlotWidget* SourceInventorySlotWidget = Cast<UFactoryInventorySlotWidget>(DragOperation->SourceSlotWidget))
 	{
-		if (UFactoryInventoryComponent* SourceInventory = SourceSlot->LinkedInventory.Get())
+		if (UFactoryInventoryComponent* SourceInventory = SourceInventorySlotWidget->GetInventoryComponent())
 		{
-			return TargetInventory->RequestTransferItem(SourceInventory, SourceSlot->SlotIndex, SlotIndex);
+			return TargetInventory->RequestTransferItem(SourceInventory, SourceInventorySlotWidget->GetSlotIndex(), SlotIndex);
+		}
+	}
+	else if (UFactoryWarehouseSlotWidget* SourceWarehouseSlotWidget = Cast<UFactoryWarehouseSlotWidget>(DragOperation->SourceSlotWidget))
+	{	
+		// 출발지가 창고인경우
+		UFactoryWarehouseSubsystem* Warehouse = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
+		if (!Warehouse) return false;
+		
+		FFactorySlot TargetSlot = TargetInventory->GetSlotData(SlotIndex);
+		if (TargetSlot.IsEmpty() || TargetSlot.ItemData == DraggedItemData)	// 비어있거나 같은 종류의 아이템일때만 전송 수행
+		{
+			int32 AvailableSpace = TargetSlot.GetAvailableSpace();
+			int32 AmountToTransfer = FMath::Min(AvailableSpace, DraggedAmount);
+			if (AmountToTransfer > 0)
+			{
+				if (Warehouse->TryRemoveItem(DraggedItemData, AmountToTransfer))
+				{
+					TargetInventory->AddItemToTargetSlot(SlotIndex, DraggedItemData, AmountToTransfer);
+					return true;
+				}
+			}
 		}
 	}
 	
-	// TODO : 출발지가 창고 슬롯인 경우
 	return false;
 }

@@ -17,7 +17,10 @@ class FACTORYTECHDEMO_API UFactoryInventorySlotWidget : public UFactoryBaseSlotW
 public:
 	UFUNCTION(BlueprintCallable, Category = "FactorySlot")
 	void InitInventorySlot(UFactoryInventoryComponent* InventoryComponent, int32 Index);
-
+	
+	UFactoryInventoryComponent* GetInventoryComponent() const { return LinkedInventory.Get(); }
+	int32 GetSlotIndex() const { return SlotIndex; }
+	
 protected:
 	UFUNCTION(BlueprintCallable, Category = "FactorySlot")
 	void OnSlotDataChanged(int32 UpdatedSlotIndex, FFactorySlot UpdatedSlotData);

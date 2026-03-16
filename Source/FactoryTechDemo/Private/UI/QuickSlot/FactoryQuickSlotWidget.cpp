@@ -34,18 +34,18 @@ void UFactoryQuickSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData,
 {
 	Super::UpdateSlotVisual(ItemData, Amount);
 	
-	if (CurrentItemData != nullptr)
+	if (SlotItemData != nullptr)
 	{
-		if (CurrentAmount < 0)	// 설비가 무한히 제공되는 경우
+		if (SlotAmount < 0)	// 설비가 무한히 제공되는 경우
 		{
 			if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
 		}
-		else if (CurrentAmount == 0)
+		else if (SlotAmount == 0)
 		{
 			ItemIcon->SetRenderOpacity(0.5f);
 			if (AmountText)
 			{
-				AmountText->SetText(FText::AsNumber(CurrentAmount));
+				AmountText->SetText(FText::AsNumber(SlotAmount));
 			}
 		}
 	}
