@@ -50,7 +50,7 @@ void UFactoryInteractionComponent::UpdateInteraction() const
 	if (!Controller) return;
 
 	EPlacementMode PlacementMode = Controller->GetCurrentPlacementMode();
-	bool bIsInventoryOpen = Controller->GetIsInventoryOpen();
+	bool bIsInventoryOpen = Controller->GetIsStorageOpen();
 	EFactoryViewModeType ViewMode = Controller->GetCurrentViewMode();
 	
 	bool bHideInteraction = (PlacementMode == EPlacementMode::PlaceFromInventory ||

@@ -98,13 +98,23 @@ void AFactoryTopViewPawn::Move(const FInputActionValue& Value)
 void AFactoryTopViewPawn::DragPan(const FInputActionValue& Value)
 {
     FVector2D DragDelta = Value.Get<FVector2D>();
+    if (Controller != nullptr)
+    {
+        if (AFactoryPlayerController* PC = Cast<AFactoryPlayerController>(Controller))
+        {
+            if (PC->GetIsStorageOpen())
+            {
+                return;
+            }
+        }
 
-    // 유저가 땅을 잡고 끄는 느낌을 위해 -1을 곱함
-    FVector Offset = (GetActorForwardVector() * -DragDelta.Y) + (GetActorRightVector() * -DragDelta.X);
+        // 유저가 땅을 잡고 끄는 느낌을 위해 -1을 곱함
+        FVector Offset = (GetActorForwardVector() * -DragDelta.Y) + (GetActorRightVector() * -DragDelta.X);
     
-    // 줌 배율에 따라 보정
-    float ZoomRatio = Camera->OrthoWidth / MaxOrthoWidth;
-    AddActorWorldOffset(Offset * PanSpeed * ZoomRatio);
+        // 줌 배율에 따라 보정
+        float ZoomRatio = Camera->OrthoWidth / MaxOrthoWidth;
+        AddActorWorldOffset(Offset * PanSpeed * ZoomRatio);
+    }
 }
 
 void AFactoryTopViewPawn::Zoom(const FInputActionValue& Value)

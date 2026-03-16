@@ -23,6 +23,7 @@ public:
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	
 	UFUNCTION()
 	void OnWarehouseItemChanged(const UFactoryItemData* ItemData, int32 Amount);

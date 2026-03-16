@@ -2,7 +2,6 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Items/FactoryFacilityItemData.h"
-#include "UI/Inventory/FactoryInventoryWidget.h"
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Player/FactoryCharacter.h"
 #include "Player/FactoryTopViewPawn.h"
@@ -11,6 +10,7 @@
 #include "Player/Component/FactoryPlayerContextHUDComponent.h"
 #include "Player/Component/FactoryQuickSlotComponent.h"
 #include "Player/Input/FactoryInputConfig.h"
+#include "UI/Storage/FactoryStorageMenuWidget.h"
 
 AFactoryPlayerController::AFactoryPlayerController()
 {
@@ -37,6 +37,16 @@ void AFactoryPlayerController::BeginPlay()
         AFactoryTopViewPawn::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
     CachedTopViewPawn->SetActorHiddenInGame(true);
     
+    if (IsLocalController() && StorageMenuWidgetBP)
+    {
+        StorageMenuWidget = CreateWidget<UFactoryStorageMenuWidget>(this, StorageMenuWidgetBP);
+        if (StorageMenuWidget)
+        {
+            StorageMenuWidget->AddToViewport();
+            StorageMenuWidget->SetVisibility(ESlateVisibility::Collapsed); // 처음엔 숨기기
+        }
+    }
+    
     // 델리게이트 등록
     if (PlacementComponent)
     {
@@ -49,7 +59,6 @@ void AFactoryPlayerController::BeginPlay()
     }
     if (InventoryComponent)
     {
-        InventoryComponent->OnInventoryToggled.AddDynamic(this, &AFactoryPlayerController::HandleInventoryToggled);
     }
     
     UpdateInputMappingContext();
@@ -78,9 +87,9 @@ void AFactoryPlayerController::SetupInputComponent()
         if (!InputConfig) return;
         
         EnhancedInputComponent->BindAction(InputConfig->ToggleViewModeAction, ETriggerEvent::Started, this, &AFactoryPlayerController::OnToggleViewMode);
+        EnhancedInputComponent->BindAction(InputConfig->ToggleInventoryAction, ETriggerEvent::Started, this, &AFactoryPlayerController::ToggleStorageMenu);
         
         if (PlacementComponent) PlacementComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
-        if (InventoryComponent) InventoryComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
         if (InteractionComponent) InteractionComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
         if (QuickSlotComponent) QuickSlotComponent->SetUpInputComponent(EnhancedInputComponent, InputConfig);
     }
@@ -88,9 +97,23 @@ void AFactoryPlayerController::SetupInputComponent()
 
 
 #pragma endregion 
-void AFactoryPlayerController::HandleInventoryToggled(bool bIsOpen)
+void AFactoryPlayerController::ToggleStorageMenu()
 {
-    bIsInventoryOpen = bIsOpen;
+    bIsStorageMenuOpen = !bIsStorageMenuOpen;
+    
+    if (StorageMenuWidget)
+    {
+        if (bIsStorageMenuOpen)
+        {
+            StorageMenuWidget->OpenMenu(InventoryComponent, EFactoryMenuMode::Warehouse); 
+            StorageMenuWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        }
+        else
+        {
+            StorageMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+        }
+    }
+    
     UpdateInputState();
 }
 
@@ -105,13 +128,13 @@ void AFactoryPlayerController::HandleObjectPlacedFromInventory(const UFactoryFac
 
 void AFactoryPlayerController::UpdateInputState()
 {
-    if (bIsInventoryOpen)
+    if (bIsStorageMenuOpen)
     {
         FInputModeGameAndUI InputMode;
-        if (InventoryComponent && InventoryComponent->GetInventoryWidget())
-        {
-            InputMode.SetWidgetToFocus(InventoryComponent->GetInventoryWidget()->TakeWidget());
-        }
+        if (StorageMenuWidget) InputMode.SetWidgetToFocus(StorageMenuWidget->TakeWidget());
+        
+        InputMode.SetHideCursorDuringCapture(false);
+        
         SetInputMode(InputMode);
         bShowMouseCursor = true;
     }
@@ -119,7 +142,9 @@ void AFactoryPlayerController::UpdateInputState()
     {
         if (CurrentViewMode == EFactoryViewModeType::TopView)
         {
-            SetInputMode(FInputModeGameAndUI());
+            FInputModeGameAndUI InputMode;
+            InputMode.SetHideCursorDuringCapture(false);
+            SetInputMode(InputMode);
             bShowMouseCursor = true;
         }
         else

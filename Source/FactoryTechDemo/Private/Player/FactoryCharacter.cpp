@@ -65,7 +65,14 @@ void AFactoryCharacter::Look(const FInputActionValue& Value)
 
     if (Controller != nullptr)
     {
-        // 마우스 이동값을 컨트롤러 회전에 더함
+        if (AFactoryPlayerController* PC = Cast<AFactoryPlayerController>(Controller))
+        {
+            if (PC->GetIsStorageOpen())
+            {
+                return;
+            }
+        }
+
         AddControllerYawInput(LookAxisVector.X);
         AddControllerPitchInput(LookAxisVector.Y);
     }

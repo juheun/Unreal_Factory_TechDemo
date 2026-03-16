@@ -4,7 +4,10 @@
 #include "UI/Warehouse/FactoryWarehousePanelWidget.h"
 
 #include "Components/WrapBox.h"
+#include "Player/Component/FactoryInventoryComponent.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
+#include "UI/Core/FactoryItemDragDropOperation.h"
+#include "UI/Inventory/FactoryInventorySlotWidget.h"
 #include "UI/Warehouse/FactoryWarehouseSlotWidget.h"
 
 void UFactoryWarehousePanelWidget::NativeConstruct()
@@ -23,6 +26,42 @@ void UFactoryWarehousePanelWidget::NativeDestruct()
 	{
 		Warehouse->OnWarehouseItemChanged.RemoveDynamic(this, &UFactoryWarehousePanelWidget::OnWarehouseItemChanged);
 	}
+}
+
+bool UFactoryWarehousePanelWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
+	UDragDropOperation* InOperation)
+{
+	Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+
+	UFactoryItemDragDropOperation* DragOperation = Cast<UFactoryItemDragDropOperation>(InOperation);
+	if (!DragOperation) return false;
+
+	// 인벤토리 슬롯에서 온 경우만 처리
+	if (UFactoryInventorySlotWidget* SourceSlot = Cast<UFactoryInventorySlotWidget>(DragOperation->SourceSlotWidget))
+	{
+		UFactoryInventoryComponent* SourceInv = SourceSlot->GetInventoryComponent();
+		UFactoryWarehouseSubsystem* Warehouse = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
+
+		if (SourceInv && Warehouse)
+		{
+			const UFactoryItemData* ItemData = DragOperation->ItemData;
+			int32 Amount = DragOperation->DraggedAmount;
+
+			// 창고의 여유 공간 확인
+			int32 SpaceLeft = FMath::Max(0, Warehouse->GetMaxItemAmount() - Warehouse->GetItemAmount(ItemData));
+			int32 AmountToTransfer = FMath::Min(Amount, SpaceLeft);
+
+			if (AmountToTransfer > 0)
+			{
+				if (SourceInv->RemoveItemFromTargetSlot(SourceSlot->GetSlotIndex(), AmountToTransfer))
+				{
+					Warehouse->AddItem(ItemData, AmountToTransfer);
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }
 
 void UFactoryWarehousePanelWidget::InitPanel()

@@ -19,6 +19,7 @@ class UFactoryObjectData;
 class AFactoryPlacePreview;
 class UFactoryFacilityItemData;
 class UFactoryPlayerContextHUDComponent;
+class UFactoryStorageMenuWidget;
 
 UENUM(BlueprintType)
 enum class EFactoryViewModeType : uint8
@@ -46,7 +47,7 @@ public:
 
     EFactoryViewModeType GetCurrentViewMode() const { return CurrentViewMode; }
     EPlacementMode GetCurrentPlacementMode() const {return PlacementComponent ? PlacementComponent->GetCurrentPlaceMode() : EPlacementMode::None;}
-    bool GetIsInventoryOpen() const { return InventoryComponent ? InventoryComponent->GetIsInventoryOpen() : false; }
+    bool GetIsStorageOpen() const { return bIsStorageMenuOpen; }
     UFactoryInventoryComponent* GetInventoryComponent() const { return InventoryComponent; };
     
     UFactoryInputConfig* GetInputConfig() const { return InputConfig; }
@@ -58,7 +59,7 @@ protected:
     
     // --- 내부 로직 제어 ---
     UFUNCTION(BlueprintCallable)
-    void HandleInventoryToggled(bool bIsOpen);
+    void ToggleStorageMenu();
     UFUNCTION()
     void HandleObjectPlacedFromInventory(const UFactoryFacilityItemData* FacilityItemData, int32 Amount);
     void UpdateInputState();
@@ -105,11 +106,17 @@ protected:
     TObjectPtr<UFactoryQuickSlotComponent> QuickSlotComponent;
     UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
     TObjectPtr<UFactoryPlayerContextHUDComponent> ContextHUDComponent;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
+    TSubclassOf<UFactoryStorageMenuWidget> StorageMenuWidgetBP;
+
+    UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+    TObjectPtr<UFactoryStorageMenuWidget> StorageMenuWidget;
 
     UPROPERTY()
     TWeakObjectPtr<AFactoryCharacter> CachedNormalViewCharacter;
     UPROPERTY()
     TWeakObjectPtr<AFactoryTopViewPawn> CachedTopViewPawn;
     
-    bool bIsInventoryOpen = false;
+    bool bIsStorageMenuOpen = false;
 };
