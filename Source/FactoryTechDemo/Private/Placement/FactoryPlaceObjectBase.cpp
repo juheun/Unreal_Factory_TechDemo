@@ -9,6 +9,7 @@
 #include "Player/FactoryPlayerController.h"
 #include "Player/Component/FactoryPlacementComponent.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
+#include "UI/Facility/FactoryFacilityPanelBase.h"
 
 AFactoryPlaceObjectBase::AFactoryPlaceObjectBase()
 {
@@ -60,7 +61,16 @@ void AFactoryPlaceObjectBase::Interact(const AActor* Interactor, const EPlacemen
 	}
 	else if (CurrentMode == EPlacementMode::None)
 	{
-		// TODO : 패널로직
+		if (PlacementDataAsset && PlacementDataAsset->FacilityPanelBP)
+		{
+			if (const APawn* InteractorPawn = Cast<APawn>(Interactor))
+			{
+				if (AFactoryPlayerController* PC = Cast<AFactoryPlayerController>(InteractorPawn->GetController()))
+				{
+					PC->OpenFacilityMenu(this);
+				}
+			}
+		}
 	}
 }
 

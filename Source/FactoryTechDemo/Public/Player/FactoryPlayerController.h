@@ -6,17 +6,16 @@
 #include "GameFramework/PlayerController.h"
 #include "FactoryPlayerController.generated.h"
 
+class AFactoryPlaceObjectBase;
 class UFactoryInputConfig;
 class UFactoryQuickSlotComponent;
 class UFactoryInteractionComponent;
-class IFactoryInteractable;
 class UFactoryInventoryComponent;
 class UFactoryPlacementComponent;
 class UInputMappingContext;
 class AFactoryCharacter;
 class AFactoryTopViewPawn;
 class UFactoryObjectData;
-class AFactoryPlacePreview;
 class UFactoryFacilityItemData;
 class UFactoryPlayerContextHUDComponent;
 class UFactoryStorageMenuWidget;
@@ -44,7 +43,9 @@ public:
 
     // --- 엔진 오버라이드 ---
     virtual void PlayerTick(float DeltaTime) override;
-
+    
+    void OpenFacilityMenu(AFactoryPlaceObjectBase* Facility);
+    
     EFactoryViewModeType GetCurrentViewMode() const { return CurrentViewMode; }
     EPlacementMode GetCurrentPlacementMode() const {return PlacementComponent ? PlacementComponent->GetCurrentPlaceMode() : EPlacementMode::None;}
     bool GetIsStorageOpen() const { return bIsStorageMenuOpen; }

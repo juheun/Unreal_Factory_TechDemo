@@ -8,6 +8,7 @@
 
 class UFactoryFacilityItemData;
 class AFactoryPlaceObjectBase;
+class UFactoryFacilityPanelBase;
 
 /**
  * 
@@ -23,6 +24,9 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Classes")
 	TSubclassOf<AFactoryPlaceObjectBase> PlaceObjectBP;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UFactoryFacilityPanelBase> FacilityPanelBP;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Placement")
 	FIntPoint GridSize = FIntPoint(1, 1);

@@ -117,6 +117,20 @@ void AFactoryPlayerController::ToggleStorageMenu()
     UpdateInputState();
 }
 
+
+void AFactoryPlayerController::OpenFacilityMenu(AFactoryPlaceObjectBase* Facility)
+{
+    if (!Facility || !StorageMenuWidget) return;
+
+    // 설비 메뉴가 이미 열려있는 상태인지 여부 상관없이, 무조건 해당 설비로 켬
+    bIsStorageMenuOpen = true; 
+    
+    StorageMenuWidget->OpenMenu(InventoryComponent, EFactoryMenuMode::Facility, Facility);
+    StorageMenuWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    
+    UpdateInputState();
+}
+
 void AFactoryPlayerController::HandleObjectPlacedFromInventory(const UFactoryFacilityItemData* FacilityItemData,
     int32 Amount)
 {
