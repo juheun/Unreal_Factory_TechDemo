@@ -24,6 +24,7 @@ public:
 	void UnregisterLogisticsActor(AFactoryLogisticsObjectBase* LogisticsObject);
 	
 	float GetCycleAlpha() const;
+	float GetCycleInterval() const { return CycleInterval; }
 	
 protected:
 	void OnFactoryCycle();
@@ -39,5 +40,5 @@ private:
 	float LastStartCycleTime = 0.f;
 	bool bGraphDirty = false;	// 사이클 내부에서 설비의 위상정렬의 재설정을 하는 플래그
 	
-	const float CycleInterval = 1.f;
+	const float CycleInterval = 2.f;
 };

@@ -7,6 +7,7 @@
 #include "Items/FactoryRecipeData.h"
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
+#include "Subsystems/FactoryCycleSubsystem.h"
 #include "Subsystems/FactoryDataSubsystem.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
@@ -72,15 +73,18 @@ void AFactoryMachineBase::PlanCycle()
 	// 가공 로직
 	if (bIsWorking)
 	{
-		if (RemainingProductionCycle > 0)
+		if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
 		{
-			RemainingProductionCycle--;
-		}
-		if (RemainingProductionCycle <= 0)
-		{
-			if (TryEndCraftItem())
+			if (RemainingProductionCycle > 0)
 			{
-				bIsWorking = false;
+				RemainingProductionCycle -= CycleSubsystem->GetCycleInterval();
+			}
+			if (RemainingProductionCycle <= 0)
+			{
+				if (TryEndCraftItem())
+				{
+					bIsWorking = false;
+				}
 			}
 		}
 	}
