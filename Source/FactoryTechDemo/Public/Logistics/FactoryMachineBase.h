@@ -11,6 +11,9 @@ struct FFactoryItemInstance;
 class UFactoryRecipeData;
 class UFactoryFacilityItemData;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInputBufferChanged, int32, SlotIndex, FFactorySlot, SlotData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOutputBufferChanged, FFactorySlot, SlotData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrentRecipeChanged, UFactoryRecipeData*, RecipeData);
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryMachineBase : public AFactoryLogisticsObjectBase
 {
@@ -19,12 +22,30 @@ class FACTORYTECHDEMO_API AFactoryMachineBase : public AFactoryLogisticsObjectBa
 public:
 	AFactoryMachineBase();
 	
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Machine|Event")
+	FOnInputBufferChanged OnInputBufferChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Machine|Event")
+	FOnOutputBufferChanged OnOutputBufferChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Machine|Event")
+	FOnCurrentRecipeChanged OnCurrentRecipeChanged;
+	
 	virtual void PlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	
 	virtual bool CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const override;
-
+	
+	bool IsWorking() const { return bIsWorking; }
+	float GetRemainingProductionCycleTime() const { return RemainingProductionCycleTime; }
+	UFactoryRecipeData* GetCurrentRecipe() const { return CurrentRecipe; }
+	TArray<FFactorySlot> GetInputBufferSlots() const { return InputBufferSlots; }
+	FFactorySlot GetOutputBufferSlot() const { return OutputBufferSlot; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Factory|Machine")
+	bool TryPutItemToBuffer(bool bIsInputBuffer, int32 SlotIndex, const UFactoryItemData* ItemData, int32 AmountToPut, int32& OutRemainingAmount);
+	UFUNCTION(BlueprintCallable, Category = "Factory|Machine")
+	bool TryTakeItemFromBuffer(bool bIsInputBuffer, int32 SlotIndex, int32 AmountToTake, FFactorySlot& OutTakenSlot);
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -48,7 +69,7 @@ protected:
 	FFactorySlot OutputBufferSlot;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Factory|Machine")
-	int32 RemainingProductionCycle;
+	int32 RemainingProductionCycleTime;		// Cycle이 돌때마다 차감됨
 	UPROPERTY(VisibleAnywhere, Category = "Factory|Machine")
 	bool bIsWorking = false;
 	

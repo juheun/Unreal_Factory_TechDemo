@@ -18,7 +18,6 @@ AFactoryMachineBase::AFactoryMachineBase()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-
 void AFactoryMachineBase::BeginPlay()
 {
 	Super::BeginPlay();
@@ -75,11 +74,11 @@ void AFactoryMachineBase::PlanCycle()
 	{
 		if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
 		{
-			if (RemainingProductionCycle > 0)
+			if (RemainingProductionCycleTime > 0)
 			{
-				RemainingProductionCycle -= CycleSubsystem->GetCycleInterval();
+				RemainingProductionCycleTime -= CycleSubsystem->GetCycleInterval();
 			}
-			if (RemainingProductionCycle <= 0)
+			if (RemainingProductionCycleTime <= 0)
 			{
 				if (TryEndCraftItem())
 				{
@@ -144,22 +143,22 @@ void AFactoryMachineBase::ExecuteCycle()
 	int InputPortNum = InputPortIndex;
 	for (int i = 0; i < MaxPorts; i++)
 	{
-		int index = (InputPortNum + i) % MaxPorts;
+		int Index = (InputPortNum + i) % MaxPorts;
 		
-		if (!LogisticsInputPortArr.IsValidIndex(index) || !LogisticsInputPortArr[index]) continue;
-		if (LogisticsInputPortArr[index]->PendingItem.IsValid())
+		if (!LogisticsInputPortArr.IsValidIndex(Index) || !LogisticsInputPortArr[Index]) continue;
+		if (LogisticsInputPortArr[Index]->PendingItem.IsValid())
 		{
-			if (PullItemFromInputPorts(LogisticsInputPortArr[index]->PendingItem))
+			if (PullItemFromInputPorts(LogisticsInputPortArr[Index]->PendingItem))
 			{
-				if (AFactoryItemVisual* VisualActor = LogisticsInputPortArr[index]->PendingItem.VisualActor.Get())
+				if (AFactoryItemVisual* VisualActor = LogisticsInputPortArr[Index]->PendingItem.VisualActor.Get())
 				{
 					UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
 					if (!PoolSubsystem) return;
 					
 					PoolSubsystem->ReturnItemToPool(VisualActor);
 				}
-				LogisticsInputPortArr[index]->PendingItem = FFactoryItemInstance();
-				InputPortIndex = (index + 1) % MaxPorts;
+				LogisticsInputPortArr[Index]->PendingItem = FFactoryItemInstance();
+				InputPortIndex = (Index + 1) % MaxPorts;
 			}
 		}
 	}
@@ -199,25 +198,27 @@ bool AFactoryMachineBase::PullItemFromInputPorts(FFactoryItemInstance& Item)
 	if (!Item.IsValid()) return false;
 
 	// 먼저 같은 아이템이 있는 덜 찬 슬롯을 찾음
-	for (FFactorySlot& Slot : InputBufferSlots)
+	for (int32 i = 0; i < InputBufferSlots.Num(); ++i)
 	{
-		if (Slot.ItemData == Item.ItemData)
+		if (InputBufferSlots[i].ItemData == Item.ItemData)
 		{
-			if (!Slot.IsFull())
+			if (!InputBufferSlots[i].IsFull())
 			{
-				Slot.Amount++;
+				InputBufferSlots[i].Amount++;
+				OnInputBufferChanged.Broadcast(i, InputBufferSlots[i]);
 				return true;
 			}
 			return false;
 		}
 	}
 	// 없으면 완전히 빈 슬롯을 찾음
-	for (FFactorySlot& Slot : InputBufferSlots)
+	for (int32 i = 0; i < InputBufferSlots.Num(); ++i)
 	{
-		if (Slot.IsEmpty())
+		if (InputBufferSlots[i].IsEmpty())
 		{
-			Slot.ItemData = Item.ItemData;
-			Slot.Amount = 1; // 벨트에서는 1개씩 들어옴
+			InputBufferSlots[i].ItemData = Item.ItemData;
+			InputBufferSlots[i].Amount = 1; // 벨트에서는 1개씩 들어옴
+			OnInputBufferChanged.Broadcast(i, InputBufferSlots[i]);
 			return true;
 		}
 	}
@@ -281,7 +282,8 @@ bool AFactoryMachineBase::TryCraftItem()
 
 			// 가공 시작
 			CurrentRecipe = Recipe;
-			RemainingProductionCycle = Recipe->ProcessingTime; // 틱 단위 변환
+			RemainingProductionCycleTime = Recipe->ProcessingTime; // 틱 단위 변환
+			OnCurrentRecipeChanged.Broadcast(CurrentRecipe);
 			bIsWorking = true;
 			return true;
 		}
@@ -296,11 +298,111 @@ bool AFactoryMachineBase::TryEndCraftItem()
 		// 이미 가공 시작 전에 공간 검사를 완료했으므로 바로 넣음
 		OutputBufferSlot.ItemData = CurrentRecipe->Output.ItemData;
 		OutputBufferSlot.Amount += CurrentRecipe->Output.Amount;
+		OnOutputBufferChanged.Broadcast(OutputBufferSlot);
 		
 		CurrentRecipe = nullptr;
+		// 초기상태말고는 항상 현재 레시피가 있는것처럼 UI에 표시. OnCurrentRecipeChanged Broadcast 하지 않음
 		return true;
 	}
 	
+	return false;
+}
+
+
+bool AFactoryMachineBase::TryPutItemToBuffer(bool bIsInputBuffer, int32 SlotIndex, const UFactoryItemData* ItemData,
+	int32 AmountToPut, int32& OutRemainingAmount)
+{
+	OutRemainingAmount = AmountToPut;
+	if (!ItemData || AmountToPut <= 0) return false;
+
+	if (bIsInputBuffer)
+	{
+		if (!InputBufferSlots.IsValidIndex(SlotIndex)) return false;
+
+		FFactorySlot& TargetSlot = InputBufferSlots[SlotIndex];
+
+		// 빈 슬롯에 넣으려는 경우 다른 슬롯에 이미 같은 아이템이 있는지 검사 (제약 조건 준수)
+		if (TargetSlot.IsEmpty())
+		{
+			for (int32 i = 0; i < InputBufferSlots.Num(); ++i)
+			{
+				if (i != SlotIndex && InputBufferSlots[i].ItemData == ItemData)
+				{
+					// 이미 다른 슬롯이 이 아이템을 전담하고 있으므로, 새로운 슬롯에 넣는 것을 거부
+					return false; 
+				}
+			}
+		}
+
+		// 해당 슬롯이 비어있거나, 넣으려는 아이템과 같은 종류일 때만 진행
+		if (TargetSlot.IsEmpty() || TargetSlot.ItemData == ItemData)
+		{
+			int32 AvailableSpace = FFactorySlot::MaxCapacity - TargetSlot.Amount;
+            
+			int32 AmountToInsert = FMath::Min(AmountToPut, AvailableSpace);
+
+			if (AmountToInsert > 0)
+			{
+				TargetSlot.ItemData = ItemData;
+				TargetSlot.Amount += AmountToInsert;
+				OutRemainingAmount -= AmountToInsert; // 다 못 넣었으면 남은 개수가 담김
+
+				OnInputBufferChanged.Broadcast(SlotIndex, TargetSlot);
+				return true;
+			}
+		}
+	}
+	else
+	{
+		// 아웃풋 슬롯에는 플레이어가 인벤토리에서 수동으로 아이템을 집어넣지 못하게 막습니다.
+		return false;
+	}
+
+	return false;
+}
+
+bool AFactoryMachineBase::TryTakeItemFromBuffer(bool bIsInputBuffer, int32 SlotIndex, int32 AmountToTake,
+	FFactorySlot& OutTakenSlot)
+{
+	OutTakenSlot.Clear();
+	if (AmountToTake <= 0) return false;
+
+	if (bIsInputBuffer)
+	{
+		// 인풋 버퍼에서 빼기
+		if (!InputBufferSlots.IsValidIndex(SlotIndex)) return false;
+		FFactorySlot& TargetSlot = InputBufferSlots[SlotIndex];
+
+		if (!TargetSlot.IsEmpty())
+		{
+			int32 ActuallyTaken = FMath::Min(AmountToTake, TargetSlot.Amount);
+			OutTakenSlot.ItemData = TargetSlot.ItemData;
+			OutTakenSlot.Amount = ActuallyTaken;
+
+			TargetSlot.Amount -= ActuallyTaken;
+			if (TargetSlot.Amount <= 0) TargetSlot.Clear();
+
+			OnInputBufferChanged.Broadcast(SlotIndex, TargetSlot);
+			return true;
+		}
+	}
+	else
+	{
+		// 아웃풋 버퍼에서 빼기 (SlotIndex는 무시하고 단일 버퍼 사용)
+		if (!OutputBufferSlot.IsEmpty())
+		{
+			int32 ActuallyTaken = FMath::Min(AmountToTake, OutputBufferSlot.Amount);
+			OutTakenSlot.ItemData = OutputBufferSlot.ItemData;
+			OutTakenSlot.Amount = ActuallyTaken;
+
+			OutputBufferSlot.Amount -= ActuallyTaken;
+			if (OutputBufferSlot.Amount <= 0) OutputBufferSlot.Clear();
+
+			OnOutputBufferChanged.Broadcast(OutputBufferSlot);
+			return true;
+		}
+	}
+
 	return false;
 }
 

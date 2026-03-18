@@ -2,9 +2,12 @@
 
 
 #include "UI/Inventory/FactoryInventorySlotWidget.h"
+
+#include "Logistics/FactoryMachineBase.h"
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/Core/FactoryItemDragDropOperation.h"
+#include "UI/Facility/FactoryFacilitySlotWidget.h"
 #include "UI/Warehouse/FactoryWarehouseSlotWidget.h"
 
 void UFactoryInventorySlotWidget::InitInventorySlot(UFactoryInventoryComponent* InventoryComponent, int32 Index)
@@ -75,6 +78,19 @@ bool UFactoryInventorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, cons
 					TargetInventory->AddItemToTargetSlot(SlotIndex, DraggedItemData, AmountToTransfer);
 					return true;
 				}
+			}
+		}
+	}
+	else if (UFactoryFacilitySlotWidget* SourceFacilitySlotWidget = Cast<UFactoryFacilitySlotWidget>(DragOperation->SourceSlotWidget))
+	{
+		FFactorySlot TakenSlot;
+		
+		if (AFactoryMachineBase* Machine = Cast<AFactoryMachineBase>(SourceFacilitySlotWidget->OwnerFacility.Get()))
+		{
+			if (Machine->TryTakeItemFromBuffer(SourceFacilitySlotWidget->bIsInputSlot, SourceFacilitySlotWidget->FacilitySlotIndex, DraggedAmount, TakenSlot))
+			{
+				TargetInventory->AddItemToTargetSlot(SlotIndex, TakenSlot.ItemData, TakenSlot.Amount);
+				return true;
 			}
 		}
 	}

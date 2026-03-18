@@ -22,6 +22,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "FactorySlot")
 	virtual void UpdateSlotVisual(const UFactoryItemData* ItemData, int32 Amount);
 	
+	void SetInteractable(bool bInteractable) {bIsInteractable = bInteractable;}
+	
 protected:
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
@@ -37,4 +39,7 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FactorySlot")
 	int32 SlotAmount;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FactorySlot")
+	bool bIsInteractable = true;
 };

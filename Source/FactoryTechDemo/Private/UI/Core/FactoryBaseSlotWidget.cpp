@@ -39,7 +39,7 @@ void UFactoryBaseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, 
 
 FReply UFactoryBaseSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && SlotItemData != nullptr)
+	if (bIsInteractable && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && SlotItemData != nullptr)
 	{
 		return UWidgetBlueprintLibrary::DetectDragIfPressed(InMouseEvent, this, EKeys::LeftMouseButton).NativeReply;
 	}
@@ -49,6 +49,8 @@ FReply UFactoryBaseSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
 void UFactoryBaseSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
+	
+	if (!bIsInteractable) return;
 	
 	UFactoryItemDragDropOperation* DragOperation = Cast<UFactoryItemDragDropOperation>(
 		UWidgetBlueprintLibrary::CreateDragDropOperation(UFactoryItemDragDropOperation::StaticClass()));
