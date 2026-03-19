@@ -24,7 +24,7 @@ void AFactoryWarehouseExporter::PlanCycle()
 	UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[0]->GetConnectedInput();
 	if (!TargetPort) return;
 	
-	if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort))
+	if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, ItemData))
 	{
 		UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 		if (WarehouseSubsystem && WarehouseSubsystem->TryRemoveItem(ItemData, 1))

@@ -23,7 +23,8 @@ public:
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	
-	virtual bool CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const override;
+	virtual bool CanPushItemFromBeforeObject(
+		const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const override;
 	
 protected:
 	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;

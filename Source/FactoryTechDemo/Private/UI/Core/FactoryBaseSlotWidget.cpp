@@ -27,7 +27,15 @@ void UFactoryBaseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, 
 				ItemIcon->SetBrushFromTexture(SlotItemData->ItemIcon);
 			}
 			ItemIcon->SetVisibility(ESlateVisibility::Visible);
-			ItemIcon->SetRenderOpacity(1.0f);
+			
+			if (SlotAmount <= 0)
+			{
+				ItemIcon->SetRenderOpacity(0.5f);
+			}
+			else
+			{
+				ItemIcon->SetRenderOpacity(1.0f);
+			}
 		}
 		if (AmountText)
 		{
@@ -39,7 +47,7 @@ void UFactoryBaseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData, 
 
 FReply UFactoryBaseSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (bIsInteractable && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && SlotItemData != nullptr)
+	if (bIsInteractable && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && SlotItemData != nullptr && SlotAmount > 0)
 	{
 		return UWidgetBlueprintLibrary::DetectDragIfPressed(InMouseEvent, this, EKeys::LeftMouseButton).NativeReply;
 	}

@@ -69,7 +69,7 @@ void AFactoryBeltRouter::PlanCycle()
 		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[index]->GetConnectedInput();
 		if (!TargetPort) continue;
 		
-		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort))
+		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItem.ItemData))
 		{
 			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
 			if (!PoolSubsystem) return;
@@ -129,9 +129,12 @@ void AFactoryBeltRouter::UpdateView()
 	// 애니메이션 재생 등
 }
 
-bool AFactoryBeltRouter::CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const
+bool AFactoryBeltRouter::CanPushItemFromBeforeObject(
+	const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const
 {
 	if (!RequestPort || RequestPort->PendingItem.IsValid()) return false;	// Pending 되어 있지 않아야 밀어넣을 수 있음
+	if (!IncomingItem) return false;
+	
 	const UFactoryItemData* PendingItem = RequestPort->PendingItem.ItemData;
 	return !PendingItem && !CurrentItem.ItemData;
 }

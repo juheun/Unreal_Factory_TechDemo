@@ -15,21 +15,3 @@ UFactoryOutputPortComponent* UFactoryInputPortComponent::GetConnectedOutput() co
 	// 부모 변수(ConnectedPort)를 캐스팅해서 리턴
 	return Cast<UFactoryOutputPortComponent>(ConnectedPort.Get());
 }
-
-bool UFactoryInputPortComponent::CanAccept(TSet<UFactoryInputPortComponent*>& Visited) const
-{
-	if (AFactoryLogisticsObjectBase* InlinePortOwner = PortOwner.Get())
-	{
-		if (!InlinePortOwner->CanPushItemFromBeforeObject(this))
-		{
-			return false;
-		}
-	}
-	else
-	{
-		return false;
-	}
-    
-	// ... 재귀 로직 ...
-	return false; // 임시 리턴
-}

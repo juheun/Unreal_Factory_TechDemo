@@ -135,15 +135,18 @@ void UFactoryMachineBasePanel::HandleSlotDrop(UFactoryFacilitySlotWidget* Target
 	
 	if (UFactoryInventorySlotWidget* InventorySlotWidget = Cast<UFactoryInventorySlotWidget>(SourceWidget))
 	{
-		int32 FoundIndex = -1;
 		if (UFactoryInventoryComponent* InventoryComponent = InventorySlotWidget->GetInventoryComponent())
 		{
-			int32 RemainingAmount = 0;
-			if (Machine->TryPutItemToBuffer(true, FoundIndex, ItemData, Amount, RemainingAmount))
+			int32 FoundIndex;
+			if (InputSlots.Find(TargetSlot, FoundIndex))
 			{
-				// 성공적으로 들어간 개수만큼 인벤토리에서 제거
-				int32 InsertedAmount = Amount - RemainingAmount;
-				InventoryComponent->RemoveItemFromTargetSlot(InventorySlotWidget->GetSlotIndex(), InsertedAmount);
+				int32 RemainingAmount = 0;
+				if (Machine->TryPutItemToBuffer(true, FoundIndex, ItemData, Amount, RemainingAmount))
+				{
+					// 성공적으로 들어간 개수만큼 인벤토리에서 제거
+					int32 InsertedAmount = Amount - RemainingAmount;
+					InventoryComponent->RemoveItemFromTargetSlot(InventorySlotWidget->GetSlotIndex(), InsertedAmount);
+				}
 			}
 		}
 	}

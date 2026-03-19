@@ -105,7 +105,7 @@ void AFactoryMachineBase::PlanCycle()
 		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[index]->GetConnectedInput();
 		if (!TargetPort) continue;
 		
-		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort))
+		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, OutputBufferSlot.ItemData))
 		{
 			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
 			if (!PoolSubsystem) return;
@@ -174,13 +174,16 @@ void AFactoryMachineBase::UpdateView()
 	// 애니메이션 재생 등
 }
 
-bool AFactoryMachineBase::CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const
+bool AFactoryMachineBase::CanPushItemFromBeforeObject(
+	const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const
 {
 	if (!RequestPort || RequestPort->PendingItem.IsValid()) return false;	// Pending 되어 있지 않아야 밀어넣을 수 있음
+	if (!IncomingItem) return false;
+	
 	bool bHasEmptySlot = false;
 	for (const FFactorySlot& Slot : InputBufferSlots)
 	{
-		if (Slot.ItemData == RequestPort->PendingItem.ItemData)
+		if (Slot.ItemData == IncomingItem)
 		{
 			return !Slot.IsFull();
 		}
@@ -270,12 +273,19 @@ bool AFactoryMachineBase::TryCraftItem()
 			// 재료 소모
 			for (const FRecipeIngredient& Input : Recipe->Inputs)
 			{
-				for (FFactorySlot& Slot : InputBufferSlots)
+				for (int32 i = 0; i < InputBufferSlots.Num(); ++i)
 				{
-					if (Slot.ItemData == Input.ItemData)
+					if (InputBufferSlots[i].ItemData == Input.ItemData)
 					{
-						Slot.Amount -= Input.Amount;
-						if (Slot.Amount <= 0) Slot.Clear();
+						InputBufferSlots[i].Amount -= Input.Amount;
+            
+						if (InputBufferSlots[i].Amount <= 0)
+						{
+							// 패널 슬롯에서 아이템이 0개라도 아이콘을 표시하기위해 clear하지 않음
+							InputBufferSlots[i].Amount = 0;
+						}
+
+						OnInputBufferChanged.Broadcast(i, InputBufferSlots[i]);
 					}
 				}
 			}
@@ -380,7 +390,8 @@ bool AFactoryMachineBase::TryTakeItemFromBuffer(bool bIsInputBuffer, int32 SlotI
 			OutTakenSlot.Amount = ActuallyTaken;
 
 			TargetSlot.Amount -= ActuallyTaken;
-			if (TargetSlot.Amount <= 0) TargetSlot.Clear();
+			// 패널 슬롯에서 아이템이 0개라도 아이콘을 표시하기위해 clear하지 않음
+			if (TargetSlot.Amount <= 0) TargetSlot.Amount = 0;
 
 			OnInputBufferChanged.Broadcast(SlotIndex, TargetSlot);
 			return true;

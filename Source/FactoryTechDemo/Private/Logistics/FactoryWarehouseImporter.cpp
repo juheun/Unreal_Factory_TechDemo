@@ -50,9 +50,10 @@ void AFactoryWarehouseImporter::UpdateView()
 {
 }
 
-bool AFactoryWarehouseImporter::CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const
+bool AFactoryWarehouseImporter::CanPushItemFromBeforeObject(
+	const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const
 {
-	if (!RequestPort) return false;
+	if (!RequestPort || !IncomingItem) return false;
 	
 	return RequestPort->PendingItem.ItemData == nullptr;
 }

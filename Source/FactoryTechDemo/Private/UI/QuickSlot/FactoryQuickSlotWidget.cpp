@@ -40,14 +40,6 @@ void UFactoryQuickSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemData,
 		{
 			if (AmountText) AmountText->SetVisibility(ESlateVisibility::Hidden);
 		}
-		else if (SlotAmount == 0)
-		{
-			ItemIcon->SetRenderOpacity(0.5f);
-			if (AmountText)
-			{
-				AmountText->SetText(FText::AsNumber(SlotAmount));
-			}
-		}
 	}
 }
 

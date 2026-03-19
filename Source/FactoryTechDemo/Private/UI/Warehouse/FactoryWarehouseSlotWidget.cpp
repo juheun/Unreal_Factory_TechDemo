@@ -3,7 +3,6 @@
 
 #include "UI/Warehouse/FactoryWarehouseSlotWidget.h"
 
-#include "Components/Image.h"
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/Core/FactoryItemDragDropOperation.h"
@@ -22,10 +21,6 @@ void UFactoryWarehouseSlotWidget::UpdateSlotVisual(const UFactoryItemData* ItemD
 {
 	Super::UpdateSlotVisual(ItemData, Amount);
 	
-	if (ItemData != nullptr && Amount == 0)
-	{
-		if (ItemIcon) ItemIcon->SetRenderOpacity(0.5f);
-	}
 }
 
 bool UFactoryWarehouseSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,

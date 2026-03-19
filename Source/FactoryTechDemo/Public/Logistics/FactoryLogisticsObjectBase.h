@@ -29,7 +29,8 @@ public:
 	virtual void UpdateView() PURE_VIRTUAL(AFactoryLogisticsObjectBase::UpdateView, ; );
     
 	// 이전 설비에서 InputPort로 아이템을 밀어넣을 수 있는지 확인해주는 로직을 구현
-	virtual bool CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const 
+	virtual bool CanPushItemFromBeforeObject(
+		const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const 
 		PURE_VIRTUAL(AFactoryLogisticsObjectBase::CanPushItemFromBeforeObject, return false; );
 	
 	int32 GetConnectedOutputPortNumber() const;

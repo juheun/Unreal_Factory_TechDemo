@@ -78,7 +78,7 @@ void AFactoryBeltBridge::PlanCycle()
 		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[i]->GetConnectedInput();
 		if (!TargetPort) continue;
 		
-		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort))
+		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItems[i].ItemData))
 		{
 			FFactoryItemInstance NewInstance(CurrentItems[i].ItemData);
 			FVector SpawnLocation = LogisticsOutputPortArr[i]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
@@ -125,9 +125,12 @@ void AFactoryBeltBridge::UpdateView()
 	// 애니메이션 재생 등
 }
 
-bool AFactoryBeltBridge::CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort) const
+bool AFactoryBeltBridge::CanPushItemFromBeforeObject(
+	const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const
 {
 	if (!RequestPort || RequestPort->PendingItem.IsValid()) return false;	// Pending 되어 있지 않아야 밀어넣을 수 있음
+	if (!IncomingItem) return false;
+	
 	int32 PortIndex = LogisticsInputPortArr.IndexOfByKey(RequestPort);
 	
 	if (PortIndex != INDEX_NONE && CurrentItems.IsValidIndex(PortIndex))

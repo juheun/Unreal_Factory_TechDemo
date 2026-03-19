@@ -19,7 +19,4 @@ public:
 	FFactoryItemInstance PendingItem;	//설비에 이동하기위해 아이템이 예약되는 공간
 	
 	UFactoryOutputPortComponent* GetConnectedOutput() const;
-	
-	// PortOwner가 Item을 받을 수 있는지 확인하는 함수
-	bool CanAccept(TSet<UFactoryInputPortComponent*>& Visited) const;
 };
