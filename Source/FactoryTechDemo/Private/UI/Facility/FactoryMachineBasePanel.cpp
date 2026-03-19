@@ -16,15 +16,18 @@ void UFactoryMachineBasePanel::InitPanel(AFactoryPlaceObjectBase* PlaceObject)
 {
 	Super::InitPanel(PlaceObject);
 	
+	if (AFactoryMachineBase* OldMachine = CachedMachine.Get())
+	{
+		// 중복방지 델리게이트 구독 해제
+		OldMachine->OnInputBufferChanged.RemoveDynamic(this, &UFactoryMachineBasePanel::OnInputBufferUpdated);
+		OldMachine->OnOutputBufferChanged.RemoveDynamic(this, &UFactoryMachineBasePanel::OnOutputBufferUpdated);
+		OldMachine->OnCurrentRecipeChanged.RemoveDynamic(this, &UFactoryMachineBasePanel::OnRecipeUpdated);
+	}
+	
 	CachedMachine = Cast<AFactoryMachineBase>(PlaceObject);
 	
 	if (AFactoryMachineBase* Machine = CachedMachine.Get())
 	{
-		// 중복방지 델리게이트 구독 해제
-		Machine->OnInputBufferChanged.RemoveDynamic(this, &UFactoryMachineBasePanel::OnInputBufferUpdated);
-		Machine->OnOutputBufferChanged.RemoveDynamic(this, &UFactoryMachineBasePanel::OnOutputBufferUpdated);
-		Machine->OnCurrentRecipeChanged.RemoveDynamic(this, &UFactoryMachineBasePanel::OnRecipeUpdated);
-		
 		// 델리게이트 구독
 		Machine->OnInputBufferChanged.AddDynamic(this, &UFactoryMachineBasePanel::OnInputBufferUpdated);
 		Machine->OnOutputBufferChanged.AddDynamic(this, &UFactoryMachineBasePanel::OnOutputBufferUpdated);

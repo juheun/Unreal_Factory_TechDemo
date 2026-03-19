@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Interface/FactoryInteractable.h"
+#include "UI/Storage/FactoryStorageMenuWidget.h"
 #include "FactoryPlaceObjectBase.generated.h"
 
 class UFactoryObjectData;
@@ -39,4 +40,7 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Data")
 	TObjectPtr<const UFactoryObjectData> PlacementDataAsset;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
+	EFactoryMenuMode FacilityMenuMode = EFactoryMenuMode::Facility;
 };

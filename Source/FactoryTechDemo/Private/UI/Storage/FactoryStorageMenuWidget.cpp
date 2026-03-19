@@ -28,15 +28,14 @@ void UFactoryStorageMenuWidget::OpenMenu(UFactoryInventoryComponent* PlayerInven
 	
 	if (FacilityPanelContainer)
 	{
-		if (MenuMode == EFactoryMenuMode::Facility && TargetFacility && 
-			TargetFacility->GetObjectData() && TargetFacility->GetObjectData()->FacilityPanelBP)
+		if ((MenuMode == EFactoryMenuMode::Facility || MenuMode == EFactoryMenuMode::FacilityOnly) && 
+		   TargetFacility && TargetFacility->GetObjectData() && TargetFacility->GetObjectData()->FacilityPanelBP)
 		{
 			FacilityPanelContainer->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-			
+          
 			TSubclassOf<UFactoryFacilityPanelBase> FacilityPanelBP = TargetFacility->GetObjectData()->FacilityPanelBP;
 			UFactoryFacilityPanelBase* PanelWidget = nullptr;
-			
-			// 이미 Map에 캐시되어있다면 해당 위젯 사용. 아니라면 새로 생성
+          
 			if (CachedFacilityPanels.Contains(FacilityPanelBP))
 			{
 				PanelWidget = CachedFacilityPanels[FacilityPanelBP];
@@ -46,8 +45,7 @@ void UFactoryStorageMenuWidget::OpenMenu(UFactoryInventoryComponent* PlayerInven
 				PanelWidget = CreateWidget<UFactoryFacilityPanelBase>(this, FacilityPanelBP);
 				if (PanelWidget) CachedFacilityPanels.Add(FacilityPanelBP, PanelWidget);
 			}
-			
-			//초기화
+          
 			if (PanelWidget)
 			{
 				FacilityPanelContainer->ClearChildren();
@@ -61,10 +59,17 @@ void UFactoryStorageMenuWidget::OpenMenu(UFactoryInventoryComponent* PlayerInven
 		}
 	}
 
-	// 인벤토리 패널 (항상 보임)
+	// 인벤토리 패널
 	if (InventoryPanel && PlayerInventory)
 	{
-		InventoryPanel->SetVisibility(ESlateVisibility::Visible);
-		InventoryPanel->InitInventory(PlayerInventory); 
+		if (MenuMode == EFactoryMenuMode::FacilityOnly)
+		{
+			InventoryPanel->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		else
+		{
+			InventoryPanel->SetVisibility(ESlateVisibility::Visible);
+			InventoryPanel->InitInventory(PlayerInventory); 
+		}
 	}
 }

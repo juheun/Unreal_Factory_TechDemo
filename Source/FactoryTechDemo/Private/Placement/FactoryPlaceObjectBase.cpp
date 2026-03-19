@@ -67,7 +67,7 @@ void AFactoryPlaceObjectBase::Interact(const AActor* Interactor, const EPlacemen
 			{
 				if (AFactoryPlayerController* PC = Cast<AFactoryPlayerController>(InteractorPawn->GetController()))
 				{
-					PC->OpenFacilityMenu(this);
+					PC->OpenFacilityMenu(this, FacilityMenuMode);
 				}
 			}
 		}

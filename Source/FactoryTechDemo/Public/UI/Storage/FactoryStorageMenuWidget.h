@@ -18,7 +18,8 @@ enum class EFactoryMenuMode : uint8
 {
 	InventoryOnly UMETA(DisplayName = "Inventory Only"),
 	Warehouse UMETA(DisplayName = "Warehouse Panel"),
-	Facility UMETA(DisplayName = "Facility Panel")
+	Facility UMETA(DisplayName = "Facility Panel"),
+	FacilityOnly UMETA(DisplayName = "Facility Only Panel")
 };
 
 /**

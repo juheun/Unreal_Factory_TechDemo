@@ -8,20 +8,33 @@
 
 class UFactoryItemData;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnExporterItemChanged, UFactoryItemData*, NewItem);
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryWarehouseExporter : public AFactoryLogisticsObjectBase
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AFactoryWarehouseExporter();
+	
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Exporter|Event")
+	FOnExporterItemChanged OnTargetItemChanged;
 	
 	virtual void PlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
+	
+	virtual bool CanPushItemFromBeforeObject(const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const override;
+	
+	UFUNCTION(BlueprintCallable, Category = "Factory|Exporter")
+	void SetTargetItem(UFactoryItemData* NewTargetItem);
+	
+	UFUNCTION(BlueprintPure, Category = "Factory|Exporter")
+	UFactoryItemData* GetTargetItem() const { return TargetItemData; }
 
 protected:
+	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UFactoryItemData> ItemData;
+	TObjectPtr<UFactoryItemData> TargetItemData;
 };
