@@ -7,11 +7,15 @@
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
+#include "UI/World/FactorySmartNameplateComponent.h"
 
 
 AFactoryWarehouseImporter::AFactoryWarehouseImporter()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	
+	CachedSmartNameplate = CreateDefaultSubobject<UFactorySmartNameplateComponent>(TEXT("SartNameplateComponent"));
+	CachedSmartNameplate->SetupAttachment(RootComponent);
 }
 
 void AFactoryWarehouseImporter::PlanCycle()

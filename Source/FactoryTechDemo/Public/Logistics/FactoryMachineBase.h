@@ -7,6 +7,7 @@
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "FactoryMachineBase.generated.h"
 
+class UFactorySmartNameplateComponent;
 struct FFactoryItemInstance;
 class UFactoryRecipeData;
 class UFactoryFacilityItemData;
@@ -73,6 +74,9 @@ protected:
 	int32 RemainingProductionCycleTime;		// Cycle이 돌때마다 차감됨
 	UPROPERTY(VisibleAnywhere, Category = "Factory|Machine")
 	bool bIsWorking = false;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactorySmartNameplateComponent> CachedSmartNameplate;
 	
 private:
 	void InitMachine();

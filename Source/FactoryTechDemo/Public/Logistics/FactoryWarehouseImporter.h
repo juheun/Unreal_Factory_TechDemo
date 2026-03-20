@@ -6,6 +6,8 @@
 #include "FactoryLogisticsObjectBase.h"
 #include "FactoryWarehouseImporter.generated.h"
 
+class UFactorySmartNameplateComponent;
+
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryWarehouseImporter : public AFactoryLogisticsObjectBase
 {
@@ -20,4 +22,8 @@ public:
 	
 	virtual bool CanPushItemFromBeforeObject(
 		const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const override;
+	
+protected:
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactorySmartNameplateComponent> CachedSmartNameplate;
 };

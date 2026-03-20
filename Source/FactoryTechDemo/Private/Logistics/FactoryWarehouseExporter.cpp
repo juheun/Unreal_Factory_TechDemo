@@ -8,11 +8,15 @@
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
+#include "UI/World/FactorySmartNameplateComponent.h"
 
 
 AFactoryWarehouseExporter::AFactoryWarehouseExporter()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	
+	CachedSmartNameplate = CreateDefaultSubobject<UFactorySmartNameplateComponent>(TEXT("SartNameplateComponent"));
+	CachedSmartNameplate->SetupAttachment(RootComponent);
 	
 	FacilityMenuMode = EFactoryMenuMode::FacilityOnly;
 }

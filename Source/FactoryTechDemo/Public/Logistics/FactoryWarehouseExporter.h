@@ -7,6 +7,7 @@
 #include "FactoryWarehouseExporter.generated.h"
 
 class UFactoryItemData;
+class UFactorySmartNameplateComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnExporterItemChanged, UFactoryItemData*, NewItem);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWarehouseAmountUpdated, int32, CurrentAmount);
@@ -40,4 +41,7 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UFactoryItemData> TargetItemData;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactorySmartNameplateComponent> CachedSmartNameplate;
 };
