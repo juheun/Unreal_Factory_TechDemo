@@ -23,27 +23,30 @@ void AFactoryWarehouseExporter::PlanCycle()
 	if (!TargetItemData || !LogisticsOutputPortArr.IsValidIndex(0) || !LogisticsOutputPortArr[0]) return;
 	UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[0]->GetConnectedInput();
 	if (!TargetPort) return;
-	
-	if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, TargetItemData))
+	if (UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
 	{
-		UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
-		if (WarehouseSubsystem && WarehouseSubsystem->TryRemoveItem(TargetItemData, 1))
+		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, TargetItemData))
 		{
-			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-			if (!PoolSubsystem) return;
-			
-			FFactoryItemInstance NewInstance(TargetItemData);
-			FVector SpawnLocation = TargetPort->GetComponentLocation(); // 일단 포트 위치에 스폰
-			FRotator SpawnRotation = TargetPort->GetComponentRotation();
-			AFactoryItemVisual* ItemVisual = 
-				PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
-			if (ItemVisual)
+			if (WarehouseSubsystem->TryRemoveItem(TargetItemData, 1))
 			{
-				ItemVisual->UpdateVisual(TargetItemData);
-				NewInstance.VisualActor = ItemVisual;
-				TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
+				UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+				if (!PoolSubsystem) return;
+				
+				FFactoryItemInstance NewInstance(TargetItemData);
+				FVector SpawnLocation = TargetPort->GetComponentLocation(); // 일단 포트 위치에 스폰
+				FRotator SpawnRotation = TargetPort->GetComponentRotation();
+				AFactoryItemVisual* ItemVisual = 
+					PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
+				if (ItemVisual)
+				{
+					ItemVisual->UpdateVisual(TargetItemData);
+					NewInstance.VisualActor = ItemVisual;
+					TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
+				}
 			}
 		}
+		int32 WarehouseAmount = WarehouseSubsystem->GetItemAmount(TargetItemData);
+		OnWarehouseAmountUpdated.Broadcast(WarehouseAmount);
 	}
 }
 
@@ -72,5 +75,11 @@ void AFactoryWarehouseExporter::SetTargetItem(UFactoryItemData* NewTargetItem)
 	{
 		TargetItemData = NewTargetItem;
 		OnTargetItemChanged.Broadcast(TargetItemData);
+
+		if (UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
+		{
+			int32 WarehouseAmount = WarehouseSubsystem->GetItemAmount(TargetItemData);
+			OnWarehouseAmountUpdated.Broadcast(WarehouseAmount);
+		}
 	}
 }

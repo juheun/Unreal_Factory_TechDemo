@@ -9,6 +9,7 @@
 class UFactoryItemData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnExporterItemChanged, UFactoryItemData*, NewItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWarehouseAmountUpdated, int32, CurrentAmount);
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryWarehouseExporter : public AFactoryLogisticsObjectBase
 {
@@ -19,6 +20,8 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Factory|Exporter|Event")
 	FOnExporterItemChanged OnTargetItemChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Exporter|Event")
+	FOnWarehouseAmountUpdated OnWarehouseAmountUpdated;
 	
 	virtual void PlanCycle() override;
 	virtual void ExecuteCycle() override;

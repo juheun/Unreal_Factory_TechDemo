@@ -6,6 +6,7 @@
 #include "FactoryFacilityPanelBase.h"
 #include "FactoryExporterPanel.generated.h"
 
+class UTextBlock;
 class AFactoryWarehouseExporter;
 class UFactoryItemSelectionPopup;
 class UFactoryBaseSlotWidget;
@@ -34,11 +35,17 @@ protected:
 	UFUNCTION()
 	void OnExporterItemChanged(UFactoryItemData* NewItem); // Exporter의 타겟 아이템 바꿨을 때 슬롯 UI 갱신하는 함수
 	
+	UFUNCTION()
+	void OnWarehouseItemAmountUpdated(int32 CurrentAmount);
+	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> SelectPanelOpenButton;
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UFactoryBaseSlotWidget> TargetItemSlot;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> WarehouseAmountText;
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UFactoryItemSelectionPopup> ItemSelectionPopup;
