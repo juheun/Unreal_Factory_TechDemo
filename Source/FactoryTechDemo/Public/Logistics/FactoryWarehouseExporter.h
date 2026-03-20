@@ -8,6 +8,7 @@
 
 class UFactoryItemData;
 class UFactorySmartNameplateComponent;
+class UFactoryRecipeBillboardComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnExporterItemChanged, UFactoryItemData*, NewItem);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWarehouseAmountUpdated, int32, CurrentAmount);
@@ -43,5 +44,8 @@ protected:
 	TObjectPtr<UFactoryItemData> TargetItemData;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
-	TObjectPtr<UFactorySmartNameplateComponent> CachedSmartNameplate;
+	TObjectPtr<UFactorySmartNameplateComponent> SmartNameplateComponent;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactoryRecipeBillboardComponent> RecipeBillboardComponent;
 };

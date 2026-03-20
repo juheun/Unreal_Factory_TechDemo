@@ -11,6 +11,7 @@
 #include "Subsystems/FactoryDataSubsystem.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
+#include "UI/World/FactoryRecipeBillboardComponent.h"
 #include "UI/World/FactorySmartNameplateComponent.h"
 
 
@@ -18,8 +19,17 @@ AFactoryMachineBase::AFactoryMachineBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	
-	CachedSmartNameplate = CreateDefaultSubobject<UFactorySmartNameplateComponent>(TEXT("SartNameplateComponent"));
-	CachedSmartNameplate->SetupAttachment(RootComponent);
+	SmartNameplateComponent = CreateDefaultSubobject<UFactorySmartNameplateComponent>(TEXT("SartNameplateComponent"));
+	SmartNameplateComponent->SetupAttachment(RootComponent);
+	
+	RecipeBillboardComponent = CreateDefaultSubobject<UFactoryRecipeBillboardComponent>(TEXT("RecipeBillboardComponent"));
+	RecipeBillboardComponent->SetupAttachment(RootComponent);
+	
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> XRayMat(TEXT("/Game/Material/M_WidgetXRay"));
+	if (XRayMat.Succeeded())
+	{
+		RecipeBillboardComponent->SetMaterial(0, XRayMat.Object);
+	}
 }
 
 void AFactoryMachineBase::BeginPlay()

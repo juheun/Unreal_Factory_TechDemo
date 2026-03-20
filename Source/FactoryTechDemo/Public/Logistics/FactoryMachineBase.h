@@ -7,6 +7,7 @@
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "FactoryMachineBase.generated.h"
 
+class UFactoryRecipeBillboardComponent;
 class UFactorySmartNameplateComponent;
 struct FFactoryItemInstance;
 class UFactoryRecipeData;
@@ -76,7 +77,10 @@ protected:
 	bool bIsWorking = false;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
-	TObjectPtr<UFactorySmartNameplateComponent> CachedSmartNameplate;
+	TObjectPtr<UFactorySmartNameplateComponent> SmartNameplateComponent;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactoryRecipeBillboardComponent> RecipeBillboardComponent;
 	
 private:
 	void InitMachine();

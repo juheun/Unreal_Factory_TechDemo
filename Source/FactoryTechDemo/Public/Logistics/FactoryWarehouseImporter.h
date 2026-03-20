@@ -7,6 +7,7 @@
 #include "FactoryWarehouseImporter.generated.h"
 
 class UFactorySmartNameplateComponent;
+class UFactoryRecipeBillboardComponent;
 
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryWarehouseImporter : public AFactoryLogisticsObjectBase
@@ -25,5 +26,8 @@ public:
 	
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
-	TObjectPtr<UFactorySmartNameplateComponent> CachedSmartNameplate;
+	TObjectPtr<UFactorySmartNameplateComponent> SmartNameplateComponent;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactoryRecipeBillboardComponent> RecipeBillboardComponent;
 };
