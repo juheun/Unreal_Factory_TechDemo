@@ -19,6 +19,9 @@ AFactoryWarehouseExporter::AFactoryWarehouseExporter()
 
 void AFactoryWarehouseExporter::PlanCycle()
 {
+	// TODO : 현재 방식은 창고에 아이템이 적고, Exporter가 많으면 특정 Exporter만 자원을 독식 할 수 있음.
+	// 추후 라운드 로빈식으로 모든 Exporter를 통제하는 방식으로 수정 필요
+	
 	// 벨트는 무조건 Output이 하나라는 가정하에 index 0사용
 	if (!TargetItemData || !LogisticsOutputPortArr.IsValidIndex(0) || !LogisticsOutputPortArr[0]) return;
 	UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[0]->GetConnectedInput();

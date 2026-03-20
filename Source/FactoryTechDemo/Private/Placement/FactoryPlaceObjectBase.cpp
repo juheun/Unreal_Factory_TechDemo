@@ -85,8 +85,12 @@ bool AFactoryPlaceObjectBase::TryGetInteractText(const EPlacementMode CurrentMod
 	}
 	else if (CurrentMode == EPlacementMode::None)
 	{
-		OutText = FText::Format(FText::FromString(TEXT("{0} 패널 열기")), Name);
-		return true;
+		if (PlacementDataAsset->FacilityPanelBP)
+		{
+			OutText = FText::Format(FText::FromString(TEXT("{0} 패널 열기")), Name);
+			return true;
+		}
+		return false;
 	}
 	
 	return false;
