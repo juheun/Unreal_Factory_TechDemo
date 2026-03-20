@@ -11,12 +11,7 @@
 
 UFactorySmartNameplateComponent::UFactorySmartNameplateComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
 	
-	SetHiddenInGame(true);
-	SetWidgetSpace(EWidgetSpace::World);
-	SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void UFactorySmartNameplateComponent::BeginPlay()
@@ -36,46 +31,29 @@ void UFactorySmartNameplateComponent::BeginPlay()
 			ExtentY = ObjectData->GridSize.Y * GridLength * 0.5f;
 		}
 	}
+}
+
+void UFactorySmartNameplateComponent::OnViewModeChanged(EFactoryViewModeType NewViewMode)
+{
+	Super::OnViewModeChanged(NewViewMode);
 	
-	// 뷰모드에 따른 델리게이트 구독
-	if (AFactoryPlayerController* Controller = Cast<AFactoryPlayerController>(
-		UGameplayStatics::GetPlayerController(GetWorld(), 0)))
+	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
 	{
-		CachedCurrentViewMode = Controller->GetCurrentViewMode();
-		Controller->OnViewModeChanged.AddDynamic(this, &UFactorySmartNameplateComponent::OnViewModeChanged);
-		
-		OnViewModeChanged(CachedCurrentViewMode);
+		SetWidgetSpace(EWidgetSpace::Screen);
+	}
+	else
+	{
+		SetWidgetSpace(EWidgetSpace::World);
 	}
 }
 
-void UFactorySmartNameplateComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-                                                    FActorComponentTickFunction* ThisTickFunction)
+void UFactorySmartNameplateComponent::UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc,
+	const FVector& CameraForward, const FVector& OwnerLoc)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
-	if (!CameraManager) return;
-	
-	FVector CameraLoc = CameraManager->GetCameraLocation();
-	FVector CameraForward = CameraManager->GetCameraRotation().Vector();
-	
-	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor) return;
-
-	FVector OwnerLoc = OwnerActor->GetActorLocation();
-	FVector DirToMachine = (OwnerLoc - CameraLoc).GetSafeNormal();
-	
-	// 카메라에서 벗어난 객체에 대해서는 이름표 표시하지 않음
-	if (FVector::DotProduct(CameraForward, DirToMachine) < CullingDotThreshold)
-	{
-		if (!bHiddenInGame) SetHiddenInGame(true);
-		return;
-	}
-	
-	if (bHiddenInGame) SetHiddenInGame(false);
+	Super::UpdateUIPlacement(DeltaTime, CameraLoc, CameraForward, OwnerLoc);
 	
 	FVector TargetLoc = OwnerLoc;
-	TargetLoc.Z = FixedZHeight;
+	TargetLoc.Z += FixedZHeight;
 	
 	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
 	{
@@ -84,6 +62,7 @@ void UFactorySmartNameplateComponent::TickComponent(float DeltaTime, ELevelTick 
 	else
 	{
 		// 설비 4면 중 카메라와 가장 가까운 면 찾기
+		AActor* OwnerActor = GetOwner();
 		FVector OwnerForward = OwnerActor->GetActorForwardVector();
 		FVector OwnerRight = OwnerActor->GetActorRightVector();
 		
@@ -91,7 +70,7 @@ void UFactorySmartNameplateComponent::TickComponent(float DeltaTime, ELevelTick 
 		FVector DirToCamera2D = (CameraLoc - OwnerLoc).GetSafeNormal2D();
 		
 		int32 BestFaceIndex = 0;
-		float MaxDot = -1.f;
+		float MaxDot = -2.f;
 		
 		for (int32 i = 0; i < 4; i++)
 		{
@@ -115,36 +94,6 @@ void UFactorySmartNameplateComponent::TickComponent(float DeltaTime, ELevelTick 
 		FRotator NewRot = FMath::RInterpTo(GetComponentRotation(), TargetRot, DeltaTime, InterpolationSpeed);
 
 		SetWorldLocationAndRotation(NewLoc, NewRot);
-	}
-}
-
-void UFactorySmartNameplateComponent::WakeUp()
-{
-	if (bIsAwake) return;
-	bIsAwake = true;
-	// Tick 내부 계산에 따라 SetHiddenInGame 설정
-	SetComponentTickEnabled(true);
-}
-
-void UFactorySmartNameplateComponent::GoToSleep()
-{
-	if (!bIsAwake) return;
-	bIsAwake = false;
-	SetHiddenInGame(true);
-	SetComponentTickEnabled(false);
-}
-
-void UFactorySmartNameplateComponent::OnViewModeChanged(EFactoryViewModeType NewViewMode)
-{
-	CachedCurrentViewMode = NewViewMode;
-	
-	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
-	{
-		SetWidgetSpace(EWidgetSpace::Screen);
-	}
-	else
-	{
-		SetWidgetSpace(EWidgetSpace::World);
 	}
 }
 
