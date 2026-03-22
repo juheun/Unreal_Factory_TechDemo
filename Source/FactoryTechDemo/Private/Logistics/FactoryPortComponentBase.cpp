@@ -1,5 +1,6 @@
 ﻿#include "Logistics/FactoryPortComponentBase.h"
 
+#include "Components/ArrowComponent.h"
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "Settings/FactoryDeveloperSettings.h"
 
@@ -9,6 +10,12 @@ UFactoryPortComponentBase::UFactoryPortComponentBase()
 	SetCollisionResponseToAllChannels(ECR_Ignore);
 	SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Block);
 	BoxExtent = FVector(10.0f, 40.0f, 10.0f);
+	
+	PortDirArrowComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("ArrowComponent"));
+	PortDirArrowComponent->SetupAttachment(this);
+	PortDirArrowComponent->SetHiddenInGame(false);
+	PortDirArrowComponent->SetRelativeLocation(FVector(-40.0f, 0.f, 0.f));
+	PortDirArrowComponent->SetArrowLength(80.f);
 }
 
 void UFactoryPortComponentBase::BeginPlay()
@@ -33,8 +40,11 @@ void UFactoryPortComponentBase::Disconnect()
 		if (TargetPort->ConnectedPort.Get() == this)
 		{
 			TargetPort->ConnectedPort = nullptr;
+			TargetPort->PortDirArrowComponent->SetHiddenInGame(false);
 		}
 		ConnectedPort = nullptr;
+		
+		PortDirArrowComponent->SetHiddenInGame(false);
 	}
 }
 
@@ -44,7 +54,10 @@ void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 
 	// 상호 연결 (Handshake)
 	this->ConnectedPort = Target;
+	PortDirArrowComponent->SetHiddenInGame(true);
+	
 	Target->ConnectedPort = this;
+	Target->PortDirArrowComponent->SetHiddenInGame(true);
 }
 
 void UFactoryPortComponentBase::ScanForConnection(FVector Direction, TSubclassOf<UFactoryPortComponentBase> TargetClassType)

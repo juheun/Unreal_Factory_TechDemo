@@ -11,6 +11,8 @@ class FACTORYTECHDEMO_API UFactoryOutputPortComponent : public UFactoryPortCompo
 	GENERATED_BODY()
 
 public:
+	UFactoryOutputPortComponent();
+	
 	virtual void BeginPlay() override;
 
 	// 연결된 놈을 Input으로 캐스팅해서 줌

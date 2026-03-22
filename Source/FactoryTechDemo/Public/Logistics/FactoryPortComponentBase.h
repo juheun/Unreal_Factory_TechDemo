@@ -4,6 +4,7 @@
 #include "Components/BoxComponent.h"
 #include "FactoryPortComponentBase.generated.h"
 
+class UArrowComponent;
 class AFactoryLogisticsObjectBase;
 
 UCLASS(Abstract)
@@ -30,6 +31,9 @@ protected:
 	// 내가 연결된 대상
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")
 	TWeakObjectPtr<UFactoryPortComponentBase> ConnectedPort;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")
+	TObjectPtr<UArrowComponent> PortDirArrowComponent;
 	
 	// 연결 스캔 로직
 	void ScanForConnection(FVector Direction, TSubclassOf<UFactoryPortComponentBase> TargetClassType);

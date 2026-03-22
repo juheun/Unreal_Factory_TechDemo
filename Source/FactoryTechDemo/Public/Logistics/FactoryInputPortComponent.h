@@ -13,6 +13,8 @@ class FACTORYTECHDEMO_API UFactoryInputPortComponent : public UFactoryPortCompon
 	GENERATED_BODY()
 
 public:
+	UFactoryInputPortComponent();
+	
 	virtual void BeginPlay() override;
 
 	UPROPERTY(Transient, SkipSerialization)
