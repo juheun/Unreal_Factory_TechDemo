@@ -65,17 +65,13 @@ void UFactoryInteractionComponent::UpdateInteraction() const
 			{
 				InteractionPromptWidget->SetInteractionText(Text);
 				InteractionPromptWidget->SetVisibility(ESlateVisibility::Visible);
+				
+				return;
 			}
 		}
-		else
-		{
-			InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
-		}
 	}
-	else
-	{
-		InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
-	}
+	
+	InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UFactoryInteractionComponent::PerformInteraction()
