@@ -9,6 +9,7 @@
 #include "Player/Component/FactoryPlacementComponent.h"
 #include "Player/Component/FactoryPlayerContextHUDComponent.h"
 #include "Player/Component/FactoryQuickSlotComponent.h"
+#include "Player/Component/FactoryWorldUIActivatorComponent.h"
 #include "Player/Input/FactoryInputConfig.h"
 #include "UI/Storage/FactoryStorageMenuWidget.h"
 
@@ -19,6 +20,7 @@ AFactoryPlayerController::AFactoryPlayerController()
     InteractionComponent = CreateDefaultSubobject<UFactoryInteractionComponent>(TEXT("InteractionComponent"));
     QuickSlotComponent = CreateDefaultSubobject<UFactoryQuickSlotComponent>(TEXT("QuickSlotComponent"));
     ContextHUDComponent = CreateDefaultSubobject<UFactoryPlayerContextHUDComponent>(TEXT("ContextHUDComponent"));
+    WorldUIActivatorComponent = CreateDefaultSubobject<UFactoryWorldUIActivatorComponent>(TEXT("WorldUIActivatorComponent"));
 }
 
 #pragma region 엔진 라이프 사이클
@@ -29,6 +31,15 @@ void AFactoryPlayerController::BeginPlay()
 
     // 액터 캐싱 및 생성
     CachedNormalViewCharacter = Cast<AFactoryCharacter>(GetCharacter());
+    
+    // WorldUIActivatorComponent를 노말 뷰 캐릭터에 부착
+    if (AFactoryCharacter* NormalViewCharacter = CachedNormalViewCharacter.Get())
+    {
+        if (WorldUIActivatorComponent)
+        {
+            WorldUIActivatorComponent->AttachToComponent(NormalViewCharacter->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+        }
+    }
     
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;
@@ -56,9 +67,6 @@ void AFactoryPlayerController::BeginPlay()
     if (QuickSlotComponent)
     {
         QuickSlotComponent->OnQuickSlotExecuted.AddDynamic(this, &AFactoryPlayerController::QuickSlotExecuteCallback);
-    }
-    if (InventoryComponent)
-    {
     }
     
     UpdateInputMappingContext();
@@ -95,8 +103,19 @@ void AFactoryPlayerController::SetupInputComponent()
     }
 }
 
+void AFactoryPlayerController::OnPossess(APawn* PossessedPawn)
+{
+    Super::OnPossess(PossessedPawn);
+    
+    if (PossessedPawn && WorldUIActivatorComponent)
+    {
+        WorldUIActivatorComponent->AttachToComponent(PossessedPawn->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+    }
+}
+
 
 #pragma endregion 
+
 void AFactoryPlayerController::ToggleStorageMenu()
 {
     bIsStorageMenuOpen = !bIsStorageMenuOpen;

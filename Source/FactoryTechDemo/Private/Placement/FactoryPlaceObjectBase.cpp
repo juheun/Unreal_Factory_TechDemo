@@ -18,6 +18,9 @@ AFactoryPlaceObjectBase::AFactoryPlaceObjectBase()
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("MeshComponent");
 	RootComponent = MeshComponent;
 	MeshComponent->bReceivesDecals = false;
+	
+	MeshComponent->SetCollisionObjectType(ECC_GameTraceChannel3);
+	MeshComponent->SetGenerateOverlapEvents(true);
 }
 
 void AFactoryPlaceObjectBase::EndPlay(const EEndPlayReason::Type EndPlayReason)

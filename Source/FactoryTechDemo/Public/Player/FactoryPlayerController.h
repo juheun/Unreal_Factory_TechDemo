@@ -7,6 +7,7 @@
 #include "UI/Storage/FactoryStorageMenuWidget.h"
 #include "FactoryPlayerController.generated.h"
 
+class UFactoryWorldUIActivatorComponent;
 class AFactoryPlaceObjectBase;
 class UFactoryInputConfig;
 class UFactoryQuickSlotComponent;
@@ -58,6 +59,7 @@ protected:
     // --- 엔진 오버라이드 (Protected) ---
     virtual void BeginPlay() override;
     virtual void SetupInputComponent() override;
+    virtual void OnPossess(APawn* PossessedPawn) override;
     
     // --- 내부 로직 제어 ---
     UFUNCTION(BlueprintCallable)
@@ -108,6 +110,8 @@ protected:
     TObjectPtr<UFactoryQuickSlotComponent> QuickSlotComponent;
     UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
     TObjectPtr<UFactoryPlayerContextHUDComponent> ContextHUDComponent;
+    UPROPERTY(VisibleAnywhere, Category = "Factory|Component")
+    TObjectPtr<UFactoryWorldUIActivatorComponent> WorldUIActivatorComponent;
     
     UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
     TSubclassOf<UFactoryStorageMenuWidget> StorageMenuWidgetBP;

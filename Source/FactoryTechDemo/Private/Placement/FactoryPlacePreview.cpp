@@ -38,6 +38,9 @@ AFactoryPlacePreview::AFactoryPlacePreview()
 	OverlapBox->SetGenerateOverlapEvents(true);
 	OverlapBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	OverlapBox->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	
+	OverlapBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	OverlapBox->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 }
 
 void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
@@ -82,7 +85,7 @@ bool AFactoryPlacePreview::UpdateOverlapValidity()
 	bool bIsOverlapping = false;
 	for (AActor* OverlappedActor : OverlappedActors)
 	{
-		if (OverlappedActor->ActorHasTag(TEXT("Player"))) continue;
+		if (OverlappedActor->ActorHasTag(TEXT("Player")) || OverlappedActor->IsA<APlayerController>()) continue;
 		if (OverlappedActor && OverlappedActor != this && !OverlappedActor->ActorHasTag(TEXT("Floor")))
 		{
 			bIsOverlapping = true;
