@@ -13,7 +13,7 @@ class UFactoryItemSelectButton;
 /**
  * 
  */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPopupItemSelected, UFactoryItemData*, SelectedItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPopupItemSelected, const UFactoryItemData*, SelectedItem);
 UCLASS()
 class FACTORYTECHDEMO_API UFactoryItemSelectionPopup : public UUserWidget
 {

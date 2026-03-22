@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "FactoryFacilityWorldUIComponent.h"
-#include "Player/FactoryPlayerController.h"
 #include "FactorySmartNameplateComponent.generated.h"
 
 
@@ -18,10 +17,11 @@ class FACTORYTECHDEMO_API UFactorySmartNameplateComponent : public UFactoryFacil
 public:
 	UFactorySmartNameplateComponent();
 
+	void InitNameplate(const UFactoryObjectData* Data);
+	
 	virtual void BeginPlay() override;
 	
 protected:
-	virtual void OnViewModeChanged(EFactoryViewModeType NewViewMode) override;
 	virtual void UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc, const FVector& CameraForward, const FVector& OwnerLoc) override;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Nameplate")

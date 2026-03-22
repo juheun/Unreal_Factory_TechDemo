@@ -3,15 +3,28 @@
 
 #include "UI/World/FactorySmartNameplateComponent.h"
 
-#include "Kismet/GameplayStatics.h"
 #include "Placement/FactoryObjectData.h"
 #include "Placement/FactoryPlaceObjectBase.h"
 #include "Settings/FactoryDeveloperSettings.h"
+#include "UI/World/FactoryNameplateWidget.h"
 
 
 UFactorySmartNameplateComponent::UFactorySmartNameplateComponent()
 {
 	
+}
+
+void UFactorySmartNameplateComponent::InitNameplate(const UFactoryObjectData* Data)
+{
+	if (!GetUserWidgetObject())
+	{
+		InitWidget(); // 위젯 강제 로드
+	}
+        
+	if (UFactoryNameplateWidget* NameplateWidget = Cast<UFactoryNameplateWidget>(GetUserWidgetObject()))
+	{
+		NameplateWidget->SetFacilityName(Data->ObjectName);
+	}
 }
 
 void UFactorySmartNameplateComponent::BeginPlay()
@@ -30,20 +43,6 @@ void UFactorySmartNameplateComponent::BeginPlay()
 			ExtentX = ObjectData->GridSize.X * GridLength * 0.5f;
 			ExtentY = ObjectData->GridSize.Y * GridLength * 0.5f;
 		}
-	}
-}
-
-void UFactorySmartNameplateComponent::OnViewModeChanged(EFactoryViewModeType NewViewMode)
-{
-	Super::OnViewModeChanged(NewViewMode);
-	
-	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
-	{
-		SetWidgetSpace(EWidgetSpace::Screen);
-	}
-	else
-	{
-		SetWidgetSpace(EWidgetSpace::World);
 	}
 }
 

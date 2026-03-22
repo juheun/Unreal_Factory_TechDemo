@@ -28,11 +28,11 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	
 	UFUNCTION()
-	virtual void OnInputBufferUpdated(int32 SlotIndex, FFactorySlot SlotData);
+	virtual void OnInputBufferUpdated(const int32 SlotIndex, const FFactorySlot SlotData);
 	UFUNCTION()
-	virtual void OnOutputBufferUpdated(FFactorySlot SlotData);
+	virtual void OnOutputBufferUpdated(const FFactorySlot SlotData);
 	UFUNCTION()
-	virtual void OnRecipeUpdated(UFactoryRecipeData* RecipeData);
+	virtual void OnRecipeUpdated(const UFactoryRecipeData* RecipeData);
 	
 	UFUNCTION()
 	void HandleSlotDrop(UFactoryFacilitySlotWidget* TargetSlot, const class UFactoryItemData* ItemData, int32 Amount, class UFactoryBaseSlotWidget* SourceWidget);
@@ -54,7 +54,7 @@ protected:
 	
 private:
 	UPROPERTY()
-	TObjectPtr<UFactoryRecipeData> CachedRecipe;
+	TObjectPtr<const UFactoryRecipeData> CachedRecipe;
 	
 	UPROPERTY()
 	TWeakObjectPtr<AFactoryMachineBase> CachedMachine;

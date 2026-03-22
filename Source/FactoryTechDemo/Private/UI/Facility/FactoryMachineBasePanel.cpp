@@ -125,7 +125,7 @@ void UFactoryMachineBasePanel::OnOutputBufferUpdated(FFactorySlot SlotData)
 	OutputSlot->UpdateSlotVisual(SlotData.ItemData, SlotData.Amount);
 }
 
-void UFactoryMachineBasePanel::OnRecipeUpdated(UFactoryRecipeData* RecipeData)
+void UFactoryMachineBasePanel::OnRecipeUpdated(const UFactoryRecipeData* RecipeData)
 {
 	CachedRecipe = RecipeData;
 }

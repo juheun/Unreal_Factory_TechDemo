@@ -22,13 +22,29 @@ AFactoryWarehouseExporter::AFactoryWarehouseExporter()
 	RecipeBillboardComponent = CreateDefaultSubobject<UFactoryRecipeBillboardComponent>(TEXT("RecipeBillboardComponent"));
 	RecipeBillboardComponent->SetupAttachment(RootComponent);
 	
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> XRayMat(TEXT("/Game/Material/M_WidgetXRay"));
-	if (XRayMat.Succeeded())
-	{
-		RecipeBillboardComponent->SetMaterial(0, XRayMat.Object);
-	}
-	
 	FacilityMenuMode = EFactoryMenuMode::FacilityOnly;
+}
+
+void AFactoryWarehouseExporter::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (RecipeBillboardComponent)
+	{
+		OnTargetItemChanged.AddDynamic(RecipeBillboardComponent, &UFactoryRecipeBillboardComponent::OnItemChangedCallback);
+		RecipeBillboardComponent->OnItemChangedCallback(TargetItemData);
+	}
+}
+
+void AFactoryWarehouseExporter::InitObject(const UFactoryObjectData* Data)
+{
+	Super::InitObject(Data);
+	
+	// 설비 이름 표시
+	if (SmartNameplateComponent)
+	{
+		SmartNameplateComponent->InitNameplate(Data);
+	}
 }
 
 void AFactoryWarehouseExporter::PlanCycle()
@@ -86,7 +102,7 @@ bool AFactoryWarehouseExporter::PullItemFromInputPorts(FFactoryItemInstance& Ite
 	return false;
 }
 
-void AFactoryWarehouseExporter::SetTargetItem(UFactoryItemData* NewTargetItem)
+void AFactoryWarehouseExporter::SetTargetItem(const UFactoryItemData* NewTargetItem)
 {
 	if (TargetItemData != NewTargetItem)
 	{

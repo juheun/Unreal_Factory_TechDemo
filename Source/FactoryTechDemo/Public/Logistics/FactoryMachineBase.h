@@ -15,7 +15,7 @@ class UFactoryFacilityItemData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInputBufferChanged, int32, SlotIndex, FFactorySlot, SlotData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOutputBufferChanged, FFactorySlot, SlotData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrentRecipeChanged, UFactoryRecipeData*, RecipeData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrentRecipeChanged, const UFactoryRecipeData*, RecipeData);
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryMachineBase : public AFactoryLogisticsObjectBase
 {
@@ -30,6 +30,8 @@ public:
 	FOnOutputBufferChanged OnOutputBufferChanged;
 	UPROPERTY(BlueprintAssignable, Category = "Factory|Machine|Event")
 	FOnCurrentRecipeChanged OnCurrentRecipeChanged;
+	
+	virtual void InitObject(const UFactoryObjectData* Data) override;
 	
 	virtual void PlanCycle() override;
 	virtual void ExecuteCycle() override;

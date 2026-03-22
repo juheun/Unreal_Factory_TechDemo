@@ -20,11 +20,28 @@ AFactoryWarehouseImporter::AFactoryWarehouseImporter()
 	
 	RecipeBillboardComponent = CreateDefaultSubobject<UFactoryRecipeBillboardComponent>(TEXT("RecipeBillboardComponent"));
 	RecipeBillboardComponent->SetupAttachment(RootComponent);
+}
+
+
+void AFactoryWarehouseImporter::BeginPlay()
+{
+	Super::BeginPlay();
 	
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> XRayMat(TEXT("/Game/Material/M_WidgetXRay"));
-	if (XRayMat.Succeeded())
+	if (RecipeBillboardComponent)
 	{
-		RecipeBillboardComponent->SetMaterial(0, XRayMat.Object);
+		OnImportItemChanged.AddDynamic(RecipeBillboardComponent, &UFactoryRecipeBillboardComponent::OnItemChangedCallback);
+		RecipeBillboardComponent->OnItemChangedCallback(nullptr);
+	}
+}
+
+void AFactoryWarehouseImporter::InitObject(const UFactoryObjectData* Data)
+{
+	Super::InitObject(Data);
+	
+	// 설비 이름 표시
+	if (SmartNameplateComponent)
+	{
+		SmartNameplateComponent->InitNameplate(Data);
 	}
 }
 
@@ -40,9 +57,17 @@ void AFactoryWarehouseImporter::ExecuteCycle()
 	
 	if (InputPort->PendingItem.ItemData == nullptr) return;
 	
+	
+	
 	if (UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
 	{
 		WarehouseSubsystem->AddItem(InputPort->PendingItem.ItemData, 1);
+		
+		if (!CachedLastImportedItem || CachedLastImportedItem != InputPort->PendingItem.ItemData)
+		{
+			CachedLastImportedItem = InputPort->PendingItem.ItemData;
+			OnImportItemChanged.Broadcast(InputPort->PendingItem.ItemData);
+		}
 		
 		if (AFactoryItemVisual* ItemVisual = InputPort->PendingItem.VisualActor.Get())
 		{
@@ -71,3 +96,4 @@ bool AFactoryWarehouseImporter::CanPushItemFromBeforeObject(
 	
 	return RequestPort->PendingItem.ItemData == nullptr;
 }
+

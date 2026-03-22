@@ -24,12 +24,6 @@ AFactoryMachineBase::AFactoryMachineBase()
 	
 	RecipeBillboardComponent = CreateDefaultSubobject<UFactoryRecipeBillboardComponent>(TEXT("RecipeBillboardComponent"));
 	RecipeBillboardComponent->SetupAttachment(RootComponent);
-	
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> XRayMat(TEXT("/Game/Material/M_WidgetXRay"));
-	if (XRayMat.Succeeded())
-	{
-		RecipeBillboardComponent->SetMaterial(0, XRayMat.Object);
-	}
 }
 
 void AFactoryMachineBase::BeginPlay()
@@ -62,6 +56,17 @@ void AFactoryMachineBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 }
 
+void AFactoryMachineBase::InitObject(const UFactoryObjectData* Data)
+{
+	Super::InitObject(Data);
+	
+	// 설비 이름 표시
+	if (SmartNameplateComponent)
+	{
+		SmartNameplateComponent->InitNameplate(Data);
+	}
+}
+
 void AFactoryMachineBase::InitMachine()
 {
 	// 인풋 버퍼 초기화
@@ -78,6 +83,12 @@ void AFactoryMachineBase::InitMachine()
 	if (DataSubsystem && FacilityIdentity)
 	{
 		AvailableRecipes = DataSubsystem->GetRecipeDatasForFacility(FacilityIdentity);
+	}
+	
+	if (RecipeBillboardComponent)
+	{
+		OnCurrentRecipeChanged.AddDynamic(RecipeBillboardComponent, &UFactoryRecipeBillboardComponent::OnRecipeChangedCallback);
+		RecipeBillboardComponent->OnRecipeChangedCallback(CurrentRecipe);
 	}
 }
 

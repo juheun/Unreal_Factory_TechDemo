@@ -76,5 +76,14 @@ void UFactoryFacilityWorldUIComponent::GoToSleep()
 void UFactoryFacilityWorldUIComponent::OnViewModeChanged(EFactoryViewModeType NewViewMode)
 {
 	CachedCurrentViewMode = NewViewMode;
+	
+	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
+	{
+		SetWidgetSpace(EWidgetSpace::Screen);
+	}
+	else
+	{
+		SetWidgetSpace(EWidgetSpace::World);
+	}
 }
 

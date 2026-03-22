@@ -30,13 +30,13 @@ protected:
 	void OnSelectPanelOpenButtonClicked();	// 아이템 선택 패널 열기 버튼
 	
 	UFUNCTION()
-	void OnPopupItemSelected(UFactoryItemData* SelectedItem);	// 팝업에서 아이템 선택 후 닫기
+	void OnPopupItemSelected(const UFactoryItemData* SelectedItem);	// 팝업에서 아이템 선택 후 닫기
 	
 	UFUNCTION()
-	void OnExporterItemChanged(UFactoryItemData* NewItem); // Exporter의 타겟 아이템 바꿨을 때 슬롯 UI 갱신하는 함수
+	void OnExporterItemChanged(const UFactoryItemData* NewItem); // Exporter의 타겟 아이템 바꿨을 때 슬롯 UI 갱신하는 함수
 	
 	UFUNCTION()
-	void OnWarehouseItemAmountUpdated(int32 CurrentAmount);
+	void OnWarehouseItemAmountUpdated(const int32 CurrentAmount);
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> SelectPanelOpenButton;

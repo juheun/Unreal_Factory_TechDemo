@@ -94,7 +94,7 @@ void UFactoryExporterPanel::OnSelectPanelOpenButtonClicked()
 	}
 }
 
-void UFactoryExporterPanel::OnPopupItemSelected(UFactoryItemData* SelectedItem)
+void UFactoryExporterPanel::OnPopupItemSelected(const UFactoryItemData* SelectedItem)
 {
 	if (AFactoryWarehouseExporter* Exporter = CachedExporter.Get())
 	{
@@ -102,7 +102,7 @@ void UFactoryExporterPanel::OnPopupItemSelected(UFactoryItemData* SelectedItem)
 	}
 }
 
-void UFactoryExporterPanel::OnExporterItemChanged(UFactoryItemData* NewItem)
+void UFactoryExporterPanel::OnExporterItemChanged(const UFactoryItemData* NewItem)
 {
 	if (TargetItemSlot)
 	{
@@ -110,7 +110,7 @@ void UFactoryExporterPanel::OnExporterItemChanged(UFactoryItemData* NewItem)
 	}
 }
 
-void UFactoryExporterPanel::OnWarehouseItemAmountUpdated(int32 CurrentAmount)
+void UFactoryExporterPanel::OnWarehouseItemAmountUpdated(const int32 CurrentAmount)
 {
 	if (WarehouseAmountText)
 	{
