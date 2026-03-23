@@ -48,6 +48,15 @@ void UFactoryPortComponentBase::Disconnect()
 	}
 }
 
+void UFactoryPortComponentBase::SetPortBlocked(bool bNewBlocked)
+{
+	if (bIsPortBlocked != bNewBlocked)
+	{
+		bIsPortBlocked = bNewBlocked;
+		OnPortBlockedStateChanged.Broadcast(bIsPortBlocked);
+	}
+}
+
 void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 {
 	if (!Target) return;

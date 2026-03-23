@@ -7,6 +7,7 @@
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "FactoryMachineBase.generated.h"
 
+class UFactoryFacilityBlockWarningComponent;
 class UFactoryRecipeBillboardComponent;
 class UFactorySmartNameplateComponent;
 struct FFactoryItemInstance;
@@ -84,6 +85,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
 	TObjectPtr<UFactoryRecipeBillboardComponent> RecipeBillboardComponent;
 	
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactoryFacilityBlockWarningComponent> FacilityBlockWarningComponent;
+	
 private:
 	void InitMachine();
 	bool TryCraftItem();
@@ -91,4 +95,6 @@ private:
 	
 	int32 InputPortIndex = 0;
 	int32 OutputPortIndex = 0;
+	
+	bool bIsMachineBlockedOnTick = false;
 };

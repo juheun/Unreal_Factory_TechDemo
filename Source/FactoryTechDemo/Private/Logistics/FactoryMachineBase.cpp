@@ -11,8 +11,10 @@
 #include "Subsystems/FactoryDataSubsystem.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
+#include "UI/World/FactoryPortBlockWarningComponent.h"
 #include "UI/World/FactoryRecipeBillboardComponent.h"
 #include "UI/World/FactorySmartNameplateComponent.h"
+#include "UI/World/UFactoryFacilityBlockWarningComponent.h"
 
 
 AFactoryMachineBase::AFactoryMachineBase()
@@ -24,6 +26,9 @@ AFactoryMachineBase::AFactoryMachineBase()
 	
 	RecipeBillboardComponent = CreateDefaultSubobject<UFactoryRecipeBillboardComponent>(TEXT("RecipeBillboardComponent"));
 	RecipeBillboardComponent->SetupAttachment(RootComponent);
+	
+	FacilityBlockWarningComponent = CreateDefaultSubobject<UFactoryFacilityBlockWarningComponent>(TEXT("FacilityBlockWarningComponent"));
+	FacilityBlockWarningComponent->SetupAttachment(RootComponent);
 }
 
 void AFactoryMachineBase::BeginPlay()
@@ -44,15 +49,13 @@ void AFactoryMachineBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		if (!InputBufferSlot.IsEmpty())
 		{
-			WarehouseSubsystem->AddItem(
-				const_cast<UFactoryItemData*>(InputBufferSlot.ItemData.Get()), InputBufferSlot.Amount);
+			WarehouseSubsystem->AddItem(InputBufferSlot.ItemData, InputBufferSlot.Amount);
 		}
 	}
 	
 	if (!OutputBufferSlot.IsEmpty())
 	{
-		WarehouseSubsystem->AddItem(
-			const_cast<UFactoryItemData*>(OutputBufferSlot.ItemData.Get()), OutputBufferSlot.Amount);
+		WarehouseSubsystem->AddItem(OutputBufferSlot.ItemData, OutputBufferSlot.Amount);
 	}
 }
 
@@ -90,10 +93,32 @@ void AFactoryMachineBase::InitMachine()
 		OnCurrentRecipeChanged.AddDynamic(RecipeBillboardComponent, &UFactoryRecipeBillboardComponent::OnRecipeChangedCallback);
 		RecipeBillboardComponent->OnRecipeChangedCallback(CurrentRecipe);
 	}
+	
+	if (FacilityBlockWarningComponent)
+	{
+		OnFacilityBlockedStateChanged.AddDynamic(FacilityBlockWarningComponent, &UFactoryFacilityBlockWarningComponent::OnFacilityBlockCallback);
+	}
+	
+	for (auto& InputPort : LogisticsInputPortArr)
+	{
+		UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
+		PortBlockWarningComponent->SetupAttachment(InputPort);
+		PortBlockWarningComponent->RegisterComponent();
+		InputPort->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
+	}
+	for (auto& OutputPort : LogisticsOutputPortArr)
+	{
+		UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
+		PortBlockWarningComponent->SetupAttachment(OutputPort);
+		PortBlockWarningComponent->RegisterComponent();
+		OutputPort->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
+	}
 }
 
 void AFactoryMachineBase::PlanCycle()
 {
+	bIsMachineBlockedOnTick = false;
+	
 	// 가공 로직
 	if (bIsWorking)
 	{
@@ -108,6 +133,10 @@ void AFactoryMachineBase::PlanCycle()
 				if (TryEndCraftItem())
 				{
 					bIsWorking = false;
+				}
+				else
+				{
+					bIsMachineBlockedOnTick = true;
 				}
 			}
 		}
@@ -155,6 +184,12 @@ void AFactoryMachineBase::PlanCycle()
 			{
 				OutputBufferSlot.Clear();
 			}
+			
+			LogisticsOutputPortArr[index]->SetPortBlocked(false);
+		}
+		else
+		{
+			LogisticsOutputPortArr[index]->SetPortBlocked(true);
 		}
 	}
 }
@@ -184,7 +219,17 @@ void AFactoryMachineBase::ExecuteCycle()
 				}
 				LogisticsInputPortArr[Index]->PendingItem = FFactoryItemInstance();
 				InputPortIndex = (Index + 1) % MaxPorts;
+				
+				LogisticsInputPortArr[Index]->SetPortBlocked(false);
 			}
+			else
+			{
+				LogisticsInputPortArr[Index]->SetPortBlocked(true);
+			}
+		}
+		else
+		{
+			LogisticsInputPortArr[Index]->SetPortBlocked(false);	// Pending 된 아이템이 없다는건 막히지 않았다는 뜻
 		}
 	}
 	
@@ -197,6 +242,8 @@ void AFactoryMachineBase::ExecuteCycle()
 void AFactoryMachineBase::UpdateView()
 {
 	// 애니메이션 재생 등
+	
+	SetFacilityBlocked(bIsMachineBlockedOnTick);
 }
 
 bool AFactoryMachineBase::CanPushItemFromBeforeObject(
@@ -256,6 +303,14 @@ bool AFactoryMachineBase::PullItemFromInputPorts(FFactoryItemInstance& Item)
 bool AFactoryMachineBase::TryCraftItem()
 {
 	if (bIsWorking || AvailableRecipes.Num() == 0) return false;
+	
+	for (const FFactorySlot& Slot : InputBufferSlots)
+	{
+		if (Slot.IsEmpty())
+		{
+			return false;	// 기획상 레시피 재료는 설비 슬롯 수와 일치. 아직 슬롯이 채워지지 않으면 가공 시작 불가
+		}
+	}
 
 	for (UFactoryRecipeData* Recipe : AvailableRecipes)
 	{
@@ -292,6 +347,7 @@ bool AFactoryMachineBase::TryCraftItem()
 				(OutputBufferSlot.ItemData != Recipe->Output.ItemData || 
 				OutputBufferSlot.Amount + Recipe->Output.Amount > FFactorySlot::MaxCapacity))
 			{
+				bIsMachineBlockedOnTick = true;		// 버퍼가 막힌것은 설비가 막힌것
 				return false; // 아웃풋 버퍼에 공간이 부족하면 가공 시작하지 않음
 			}
 
@@ -323,6 +379,7 @@ bool AFactoryMachineBase::TryCraftItem()
 			return true;
 		}
 	}
+	bIsMachineBlockedOnTick = true;		// 슬롯에 아이템이 차있으나 가공을 시작할 수 없었음
 	return false;
 }
 
@@ -330,14 +387,17 @@ bool AFactoryMachineBase::TryEndCraftItem()
 {
 	if (CurrentRecipe)
 	{
-		// 이미 가공 시작 전에 공간 검사를 완료했으므로 바로 넣음
-		OutputBufferSlot.ItemData = CurrentRecipe->Output.ItemData;
-		OutputBufferSlot.Amount += CurrentRecipe->Output.Amount;
-		OnOutputBufferChanged.Broadcast(OutputBufferSlot);
-		
-		CurrentRecipe = nullptr;
-		// 초기상태말고는 항상 현재 레시피가 있는것처럼 UI에 표시. OnCurrentRecipeChanged Broadcast 하지 않음
-		return true;
+		if ((OutputBufferSlot.IsEmpty() || OutputBufferSlot.ItemData == CurrentRecipe->Output.ItemData)
+			&& OutputBufferSlot.Amount + CurrentRecipe->Output.Amount <= FFactorySlot::MaxCapacity)
+		{
+			// 이미 가공 시작 전에 공간 검사를 완료했으므로 바로 넣음
+			OutputBufferSlot.ItemData = CurrentRecipe->Output.ItemData;
+			OutputBufferSlot.Amount += CurrentRecipe->Output.Amount;
+			OnOutputBufferChanged.Broadcast(OutputBufferSlot);
+			CurrentRecipe = nullptr;
+			// 초기상태말고는 항상 현재 레시피가 있는것처럼 UI에 표시. OnCurrentRecipeChanged Broadcast 하지 않음
+			return true;
+		}
 	}
 	
 	return false;

@@ -9,6 +9,8 @@ class UFactoryObjectData;
 class UFactoryInputPortComponent;
 class UFactoryOutputPortComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFacilityBlockedStateChanged, bool, bIsBlocked);
+
 UCLASS(Abstract)
 class FACTORYTECHDEMO_API AFactoryLogisticsObjectBase : public AFactoryPlaceObjectBase
 {
@@ -16,6 +18,9 @@ class FACTORYTECHDEMO_API AFactoryLogisticsObjectBase : public AFactoryPlaceObje
 
 public:
 	AFactoryLogisticsObjectBase();
+	
+	UPROPERTY(BlueprintAssignable, Category = "Factory|Event")
+	FOnFacilityBlockedStateChanged OnFacilityBlockedStateChanged;
 	
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -45,10 +50,16 @@ protected:
 	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) 
 		PURE_VIRTUAL(AFactoryLogisticsObjectBase::ReceiveItem, return false; );
 	
+	UFUNCTION(BlueprintCallable, Category = "Factory|State")
+	void SetFacilityBlocked(bool bNewBlock);
+	
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UFactoryOutputPortComponent>> LogisticsOutputPortArr;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UFactoryInputPortComponent>> LogisticsInputPortArr;
 	
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Factory|State")
+	bool bIsFacilityBlocked = false;
 };

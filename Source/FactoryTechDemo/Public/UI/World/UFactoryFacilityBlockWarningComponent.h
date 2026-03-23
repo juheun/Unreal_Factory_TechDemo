@@ -4,33 +4,28 @@
 
 #include "CoreMinimal.h"
 #include "FactoryFacilityWorldUIComponent.h"
-#include "FactoryRecipeBillboardComponent.generated.h"
+#include "UFactoryFacilityBlockWarningComponent.generated.h"
 
-class UFactoryRecipeData;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class FACTORYTECHDEMO_API UFactoryRecipeBillboardComponent : public UFactoryFacilityWorldUIComponent
+class FACTORYTECHDEMO_API UFactoryFacilityBlockWarningComponent : public UFactoryFacilityWorldUIComponent
 {
 	GENERATED_BODY()
-	
-public:
-	UFactoryRecipeBillboardComponent();
-	
-	UFUNCTION()
-	void OnRecipeChangedCallback(const UFactoryRecipeData* NewRecipe);
-	
-	UFUNCTION()
-	void OnItemChangedCallback(const UFactoryItemData* NewItemData);
 
+public:
+	UFactoryFacilityBlockWarningComponent();
+	
+	UFUNCTION()
+	void OnFacilityBlockCallback(bool bIsBlocked);
+	
 protected:
 	virtual void UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc, const FVector& CameraForward, const FVector& OwnerLoc) override;
-	void SetIcon(UTexture2D* Icon);
-
+	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
-	float DefaultBillboardZHeight = 250.f;
+	float DefaultBillboardZHeight = 400.f;
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
-	float BillboardZHeight = 150.f;
-		
+	float BillboardZHeight = 300.f;
+	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
-	float TopViewScreenOffset = -150.f;
+	float TopViewScreenOffset = 150.f;
 };

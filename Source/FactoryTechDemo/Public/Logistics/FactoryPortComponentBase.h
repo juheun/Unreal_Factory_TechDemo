@@ -7,6 +7,7 @@
 class UArrowComponent;
 class AFactoryLogisticsObjectBase;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPortBlockedStateChanged, bool, bIsBlocked);
 UCLASS(Abstract)
 class FACTORYTECHDEMO_API UFactoryPortComponentBase : public UBoxComponent
 {
@@ -15,6 +16,9 @@ class FACTORYTECHDEMO_API UFactoryPortComponentBase : public UBoxComponent
 public:
 	UFactoryPortComponentBase();
 	
+	UPROPERTY(BlueprintAssignable, Category="Factory|Port|Event")
+	FOnPortBlockedStateChanged OnPortBlockedStateChanged;
+	
 	virtual void BeginPlay() override;
 	// 철거 시 연결 끊기 위해 오버라이드
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -22,6 +26,8 @@ public:
 	// 연결 함수
 	void ConnectTo(UFactoryPortComponentBase* Target);
 	void Disconnect();
+	
+	void SetPortBlocked(bool bNewBlocked);
 	
 	AFactoryLogisticsObjectBase* GetPortOwner() const { return PortOwner.Get();}
 
@@ -37,4 +43,7 @@ protected:
 	
 	// 연결 스캔 로직
 	void ScanForConnection(FVector Direction, TSubclassOf<UFactoryPortComponentBase> TargetClassType);
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Factory|Port|State")
+	bool bIsPortBlocked = false;
 };

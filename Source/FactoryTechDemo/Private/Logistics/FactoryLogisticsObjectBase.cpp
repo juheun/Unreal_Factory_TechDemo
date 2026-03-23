@@ -96,3 +96,13 @@ void AFactoryLogisticsObjectBase::InitializeLogisticsPort()
 	}
 }
 
+
+void AFactoryLogisticsObjectBase::SetFacilityBlocked(bool bNewBlock)
+{
+	if (bIsFacilityBlocked != bNewBlock)
+	{
+		bIsFacilityBlocked = bNewBlock;
+		OnFacilityBlockedStateChanged.Broadcast(bIsFacilityBlocked);
+	}
+}
+

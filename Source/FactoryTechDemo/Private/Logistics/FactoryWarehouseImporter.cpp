@@ -7,6 +7,7 @@
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
+#include "UI/World/FactoryPortBlockWarningComponent.h"
 #include "UI/World/FactoryRecipeBillboardComponent.h"
 #include "UI/World/FactorySmartNameplateComponent.h"
 
@@ -32,6 +33,11 @@ void AFactoryWarehouseImporter::BeginPlay()
 		OnImportItemChanged.AddDynamic(RecipeBillboardComponent, &UFactoryRecipeBillboardComponent::OnItemChangedCallback);
 		RecipeBillboardComponent->OnItemChangedCallback(nullptr);
 	}
+	
+	UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
+	PortBlockWarningComponent->SetupAttachment(LogisticsInputPortArr[0]);
+	PortBlockWarningComponent->RegisterComponent();
+	LogisticsInputPortArr[0]->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
 }
 
 void AFactoryWarehouseImporter::InitObject(const UFactoryObjectData* Data)
@@ -55,32 +61,44 @@ void AFactoryWarehouseImporter::ExecuteCycle()
 	
 	UFactoryInputPortComponent* InputPort = LogisticsInputPortArr[0];
 	
-	if (InputPort->PendingItem.ItemData == nullptr) return;
-	
-	
+	if (InputPort->PendingItem.ItemData == nullptr)
+	{
+		// 포트에 펜딩된 아이템 없으면 막힌게 아님
+		InputPort->SetPortBlocked(false);
+		return;
+	}
 	
 	if (UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
 	{
-		WarehouseSubsystem->AddItem(InputPort->PendingItem.ItemData, 1);
+		int ItemAmountBeforeAdd = WarehouseSubsystem->GetItemAmount(InputPort->PendingItem.ItemData);
+		int ItemAmountAfterAdd = WarehouseSubsystem->AddItem(InputPort->PendingItem.ItemData, 1);
 		
-		if (!CachedLastImportedItem || CachedLastImportedItem != InputPort->PendingItem.ItemData)
+		if (ItemAmountBeforeAdd < ItemAmountAfterAdd)
 		{
-			CachedLastImportedItem = InputPort->PendingItem.ItemData;
-			OnImportItemChanged.Broadcast(InputPort->PendingItem.ItemData);
-		}
+			if (!CachedLastImportedItem || CachedLastImportedItem != InputPort->PendingItem.ItemData)
+			{
+				CachedLastImportedItem = InputPort->PendingItem.ItemData;
+				OnImportItemChanged.Broadcast(InputPort->PendingItem.ItemData);
+			}
 		
-		if (AFactoryItemVisual* ItemVisual = InputPort->PendingItem.VisualActor.Get())
-		{
-			if (UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>())
+			if (AFactoryItemVisual* ItemVisual = InputPort->PendingItem.VisualActor.Get())
 			{
-				PoolSubsystem->ReturnItemToPool(ItemVisual);
-			}
-			else
-			{
-				ItemVisual->Destroy();
-			}
+				if (UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>())
+				{
+					PoolSubsystem->ReturnItemToPool(ItemVisual);
+				}
+				else
+				{
+					ItemVisual->Destroy();
+				}
 			
-			InputPort->PendingItem = FFactoryItemInstance();
+				InputPort->PendingItem = FFactoryItemInstance();
+			}
+			InputPort->SetPortBlocked(false);
+		}
+		else
+		{
+			InputPort->SetPortBlocked(true);
 		}
 	}
 }

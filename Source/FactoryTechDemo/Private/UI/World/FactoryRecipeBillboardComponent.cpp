@@ -63,16 +63,22 @@ void UFactoryRecipeBillboardComponent::UpdateUIPlacement(float DeltaTime, const 
 		
 		if (MeshBounds.IsValid)
 		{
-			TargetLoc.Z = MeshBounds.Max.Z + 150.f;
+			TargetLoc.Z = MeshBounds.Max.Z + BillboardZHeight;
 		}
 		else
 		{
-			TargetLoc.Z += BillboardZHeight;
+			TargetLoc.Z += DefaultBillboardZHeight;
 		}
 	}
 	else
 	{
-		TargetLoc.Z += BillboardZHeight; // 예외 처리 (기본값)
+		TargetLoc.Z += DefaultBillboardZHeight; // 예외 처리 (기본값)
+	}
+	
+	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
+	{
+		FVector CameraUp = FRotationMatrix::MakeFromX(CameraForward).GetUnitAxis(EAxis::Z);
+		TargetLoc += CameraUp * TopViewScreenOffset;
 	}
     
 	// 카메라 보게하기

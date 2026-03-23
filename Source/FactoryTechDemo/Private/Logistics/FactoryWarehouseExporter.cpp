@@ -8,6 +8,7 @@
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
+#include "UI/World/FactoryPortBlockWarningComponent.h"
 #include "UI/World/FactoryRecipeBillboardComponent.h"
 #include "UI/World/FactorySmartNameplateComponent.h"
 
@@ -34,6 +35,11 @@ void AFactoryWarehouseExporter::BeginPlay()
 		OnTargetItemChanged.AddDynamic(RecipeBillboardComponent, &UFactoryRecipeBillboardComponent::OnItemChangedCallback);
 		RecipeBillboardComponent->OnItemChangedCallback(TargetItemData);
 	}
+	
+	UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
+	PortBlockWarningComponent->SetupAttachment(LogisticsOutputPortArr[0]);
+	PortBlockWarningComponent->RegisterComponent();
+	LogisticsOutputPortArr[0]->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
 }
 
 void AFactoryWarehouseExporter::InitObject(const UFactoryObjectData* Data)
@@ -76,7 +82,16 @@ void AFactoryWarehouseExporter::PlanCycle()
 					NewInstance.VisualActor = ItemVisual;
 					TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
 				}
+				LogisticsOutputPortArr[0]->SetPortBlocked(false);
 			}
+			else
+			{
+				LogisticsOutputPortArr[0]->SetPortBlocked(true);
+			}
+		}
+		else
+		{
+			LogisticsOutputPortArr[0]->SetPortBlocked(true);
 		}
 		int32 WarehouseAmount = WarehouseSubsystem->GetItemAmount(TargetItemData);
 		OnWarehouseAmountUpdated.Broadcast(WarehouseAmount);
