@@ -39,7 +39,7 @@ public:
 	virtual void UpdateView() override;
 	
 	virtual bool CanPushItemFromBeforeObject(
-		const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const override;
+		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
 	
 	bool IsWorking() const { return bIsWorking; }
 	float GetRemainingProductionCycleTime() const { return RemainingProductionCycleTime; }
@@ -96,5 +96,5 @@ private:
 	int32 InputPortIndex = 0;
 	int32 OutputPortIndex = 0;
 	
-	bool bIsMachineBlockedOnTick = false;
+	bool bIsMachineBlockedOnCycle = false;
 };

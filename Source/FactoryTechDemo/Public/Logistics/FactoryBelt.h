@@ -27,7 +27,7 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	
 	virtual bool CanPushItemFromBeforeObject(
-		const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const override;
+		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
 	
 	void SetBeltType(EBeltType Type);
 

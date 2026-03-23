@@ -3,15 +3,28 @@
 
 #include "UI/World/UFactoryFacilityBlockWarningComponent.h"
 
+#include "Kismet/GameplayStatics.h"
+
 
 UFactoryFacilityBlockWarningComponent::UFactoryFacilityBlockWarningComponent()
 {
 	SetDrawSize(FVector2D(100.f, 100.f));
+	SetHiddenInGame(true);
 }
 
 void UFactoryFacilityBlockWarningComponent::OnFacilityBlockCallback(bool bIsBlocked)
 {
 	SetHiddenInGame(!bIsBlocked);
+	
+	if (!GetUserWidgetObject())
+	{
+		InitWidget();
+	}
+	
+	if (UUserWidget* WidgetObj = GetUserWidgetObject())
+	{
+		WidgetObj->SetVisibility(bIsBlocked ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
 }
 
 void UFactoryFacilityBlockWarningComponent::UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc,
@@ -48,8 +61,11 @@ void UFactoryFacilityBlockWarningComponent::UpdateUIPlacement(float DeltaTime, c
 	
 	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
 	{
-		FVector CameraUp = FRotationMatrix::MakeFromX(CameraForward).GetUnitAxis(EAxis::Z);
-		TargetLoc += CameraUp * TopViewScreenOffset;
+		if (APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0))
+		{
+			FVector RealCameraUp = CameraManager->GetCameraRotation().Quaternion().GetUpVector();
+			TargetLoc += RealCameraUp * TopViewScreenOffset;
+		}
 	}
     
 	// 카메라 보게하기

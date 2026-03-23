@@ -5,6 +5,7 @@
 
 #include "Items/FactoryItemData.h"
 #include "Items/FactoryRecipeData.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/World/FactoryRecipeBillboardWidget.h"
 
 
@@ -77,8 +78,11 @@ void UFactoryRecipeBillboardComponent::UpdateUIPlacement(float DeltaTime, const 
 	
 	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
 	{
-		FVector CameraUp = FRotationMatrix::MakeFromX(CameraForward).GetUnitAxis(EAxis::Z);
-		TargetLoc += CameraUp * TopViewScreenOffset;
+		if (APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0))
+		{
+			FVector RealCameraUp = CameraManager->GetCameraRotation().Quaternion().GetUpVector();
+			TargetLoc += RealCameraUp * TopViewScreenOffset;
+		}
 	}
     
 	// 카메라 보게하기

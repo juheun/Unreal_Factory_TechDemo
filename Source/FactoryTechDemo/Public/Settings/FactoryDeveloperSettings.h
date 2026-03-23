@@ -25,6 +25,8 @@ public:
 	
 	UMaterialInterface* GetPlacePreviewMaterial() const {return PreviewObjectMaterial.LoadSynchronous();};
 	
+	UStaticMesh* GetPortWarningMesh() const { return PortWarningMesh.LoadSynchronous(); }
+	
 	TSubclassOf<AActor> GetPoolClass(EFactoryPoolType PoolType) const
 	{
 		return PoolClassMap.Contains(PoolType) ? PoolClassMap[PoolType] : nullptr;
@@ -35,6 +37,9 @@ public:
 private:
 	UPROPERTY(Config, EditAnywhere, Category="Visuals")
 	TSoftObjectPtr<UMaterialInterface> PreviewObjectMaterial;
+	
+	UPROPERTY(Config, EditAnywhere, Category="Visuals")
+	TSoftObjectPtr<UStaticMesh> PortWarningMesh;
 	
 	UPROPERTY(Config, EditAnywhere, Category="Pooling")
 	TMap<EFactoryPoolType, TSubclassOf<AActor>> PoolClassMap;

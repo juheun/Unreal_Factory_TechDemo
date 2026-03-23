@@ -97,12 +97,16 @@ void AFactoryMachineBase::InitMachine()
 	if (FacilityBlockWarningComponent)
 	{
 		OnFacilityBlockedStateChanged.AddDynamic(FacilityBlockWarningComponent, &UFactoryFacilityBlockWarningComponent::OnFacilityBlockCallback);
+		FacilityBlockWarningComponent->OnFacilityBlockCallback(bIsMachineBlockedOnCycle);
 	}
 	
+	UStaticMesh* WarningMesh = UFactoryDeveloperSettings::Get()->GetPortWarningMesh();
 	for (auto& InputPort : LogisticsInputPortArr)
 	{
 		UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
 		PortBlockWarningComponent->SetupAttachment(InputPort);
+		float OffsetX = InputPort->GetScaledBoxExtent().X + 1.f;
+		PortBlockWarningComponent->AddRelativeLocation(FVector(-OffsetX, 0.f, 0.f)); // 설비에 묻히지 않게 조금 이동
 		PortBlockWarningComponent->RegisterComponent();
 		InputPort->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
 	}
@@ -110,6 +114,8 @@ void AFactoryMachineBase::InitMachine()
 	{
 		UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
 		PortBlockWarningComponent->SetupAttachment(OutputPort);
+		float OffsetX = OutputPort->GetScaledBoxExtent().X + 1.f;
+		PortBlockWarningComponent->AddRelativeLocation(FVector(OffsetX, 0.f, 0.f)); // 설비에 묻히지 않게 조금 이동
 		PortBlockWarningComponent->RegisterComponent();
 		OutputPort->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
 	}
@@ -117,7 +123,7 @@ void AFactoryMachineBase::InitMachine()
 
 void AFactoryMachineBase::PlanCycle()
 {
-	bIsMachineBlockedOnTick = false;
+	bIsMachineBlockedOnCycle = false;
 	
 	// 가공 로직
 	if (bIsWorking)
@@ -136,7 +142,7 @@ void AFactoryMachineBase::PlanCycle()
 				}
 				else
 				{
-					bIsMachineBlockedOnTick = true;
+					bIsMachineBlockedOnCycle = true;
 				}
 			}
 		}
@@ -219,17 +225,7 @@ void AFactoryMachineBase::ExecuteCycle()
 				}
 				LogisticsInputPortArr[Index]->PendingItem = FFactoryItemInstance();
 				InputPortIndex = (Index + 1) % MaxPorts;
-				
-				LogisticsInputPortArr[Index]->SetPortBlocked(false);
 			}
-			else
-			{
-				LogisticsInputPortArr[Index]->SetPortBlocked(true);
-			}
-		}
-		else
-		{
-			LogisticsInputPortArr[Index]->SetPortBlocked(false);	// Pending 된 아이템이 없다는건 막히지 않았다는 뜻
 		}
 	}
 	
@@ -243,29 +239,34 @@ void AFactoryMachineBase::UpdateView()
 {
 	// 애니메이션 재생 등
 	
-	SetFacilityBlocked(bIsMachineBlockedOnTick);
+	SetFacilityBlocked(bIsMachineBlockedOnCycle);
 }
 
 bool AFactoryMachineBase::CanPushItemFromBeforeObject(
-	const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const
+	UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
 {
 	if (!RequestPort || RequestPort->PendingItem.IsValid()) return false;	// Pending 되어 있지 않아야 밀어넣을 수 있음
 	if (!IncomingItem) return false;
 	
-	bool bHasEmptySlot = false;
 	for (const FFactorySlot& Slot : InputBufferSlots)
 	{
 		if (Slot.ItemData == IncomingItem)
 		{
+			RequestPort->SetPortBlocked(Slot.IsFull());
 			return !Slot.IsFull();
 		}
-		
+	}
+	
+	for (const FFactorySlot& Slot : InputBufferSlots)
+	{
 		if (Slot.IsEmpty())
 		{
-			bHasEmptySlot = true;
+			RequestPort->SetPortBlocked(false);
+			return true;
 		}
 	}
-	return bHasEmptySlot;
+	RequestPort->SetPortBlocked(true);
+	return false;
 }
 
 bool AFactoryMachineBase::PullItemFromInputPorts(FFactoryItemInstance& Item)
@@ -311,7 +312,7 @@ bool AFactoryMachineBase::TryCraftItem()
 			return false;	// 기획상 레시피 재료는 설비 슬롯 수와 일치. 아직 슬롯이 채워지지 않으면 가공 시작 불가
 		}
 	}
-
+	
 	for (UFactoryRecipeData* Recipe : AvailableRecipes)
 	{
 		if (!Recipe) continue;
@@ -347,7 +348,7 @@ bool AFactoryMachineBase::TryCraftItem()
 				(OutputBufferSlot.ItemData != Recipe->Output.ItemData || 
 				OutputBufferSlot.Amount + Recipe->Output.Amount > FFactorySlot::MaxCapacity))
 			{
-				bIsMachineBlockedOnTick = true;		// 버퍼가 막힌것은 설비가 막힌것
+				bIsMachineBlockedOnCycle = true;		// 버퍼가 막힌것은 설비가 막힌것
 				return false; // 아웃풋 버퍼에 공간이 부족하면 가공 시작하지 않음
 			}
 
@@ -362,7 +363,7 @@ bool AFactoryMachineBase::TryCraftItem()
             
 						if (InputBufferSlots[i].Amount <= 0)
 						{
-							// 패널 슬롯에서 아이템이 0개라도 아이콘을 표시하기위해 clear하지 않음
+							// 패널 슬롯에서 아이템이 0개라도 아이콘을 표시하기위해 clear하지 않음ㅁㅁ
 							InputBufferSlots[i].Amount = 0;
 						}
 
@@ -379,7 +380,7 @@ bool AFactoryMachineBase::TryCraftItem()
 			return true;
 		}
 	}
-	bIsMachineBlockedOnTick = true;		// 슬롯에 아이템이 차있으나 가공을 시작할 수 없었음
+	
 	return false;
 }
 
@@ -394,8 +395,6 @@ bool AFactoryMachineBase::TryEndCraftItem()
 			OutputBufferSlot.ItemData = CurrentRecipe->Output.ItemData;
 			OutputBufferSlot.Amount += CurrentRecipe->Output.Amount;
 			OnOutputBufferChanged.Broadcast(OutputBufferSlot);
-			CurrentRecipe = nullptr;
-			// 초기상태말고는 항상 현재 레시피가 있는것처럼 UI에 표시. OnCurrentRecipeChanged Broadcast 하지 않음
 			return true;
 		}
 	}

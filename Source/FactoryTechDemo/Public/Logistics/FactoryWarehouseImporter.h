@@ -28,7 +28,7 @@ public:
 	virtual void UpdateView() override;
 	
 	virtual bool CanPushItemFromBeforeObject(
-		const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const override;
+		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
 	
 protected:
 	virtual void BeginPlay() override;

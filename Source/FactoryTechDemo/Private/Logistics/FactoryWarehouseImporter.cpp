@@ -36,6 +36,8 @@ void AFactoryWarehouseImporter::BeginPlay()
 	
 	UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
 	PortBlockWarningComponent->SetupAttachment(LogisticsInputPortArr[0]);
+	float OffsetX = LogisticsInputPortArr[0]->GetScaledBoxExtent().X + 1.f;
+	PortBlockWarningComponent->AddRelativeLocation(FVector(-OffsetX, 0.f, 0.f)); // 설비에 묻히지 않게 조금 이동
 	PortBlockWarningComponent->RegisterComponent();
 	LogisticsInputPortArr[0]->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
 }
@@ -108,7 +110,7 @@ void AFactoryWarehouseImporter::UpdateView()
 }
 
 bool AFactoryWarehouseImporter::CanPushItemFromBeforeObject(
-	const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const
+	UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
 {
 	if (!RequestPort || !IncomingItem) return false;
 	

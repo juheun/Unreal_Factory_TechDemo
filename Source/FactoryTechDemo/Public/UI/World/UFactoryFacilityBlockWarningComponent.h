@@ -24,8 +24,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
 	float DefaultBillboardZHeight = 400.f;
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
-	float BillboardZHeight = 300.f;
+	float BillboardZHeight = 200.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
-	float TopViewScreenOffset = 150.f;
+	float TopViewScreenOffset = 100.f;
 };

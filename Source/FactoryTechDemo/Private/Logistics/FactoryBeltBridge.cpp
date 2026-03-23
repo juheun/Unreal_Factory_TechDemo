@@ -126,7 +126,7 @@ void AFactoryBeltBridge::UpdateView()
 }
 
 bool AFactoryBeltBridge::CanPushItemFromBeforeObject(
-	const UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) const
+	UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
 {
 	if (!RequestPort || RequestPort->PendingItem.IsValid()) return false;	// Pending 되어 있지 않아야 밀어넣을 수 있음
 	if (!IncomingItem) return false;

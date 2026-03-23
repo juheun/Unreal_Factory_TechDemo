@@ -17,6 +17,8 @@ class FACTORYTECHDEMO_API UFactoryPortBlockWarningComponent : public UStaticMesh
 public:
 	UFactoryPortBlockWarningComponent();
 	
+	virtual void BeginPlay() override;
+	
 	UFUNCTION()
 	void OnPortBlockedCallback(bool bIsBlocked);
 };
