@@ -137,9 +137,31 @@ bool AFactoryBelt::CanPushItemFromBeforeObject(
 
 void AFactoryBelt::SetBeltType(EBeltType Type)
 {
+	// 벨트 유형이 바뀌며 유령연결이 되는것 방지
+	if (LogisticsOutputPortArr.IsValidIndex(0) && LogisticsOutputPortArr[0])
+	{
+		LogisticsOutputPortArr[0]->Disconnect();
+	}
+	if (LogisticsInputPortArr.IsValidIndex(0) && LogisticsInputPortArr[0])
+	{
+		LogisticsInputPortArr[0]->Disconnect();
+	}
+	
 	BeltType = Type;
 	UpdateSplinePath(Type);
 	UpdateBeltVisual(Type);
+	
+	if (HasActorBegunPlay())
+	{
+		if (LogisticsOutputPortArr.IsValidIndex(0) && LogisticsOutputPortArr[0])
+		{
+			LogisticsOutputPortArr[0]->ForceScanConnection();
+		}
+		if (LogisticsInputPortArr.IsValidIndex(0) && LogisticsInputPortArr[0])
+		{
+			LogisticsInputPortArr[0]->ForceScanConnection();
+		}
+	}
 }
 
 FVector AFactoryBelt::GetBeltExitDirection() const

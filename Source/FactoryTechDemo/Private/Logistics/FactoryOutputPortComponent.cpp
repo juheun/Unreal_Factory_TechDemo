@@ -15,6 +15,12 @@ void UFactoryOutputPortComponent::BeginPlay()
 	ScanForConnection(GetForwardVector(), UFactoryInputPortComponent::StaticClass());
 }
 
+void UFactoryOutputPortComponent::ForceScanConnection()
+{
+	Super::ForceScanConnection();
+	ScanForConnection(GetForwardVector(), UFactoryInputPortComponent::StaticClass());
+}
+
 UFactoryInputPortComponent* UFactoryOutputPortComponent::GetConnectedInput() const
 {
 	// 부모 변수(ConnectedPort)를 캐스팅해서 리턴

@@ -33,6 +33,8 @@ public:
 	void SetPortBlocked(bool bNewBlocked);
 	void SetPortEnabled(bool bEnabled);
 	
+	virtual void ForceScanConnection() {};
+	
 	AFactoryLogisticsObjectBase* GetPortOwner() const { return PortOwner.Get();}
 
 protected:

@@ -72,7 +72,7 @@ void UFactoryPortComponentBase::SetPortEnabled(bool bEnabled)
 void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 {
 	if (!Target) return;
-
+	
 	// 상호 연결 (Handshake)
 	this->ConnectedPort = Target;
 	PortDirArrowComponent->SetHiddenInGame(true);

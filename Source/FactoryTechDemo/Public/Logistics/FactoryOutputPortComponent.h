@@ -14,7 +14,9 @@ public:
 	UFactoryOutputPortComponent();
 	
 	virtual void BeginPlay() override;
+	virtual void ForceScanConnection() override;
 
 	// 연결된 놈을 Input으로 캐스팅해서 줌
 	UFactoryInputPortComponent* GetConnectedInput() const;
+	
 };
