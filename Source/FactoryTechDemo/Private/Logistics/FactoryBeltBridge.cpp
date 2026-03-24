@@ -19,18 +19,33 @@ void AFactoryBeltBridge::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	if (LogisticsOutputPortArr.Num() != LaneCount || LogisticsInputPortArr.Num() != LaneCount)
+	if (LogisticsInputPortArr.Num() != 4 || LogisticsOutputPortArr.Num() != 4)
 	{
-		UE_LOG(LogTemp, Error, TEXT("BeltBridge Port Num Error"));
+		UE_LOG(LogTemp, Error, TEXT("[AFactoryBeltBridge] 포트 개수가 4개가 아닙니다! BP 세팅을 확인하세요. 현재 In: %d, Out: %d"), LogisticsInputPortArr.Num(), LogisticsOutputPortArr.Num());
 		return;
 	}
-	CurrentItems.SetNum(LaneCount);
+	
+	CurrentItems.SetNum(4);
+	
+	for (int i = 0; i < 4; i++)
+	{
+		if (LogisticsOutputPortArr[i])
+		{
+			LogisticsOutputPortArr[i]->SetPortEnabled(false);
+			LogisticsOutputPortArr[i]->OnPortConnectionChanged.AddDynamic(this, &AFactoryBeltBridge::HandlePortConnectionChanged);
+		}
+
+		if (LogisticsInputPortArr[i])
+		{
+			LogisticsInputPortArr[i]->SetPortEnabled(true);
+			LogisticsInputPortArr[i]->OnPortConnectionChanged.AddDynamic(this, &AFactoryBeltBridge::HandlePortConnectionChanged);
+		}
+	}
 }
 
 void AFactoryBeltBridge::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-	
 	
 	UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 	if (!WarehouseSubsystem) return;
@@ -71,18 +86,20 @@ void AFactoryBeltBridge::PlanCycle()
 	UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
 	if (!PoolSubsystem) return;
 	
-	for (int i = 0; i < LaneCount; i++)
+	for (int i = 0; i < 4; i++)
 	{
-		if (!CurrentItems[i].IsValid() || !LogisticsOutputPortArr.IsValidIndex(i) || !LogisticsOutputPortArr[i]) continue;
+		int32 Opposite = GetOppositePortIndex(i);
 		
-		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[i]->GetConnectedInput();
+		if (!CurrentItems[i].IsValid() || !LogisticsOutputPortArr[Opposite]) continue;
+		
+		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[Opposite]->GetConnectedInput();
 		if (!TargetPort) continue;
 		
 		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItems[i].ItemData))
 		{
 			FFactoryItemInstance NewInstance(CurrentItems[i].ItemData);
-			FVector SpawnLocation = LogisticsOutputPortArr[i]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
-			FRotator SpawnRotation = LogisticsOutputPortArr[i]->GetComponentRotation();
+			FVector SpawnLocation = LogisticsOutputPortArr[Opposite]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
+			FRotator SpawnRotation = LogisticsOutputPortArr[Opposite]->GetComponentRotation();
 			AFactoryItemVisual* ItemVisual = PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(
 				EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
 			ItemVisual->UpdateVisual(CurrentItems[i].ItemData);
@@ -99,7 +116,7 @@ void AFactoryBeltBridge::PlanCycle()
 
 void AFactoryBeltBridge::ExecuteCycle()
 {
-	for (int i = 0; i < LaneCount; i++)
+	for (int i = 0; i < 4; i++)
 	{
 		if (!LogisticsInputPortArr.IsValidIndex(i) || !LogisticsInputPortArr[i]) continue;
 		if (!LogisticsInputPortArr[i]->PendingItem.IsValid()) continue;
@@ -145,6 +162,42 @@ bool AFactoryBeltBridge::PullItemFromInputPorts(FFactoryItemInstance& Item)
 {
 	// PlanCycle에서 직접 구현하여 별도로 PullItemFromInputPorts를 구현하지 않음
 	return false;
+}
+
+void AFactoryBeltBridge::HandlePortConnectionChanged(UFactoryPortComponentBase* Port, bool bIsConnected)
+{
+	// 입력 포트가 연결/해제될 때만 반응하여 반대편 출구를 제어
+	if (UFactoryInputPortComponent* InPort = Cast<UFactoryInputPortComponent>(Port))
+	{
+		int32 Index = LogisticsInputPortArr.IndexOfByKey(InPort);
+		int32 Opposite = GetOppositePortIndex(Index);
+
+		if (Index != INDEX_NONE && Opposite != INDEX_NONE)
+		{
+			if (bIsConnected)
+			{
+				// 반대편의 Input을 막고 Output을 연다
+				LogisticsInputPortArr[Opposite]->SetPortEnabled(false);
+				LogisticsOutputPortArr[Opposite]->SetPortEnabled(true);
+			}
+			else
+			{
+				// 반대편의 Output을 닫고 Input을 다시 연다
+				LogisticsOutputPortArr[Opposite]->SetPortEnabled(false);
+				LogisticsInputPortArr[Opposite]->SetPortEnabled(true);
+			}
+		}
+	}
+}
+
+int32 AFactoryBeltBridge::GetOppositePortIndex(int32 PortIndex) const
+{
+	// 0(+X) ↔ 1(-X), 2(+Y) ↔ 3(-Y)
+	if (PortIndex == 0) return 1;
+	if (PortIndex == 1) return 0;
+	if (PortIndex == 2) return 3;
+	if (PortIndex == 3) return 2;
+	return INDEX_NONE;
 }
 
 

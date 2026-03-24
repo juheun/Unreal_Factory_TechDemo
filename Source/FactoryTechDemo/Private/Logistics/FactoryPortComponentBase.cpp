@@ -41,10 +41,11 @@ void UFactoryPortComponentBase::Disconnect()
 		{
 			TargetPort->ConnectedPort = nullptr;
 			TargetPort->PortDirArrowComponent->SetHiddenInGame(false);
+			TargetPort->OnPortConnectionChanged.Broadcast(TargetPort, false);
 		}
 		ConnectedPort = nullptr;
-		
 		PortDirArrowComponent->SetHiddenInGame(false);
+		OnPortConnectionChanged.Broadcast(this, false);
 	}
 }
 
@@ -57,6 +58,17 @@ void UFactoryPortComponentBase::SetPortBlocked(bool bNewBlocked)
 	}
 }
 
+void UFactoryPortComponentBase::SetPortEnabled(bool bEnabled)
+{
+	// 1. 콜리전 제어
+	SetCollisionEnabled(bEnabled ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+    
+	// 2. 화살표 시각적 제어 (켜지면 화살표 보임, 꺼지면 화살표 숨김)
+	// 단, 포트가 '연결(Connected)'된 상태라면 무조건 숨겨야 하므로 조건 추가
+	bool bShouldHideArrow = !bEnabled || ConnectedPort.IsValid();
+	PortDirArrowComponent->SetHiddenInGame(bShouldHideArrow);
+}
+
 void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 {
 	if (!Target) return;
@@ -64,9 +76,11 @@ void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 	// 상호 연결 (Handshake)
 	this->ConnectedPort = Target;
 	PortDirArrowComponent->SetHiddenInGame(true);
+	OnPortConnectionChanged.Broadcast(this, true);
 	
 	Target->ConnectedPort = this;
 	Target->PortDirArrowComponent->SetHiddenInGame(true);
+	Target->OnPortConnectionChanged.Broadcast(Target, true);
 }
 
 void UFactoryPortComponentBase::ScanForConnection(FVector Direction, TSubclassOf<UFactoryPortComponentBase> TargetClassType)

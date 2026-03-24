@@ -6,6 +6,8 @@
 #include "FactoryLogisticsObjectBase.h"
 #include "FactoryBeltBridge.generated.h"
 
+class UFactoryPortComponentBase;
+
 /**
  * 벨트가 교차하는 블럭에서 직선방향으로 벨트를 이어주는 클래스
  */
@@ -30,8 +32,11 @@ public:
 protected:
 	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
 	
+	UFUNCTION()
+	void HandlePortConnectionChanged(UFactoryPortComponentBase* Port, bool bIsConnected);
+	
+	int32 GetOppositePortIndex(int32 PortIndex) const;
+	
 	UPROPERTY()
 	TArray<FFactoryItemInstance> CurrentItems;
-	
-	const int32 LaneCount = 2;
 };
