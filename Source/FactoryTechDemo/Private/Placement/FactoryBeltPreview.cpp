@@ -29,6 +29,17 @@ bool AFactoryBeltPreview::UpdateOverlapValidity()
 	return bIsPlacementValid;
 }
 
+FVector AFactoryBeltPreview::GetBeltExitDirection() const
+{
+	FVector ActorForwardDir = GetActorForwardVector();
+	FVector OutPortDir = ActorForwardDir;
+	
+	if (BeltType == EBeltType::LeftTurn) OutPortDir = ActorForwardDir.RotateAngleAxis(-90.f, FVector::UpVector);
+	else if (BeltType == EBeltType::RightTurn) OutPortDir = ActorForwardDir.RotateAngleAxis(90.f, FVector::UpVector);
+	
+	return OutPortDir.GetSafeNormal();
+}
+
 void AFactoryBeltPreview::SetBeltType(const EBeltType Type)
 {
 	BeltType = Type;

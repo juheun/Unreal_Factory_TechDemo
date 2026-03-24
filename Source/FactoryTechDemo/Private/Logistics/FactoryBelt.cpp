@@ -144,6 +144,9 @@ void AFactoryBelt::SetBeltType(EBeltType Type)
 
 FVector AFactoryBelt::GetBeltExitDirection() const
 {
+	if (!LogisticsOutputPortArr.IsValidIndex(0) || !LogisticsOutputPortArr[0]) 
+		return FVector::ZeroVector;
+	
 	return LogisticsOutputPortArr[0]->GetForwardVector().GetSafeNormal();
 }
 

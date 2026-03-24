@@ -19,6 +19,7 @@ public:
 
 	virtual bool UpdateOverlapValidity() override;
 	
+	FVector GetBeltExitDirection() const;
 	void SetBeltType(const EBeltType Type);
 	EBeltType GetBeltType() const { return BeltType; }
 	

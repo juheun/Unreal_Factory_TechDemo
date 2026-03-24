@@ -76,7 +76,7 @@ private:
 	/////
 	
 	///// 내부 핵심 로직
-	void PlaceObject();
+	bool PlaceObject();
 	void HandleBeltPlacementClick();
 	void BeltPlacePreviewUpdate(TArray<FBeltPlacementData> BeltPlacementDatas);
 	/////

@@ -332,12 +332,15 @@ void UFactoryPlacementComponent::RotatePlacementPreview()
 	PlaceObjectPivotActor->SetActorRotation(FRotator(0.f, FRotator::NormalizeAxis(NextYaw), 0.f));
 }
 
-void UFactoryPlacementComponent::PlaceObject()
+bool UFactoryPlacementComponent::PlaceObject()
 {
 	bool bGlobalValid = true;
-	for (auto Preview : ActivePreviews) { if (!Preview->GetPlacementValid()) bGlobalValid = false; }
+	for (auto Preview : ActivePreviews)
+	{
+		if (!Preview->GetPlacementValid()) { if (!Preview->GetPlacementValid()) bGlobalValid = false; }
+	}
 	
-	if (bGlobalValid && ActivePreviews.Num() > 0)
+	if ( bGlobalValid && ActivePreviews.Num() > 0)
 	{
 		if (CurrentPlacementMode == EPlacementMode::Move)
 		{
@@ -366,9 +369,9 @@ void UFactoryPlacementComponent::PlaceObject()
 				}
 			}
 			
+			// 실제 객체 배치 시작
 			FActorSpawnParameters Params; 
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
 			AFactoryPlaceObjectBase* NewActor = GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
 				Preview->GetObjectData()->PlaceObjectBP, 
 				Preview->GetActorLocation(), 
@@ -380,27 +383,33 @@ void UFactoryPlacementComponent::PlaceObject()
 				NewActor->InitObject(Preview->GetObjectData());
 				if (AFactoryBelt* Belt = Cast<AFactoryBelt>(NewActor))
 				{
-					// 지정된 벨트 배치
+					// 벨트라면 벨트 타입 설정
 					if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
 					{
 						Belt->SetBeltType(BeltPreview->GetBeltType());
 					}
 				}
 				
+				// 배치된 객체가 인벤토리에서 소모되어야 하는 객체라면 배치되었음을 방송함
 				if (CurrentPlacementMode == EPlacementMode::PlaceFromInventory && NewActor->GetObjectData()->bRefundItemOnDestroy)
 				{
 					OnObjectPlacedFromInventorySignature.Broadcast(NewActor->GetObjectData()->RepresentingItemData, 1);
 				}
 			}
 		}
+		
 		ClearAllPreviews();
+		
 		if (CurrentPlacementMode != EPlacementMode::BeltPlace)
 		{
 			CurrentPlacementMode = EPlacementMode::None;
 		}
+		
+		OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
+		return true;
 	}
 	
-	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
+	return false;
 }
 
 void UFactoryPlacementComponent::CancelPlaceObject()
@@ -482,9 +491,28 @@ void UFactoryPlacementComponent::HandleBeltPlacementClick()
 	}
 	else
 	{
-		PlaceObject();
-		bIsWaitingDetermineBeltEnd = false;
-		ResetBeltGuidePreview();
+		if (ActivePreviews.IsEmpty()) return;
+		
+		// 마지막 벨트의 정보 저장
+		AFactoryPlacePreview* LastPreview = ActivePreviews.Last();
+		FIntPoint NextStartGrid = WorldToGrid(LastPreview->GetActorLocation());
+		FVector NextStartDir;
+		
+		if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(LastPreview))
+		{
+			NextStartDir = BeltPreview->GetBeltExitDirection();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("UFactoryPlacementComponent : HandleBeltPlacementClick에서 AFactoryBeltPreview Cast 실패"));
+		}
+		
+		if (PlaceObject())
+		{
+			bIsWaitingDetermineBeltEnd = true;		// 계속해서 이어서 벨트 배치
+			BeltStartPoint = NextStartGrid;
+			BeltStartDir = NextStartDir;
+		}
 	}
 }
 
