@@ -21,6 +21,7 @@ class FACTORYTECHDEMO_API AFactoryPlaceObjectBase : public AActor, public IFacto
 public:
 	AFactoryPlaceObjectBase();
 	
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	virtual void InitObject(const UFactoryObjectData* Data);

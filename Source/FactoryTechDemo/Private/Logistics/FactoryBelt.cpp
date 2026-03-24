@@ -142,6 +142,11 @@ void AFactoryBelt::SetBeltType(EBeltType Type)
 	UpdateBeltVisual(Type);
 }
 
+FVector AFactoryBelt::GetBeltExitDirection() const
+{
+	return LogisticsOutputPortArr[0]->GetForwardVector().GetSafeNormal();
+}
+
 bool AFactoryBelt::PullItemFromInputPorts(FFactoryItemInstance& Item)
 {
 	CurrentItem = Item;

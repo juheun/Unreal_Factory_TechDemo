@@ -5,6 +5,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "Logistics/FactoryBelt.h"
+#include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "Logistics/FactoryOutputPortComponent.h"
@@ -67,11 +68,50 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 		if (CurrentPlacementMode == EPlacementMode::BeltPlace && bIsWaitingDetermineBeltEnd)
 		{
 			FIntPoint EndPoint = WorldToGrid(NewLocation);
-			BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir));
+          
+			// 기본 경로로 프리뷰를 생성
+			BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, false));
+			
+			// 유효성 검사 람다 생성
+			auto CheckValidity = [&]() -> bool {
+				for (AFactoryPlacePreview* Preview : ActivePreviews)
+					if (!Preview->UpdateOverlapValidity()) return false;
+				return true;
+			};
+			
+			// 프리뷰 유효성 검사
+			bool bGlobalValid = CheckValidity();
+
+			// 만약 기본 경로가 Invalid라면
+			if (!bGlobalValid)
+			{
+				// 대안 경로로 다시 생성
+				BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, true));
+              
+				// 대안 경로에 대해서도 다시 한 번 유효성 검사 세팅
+				bGlobalValid = CheckValidity();
+			}
+
+			// 최종 유효성 검사 결과 적용
+			for (AFactoryPlacePreview* Preview : ActivePreviews)
+			{
+				Preview->SetVisualValidity(bGlobalValid);
+			}
 		}
 		else
 		{
 			PlaceObjectPivotActor->SetActorLocation(NewLocation);
+			
+			// 단일 배치 모드 유효성 검사
+			bool bGlobalValid = true;
+			for (AFactoryPlacePreview* Preview : ActivePreviews)
+			{
+				if (!Preview->UpdateOverlapValidity()) bGlobalValid = false;
+			}
+			for (AFactoryPlacePreview* Preview : ActivePreviews)
+			{
+				Preview->SetVisualValidity(bGlobalValid);
+			}
 		}
 	}
 	
@@ -176,7 +216,7 @@ void UFactoryPlacementComponent::TryEnterMoveMode()
 		if (Controller->GetCurrentViewMode() != EFactoryViewModeType::TopView) return;
 
 		FHitResult HitResult;
-		if (Controller->GetHitResultUnderCursor(ECC_Visibility, false, HitResult)) 
+		if (Controller->GetHitResultUnderCursor(ECC_GameTraceChannel3, false, HitResult)) 
 		{
 			if (AFactoryLogisticsObjectBase* HitObject = Cast<AFactoryLogisticsObjectBase>(HitResult.GetActor()))
 			{
@@ -312,6 +352,20 @@ void UFactoryPlacementComponent::PlaceObject()
 		{
 			if (!Preview || !Preview->GetObjectData()) continue;
 			
+			// 만약 벨트 배치 로직에서 겹쳐있는 벨트가 있다면 선제적으로 수납처리함
+			if (CurrentPlacementMode == EPlacementMode::BeltPlace)
+			{
+				TArray<AFactoryPlaceObjectBase*> OverlappedObjects = Preview->GetOverlappingPlaceObjects();
+             
+				for (AFactoryPlaceObjectBase* OldObj : OverlappedObjects)
+				{
+					if (AFactoryBelt* OldBelt = Cast<AFactoryBelt>(OldObj))
+					{
+						OldBelt->Retrieve(); 
+					}
+				}
+			}
+			
 			FActorSpawnParameters Params; 
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
@@ -326,11 +380,7 @@ void UFactoryPlacementComponent::PlaceObject()
 				NewActor->InitObject(Preview->GetObjectData());
 				if (AFactoryBelt* Belt = Cast<AFactoryBelt>(NewActor))
 				{
-					if (!BeltData)
-					{
-						UE_LOG(LogTemp, Error, TEXT("BeltData is NOT assigned in PlacementComponent!"));
-						return;
-					}
+					// 지정된 벨트 배치
 					if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
 					{
 						Belt->SetBeltType(BeltPreview->GetBeltType());
@@ -470,47 +520,147 @@ void UFactoryPlacementComponent::ResetBeltGuidePreview()
 }
 
 TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
-	const FIntPoint& StartPoint, const FIntPoint& EndPoint, const FVector& StartPointDir) const
+	const FIntPoint& StartPoint, const FIntPoint& EndPoint, const FVector& StartPointDir, bool bAlternativeRoute) const
 {
 	TArray<FIntPoint> Points;
-	TArray<FBeltPlacementData> OutBeltPath;
-	FIntPoint CurrentPoint = StartPoint;
+    Points.Add(StartPoint);
+
+    if (StartPoint != EndPoint)
+    {
+        // 지정한 축(X 또는 Y)으로 목표 지점까지 한 칸씩 배열에 추가하며 이동
+        auto MoveToX = [&](int32 TargetX) {
+            int32 Step = FMath::Sign(TargetX - Points.Last().X);
+            while (Points.Last().X != TargetX) {
+                Points.Add(FIntPoint(Points.Last().X + Step, Points.Last().Y));
+            }
+        };
+        auto MoveToY = [&](int32 TargetY) {
+            int32 Step = FMath::Sign(TargetY - Points.Last().Y);
+            while (Points.Last().Y != TargetY) {
+                Points.Add(FIntPoint(Points.Last().X, Points.Last().Y + Step));
+            }
+        };
+
+        FIntPoint StartDirInt(FMath::RoundToInt(StartPointDir.X), FMath::RoundToInt(StartPointDir.Y));
+        bool bIsXDir = (StartDirInt.X != 0);
+
+        // 목적지가 등 뒤에 있는지 판별
+        bool bTargetIsBehind = false;
+        if (bIsXDir && FMath::Sign(EndPoint.X - StartPoint.X) == -StartDirInt.X) bTargetIsBehind = true;
+        if (!bIsXDir && FMath::Sign(EndPoint.Y - StartPoint.Y) == -StartDirInt.Y) bTargetIsBehind = true;
+
+        if (!bTargetIsBehind)
+        {
+            // [정상 L자 라우팅]: 목표가 앞이나 옆에 있으면, 무조건 내가 바라보는 방향(직진)을 먼저 이동
+            if (bIsXDir) { MoveToX(EndPoint.X); MoveToY(EndPoint.Y); }
+            else         { MoveToY(EndPoint.Y); MoveToX(EndPoint.X); }
+        }
+        else
+        {
+            // [회피 U/L자 라우팅]: 목표가 등 뒤에 있으면, 무조건 좌/우 측면으로 먼저 이동
+            int32 AltSign = bAlternativeRoute ? -1 : 1; // 충돌 시 반대편으로 꺾기 위한 배수
+
+            if (bIsXDir)
+            {
+                if (StartPoint.Y == EndPoint.Y) // 목표가 정확히 일직선 뒤에 있을 때
+                {
+                    MoveToY(StartPoint.Y + AltSign); // 옆으로 1칸 회피
+                    MoveToX(EndPoint.X);             // 뒤로 이동
+                    MoveToY(EndPoint.Y);             // 다시 원래 라인으로 복귀
+                }
+                else
+                {
+                    MoveToY(EndPoint.Y); // 그냥 목표의 Y축으로 바로 꺾어서 빠져나감
+                    MoveToX(EndPoint.X); // 그 다음 뒤로 이동
+                }
+            }
+            else // 바라보는 방향이 Y축일 때
+            {
+                if (StartPoint.X == EndPoint.X)
+                {
+                    MoveToX(StartPoint.X + AltSign);
+                    MoveToY(EndPoint.Y);
+                    MoveToX(EndPoint.X);
+                }
+                else
+                {
+                    MoveToX(EndPoint.X);
+                    MoveToY(EndPoint.Y);
+                }
+            }
+        }
+    }
 	
-	Points.Add(CurrentPoint);
-	
-	// X축 우선 이동
-	int32 StepX = FMath::Sign(EndPoint.X - CurrentPoint.X);
-	while (CurrentPoint.X != EndPoint.X && StepX != 0)
-	{
-		CurrentPoint.X += StepX;
-		Points.Add(CurrentPoint);
-	}
-	
-	// Y축 이동
-	int32 StepY = FMath::Sign(EndPoint.Y - CurrentPoint.Y);
-	while (CurrentPoint.Y != EndPoint.Y && StepY != 0)
-	{
-		CurrentPoint.Y += StepY;
-		Points.Add(CurrentPoint);
-	}
-	
-	// 회전 밑 벨트 타입 처리
-	for (int i = 0; i < Points.Num(); i++)
-	{
-		FBeltPlacementData PlacementData;
-		PlacementData.GridPoint = Points[i];
-		
-		FVector InDir = (i == 0) ? 
-			StartPointDir : FVector(Points[i] - Points[i - 1], 0.f).GetSafeNormal();
-		FVector EndDir = (i < Points.Num() - 1) ? 
-			FVector(Points[i + 1] - Points[i], 0.f).GetSafeNormal() : InDir;	// 일단 마지막은 직선으로 처리
-		
-		PlacementData.Type = DetermineBeltType(InDir, EndDir);
-		PlacementData.Rotation = InDir.Rotation();	// BP는 모두 진입 방향 = 액터 회전값으로 설계됨
-		OutBeltPath.Add(PlacementData);
-	}
-	
-	return OutBeltPath;
+    TArray<FBeltPlacementData> OutBeltPath;
+    for (int i = 0; i < Points.Num(); i++)
+    {
+        FBeltPlacementData PlacementData;
+    	PlacementData.GridPoint = Points[i];
+       
+        FVector InDir = (i == 0) ? 
+          StartPointDir : FVector(Points[i] - Points[i - 1], 0.f).GetSafeNormal();
+    	
+	    FVector EndDir;
+	    if (i < Points.Num() - 1)
+	    {
+    		// 중간 벨트들은 다음 벨트를 향해 방향을 잡음
+    		EndDir = FVector(Points[i + 1] - Points[i], 0.f).GetSafeNormal();
+	    }
+	    else
+	    {
+    		// 마지막 벨트. 주변 InputPort를 스캔
+    		EndDir = InDir; // 기본값은 직진
+	       
+    		FVector CurrentLoc = GridToWorld(Points[i]);
+	    	bool bLastBeltOverwritten = false;
+	    	
+	    	// 마지막 벨트에 이미 벨트가 존재했었는지 확인
+	    	FHitResult BeltHit;
+	    	FVector TraceStart = CurrentLoc + FVector(0, 0, 50.f);
+	    	FVector TraceEnd = CurrentLoc - FVector(0, 0, 50.f);
+	    	FCollisionObjectQueryParams ObjectParams;
+	    	ObjectParams.AddObjectTypesToQuery(ECC_GameTraceChannel3); // PlaceObject 채널
+	    	
+	    	if (GetWorld()->LineTraceSingleByObjectType(BeltHit, TraceStart, TraceEnd, ObjectParams))
+	    	{
+	    		if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(BeltHit.GetActor()))
+	    		{
+	    			EndDir = HitBelt->GetBeltExitDirection();
+	    			bLastBeltOverwritten = true; // 벨트를 찾았으므로 포트 스캔 통과
+	    		}
+	    	}
+	    	
+	    	// 마지막 벨트의 덮어쓰기가 없을때만 주변 포트 스캔
+	    	if (!bLastBeltOverwritten)
+	    	{
+	    		int XArr[4] = {1, -1, 0, 0};
+	    		int YArr[4] = {0, 0, 1, -1};
+	       
+	    		for (int j = 0; j < 4; j++)
+	    		{
+	    			FVector SearchLoc = CurrentLoc + FVector(XArr[j] * GridLength, YArr[j] * GridLength, 0);
+	    			FHitResult PortHit;
+	           
+	    			// 내 주변에 InputPort가 있는지 트레이스
+	    			if (GetWorld()->LineTraceSingleByChannel(PortHit, CurrentLoc, SearchLoc, ECC_GameTraceChannel2))
+	    			{
+	    				if (UFactoryInputPortComponent* InputPort = Cast<UFactoryInputPortComponent>(PortHit.GetComponent()))
+	    				{
+	    					// 포트를 발견하면, 그 포트를 향하는 방향으로 EndDir을 강제 수정
+	    					EndDir = InputPort->GetForwardVector();
+	    					break; 
+	    				}
+	    			}
+	    		}
+	    	}
+	    }
+       
+       PlacementData.Type = DetermineBeltType(InDir, EndDir);
+       PlacementData.Rotation = InDir.Rotation();
+       OutBeltPath.Add(PlacementData);
+    }
+    
+    return OutBeltPath;
 }
 
 EBeltType UFactoryPlacementComponent::DetermineBeltType(const FVector& StartDir, const FVector& EndDir) const
@@ -530,24 +680,40 @@ EBeltType UFactoryPlacementComponent::DetermineBeltType(const FVector& StartDir,
 bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLocation, 
                                                      FIntPoint& OutStartGrid, FVector& OutStartDir) const
 {
-	// TODO : AFactoryLogisticsObject가 현재 그리드에 있는지 검사 후 처리하는 로직 추가. collision 활용?
+	OutStartGrid = WorldToGrid(PointingLocation);
+	FHitResult HitResult;
 	
+	// 현재 클릭한 그리드에 기존 벨트가 있는지 수직으로 검사 (벨트 덮어쓰기 및 연장용)
+	FVector TraceStart = PointingLocation + FVector(0, 0, 50.f);
+	FVector TraceEnd = PointingLocation - FVector(0, 0, 50.f);
+	
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_GameTraceChannel3);	// PlaceObject 채널
+	
+	if (GetWorld()->LineTraceSingleByObjectType(HitResult, TraceStart, TraceEnd, ObjectParams))
+	{
+		if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitResult.GetActor()))
+		{
+			OutStartDir = HitBelt->GetActorForwardVector();
+			return true;
+		}
+	}
+	
+	// 설비의 Outport찾기
 	int XArr[4] = {1,-1,0,0};
 	int YArr[4] = {0,0,1,-1};
-	FHitResult HitResult;
 	FVector StartLocation = PointingLocation + FVector(0,0,5);	// 지면과 너무 붙는 현상 방지
 	float TraceLength = GridLength * 1.5f;
 	
 	for (int i = 0; i < 4; i++)
 	{
-		FVector EndLocation = PointingLocation + FVector(XArr[i] * TraceLength,YArr[i] * TraceLength,0);
+		FVector SearchEnd = StartLocation + FVector(XArr[i] * TraceLength,YArr[i] * TraceLength,0);
 		
 		if (GetWorld()->LineTraceSingleByChannel(
-			HitResult, StartLocation, EndLocation, ECC_GameTraceChannel2))	// Port 검사 채널
+			HitResult, StartLocation, SearchEnd, ECC_GameTraceChannel2))	// Port 검사 채널
 		{
 			if (UFactoryOutputPortComponent* OutputPortComponent = Cast<UFactoryOutputPortComponent>(HitResult.GetComponent()))
 			{
-				OutStartGrid = WorldToGrid(StartLocation);
 				OutStartDir = OutputPortComponent->GetForwardVector();
 				return true;
 			}

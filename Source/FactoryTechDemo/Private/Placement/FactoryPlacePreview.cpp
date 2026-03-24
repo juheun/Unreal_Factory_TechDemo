@@ -41,6 +41,7 @@ AFactoryPlacePreview::AFactoryPlacePreview()
 	
 	OverlapBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	OverlapBox->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	OverlapBox->SetCollisionResponseToChannel(ECC_GameTraceChannel3, ECR_Overlap);
 }
 
 void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
@@ -79,21 +80,9 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 
 bool AFactoryPlacePreview::UpdateOverlapValidity()
 {
-	TArray<AActor*> OverlappedActors;
-	OverlapBox->GetOverlappingActors(OverlappedActors);
-    
-	bool bIsOverlapping = false;
-	for (AActor* OverlappedActor : OverlappedActors)
-	{
-		if (OverlappedActor->ActorHasTag(TEXT("Player")) || OverlappedActor->IsA<APlayerController>()) continue;
-		if (OverlappedActor && OverlappedActor != this && !OverlappedActor->ActorHasTag(TEXT("Floor")))
-		{
-			bIsOverlapping = true;
-			break;
-		}
-	}
+	TArray<AFactoryPlaceObjectBase*> OverlappedObjects = GetOverlappingPlaceObjects();
 
-	bIsPlacementValid = !bIsOverlapping;
+	bIsPlacementValid = (OverlappedObjects.Num() == 0);
 	return bIsPlacementValid;
 }
 
@@ -106,3 +95,24 @@ void AFactoryPlacePreview::SetVisualValidity(const bool bIsGlobalValid)
         PreviewDynamicMaterial->SetVectorParameterValue(TEXT("Color"), TargetColor);
     }
 }
+
+TArray<AFactoryPlaceObjectBase*> AFactoryPlacePreview::GetOverlappingPlaceObjects() const
+{
+	TArray<AActor*> OverlappedActors;
+	OverlapBox->GetOverlappingActors(OverlappedActors);
+    
+	TArray<AFactoryPlaceObjectBase*> ResultObjects;
+    
+	for (AActor* OverlappedActor : OverlappedActors)
+	{
+		if (!OverlappedActor || OverlappedActor == this) continue;
+		if (OverlappedActor->ActorHasTag(TEXT("Player")) || OverlappedActor->ActorHasTag(TEXT("Floor")) || OverlappedActor->IsA<APlayerController>()) continue;
+       
+		if (AFactoryPlaceObjectBase* PlaceObj = Cast<AFactoryPlaceObjectBase>(OverlappedActor))
+		{
+			ResultObjects.Add(PlaceObj);
+		}
+	}
+	return ResultObjects;
+}
+

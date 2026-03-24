@@ -23,6 +23,14 @@ AFactoryPlaceObjectBase::AFactoryPlaceObjectBase()
 	MeshComponent->SetGenerateOverlapEvents(true);
 }
 
+void AFactoryPlaceObjectBase::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	MeshComponent->SetCollisionObjectType(ECC_GameTraceChannel3);
+	MeshComponent->SetGenerateOverlapEvents(true);
+}
+
 void AFactoryPlaceObjectBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);

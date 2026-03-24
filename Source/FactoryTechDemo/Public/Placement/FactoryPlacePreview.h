@@ -9,6 +9,7 @@
 class UFactoryObjectData;
 class UBoxComponent;
 class UDecalComponent;
+class AFactoryPlaceObjectBase;
 
 UCLASS()
 class FACTORYTECHDEMO_API AFactoryPlacePreview : public AActor
@@ -16,13 +17,14 @@ class FACTORYTECHDEMO_API AFactoryPlacePreview : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	AFactoryPlacePreview();
 	
 	void InitPreview(const UFactoryObjectData* Data); // 데이터 에셋을 받아 메쉬, 데칼 크기 등 설정
 	
-	bool UpdateOverlapValidity();	// 현재 다른 물체와 겹쳐있는지 여부 검사
+	virtual bool UpdateOverlapValidity();	// 현재 다른 물체와 겹쳐있는지 여부 검사
 	void SetVisualValidity(bool const bIsValid);	// 배치가능 여부에 따라 색상 변경
+	
+	TArray<AFactoryPlaceObjectBase*> GetOverlappingPlaceObjects() const;	// 겹쳐있는 객체들중 유효한 객체만 필터링해서 반환
 	
 	bool GetPlacementValid() const { return bIsPlacementValid; }
 	const UFactoryObjectData* GetObjectData() const { return ObjectData.Get(); }

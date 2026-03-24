@@ -104,7 +104,8 @@ private:
 	FIntPoint WorldToGrid(const FVector& WorldLocation) const;
     FVector GridToWorld(const FIntPoint& GridLocation, const float Height = 0.0f) const;
 	
-	TArray<FBeltPlacementData> CalculateBeltPath(const FIntPoint& StartPoint, const FIntPoint& EndPoint, const FVector& StartPointDir) const;
+	TArray<FBeltPlacementData> CalculateBeltPath(const FIntPoint& StartPoint, const FIntPoint& EndPoint, 
+		const FVector& StartPointDir, bool bAlternativeRoute = false) const;
 	EBeltType DetermineBeltType(const FVector& StartDir, const FVector& EndDir) const;
 	
 	

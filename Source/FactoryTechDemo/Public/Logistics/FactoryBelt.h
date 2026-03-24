@@ -31,6 +31,8 @@ public:
 	
 	void SetBeltType(EBeltType Type);
 
+	// 벨트의 타입을 고려한 실제 배출 방향을 반환
+	FVector GetBeltExitDirection() const;
 	EBeltType GetBeltType() const {return BeltType;};
 
 protected:
