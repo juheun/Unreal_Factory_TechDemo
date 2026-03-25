@@ -220,6 +220,11 @@ void UFactoryPlacementComponent::TryEnterMoveMode()
 		{
 			if (AFactoryLogisticsObjectBase* HitObject = Cast<AFactoryLogisticsObjectBase>(HitResult.GetActor()))
 			{
+				if (HitObject->IsA(AFactoryBelt::StaticClass()))
+				{
+					return;		// 기획상 벨트는 이동할 수 없게 방어
+				}
+				
 				SelectObject(HitObject);
 				SetMoveObjectToPreviews();
 			}
