@@ -666,7 +666,7 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
 	       
 	    		for (int j = 0; j < 4; j++)
 	    		{
-	    			FVector SearchLoc = CurrentLoc + FVector(XArr[j] * GridLength, YArr[j] * GridLength, 0);
+	    			FVector SearchLoc = CurrentLoc + FVector(XArr[j] * GridLength, YArr[j] * GridLength, 5.f);
 	    			FHitResult PortHit;
 	           
 	    			// 내 주변에 InputPort가 있는지 트레이스
