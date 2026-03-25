@@ -27,19 +27,35 @@ void AFactoryBeltBridge::BeginPlay()
 	
 	CurrentItems.SetNum(4);
 	
+	// 포트가 마음대로 설치시 연결이 됐다면 강제로 연결을 끊어 브릿지가 통제 및 델리게이트 등록
 	for (int i = 0; i < 4; i++)
 	{
 		if (LogisticsOutputPortArr[i])
 		{
-			LogisticsOutputPortArr[i]->SetPortEnabled(false);
+			LogisticsOutputPortArr[i]->Disconnect();
 			LogisticsOutputPortArr[i]->OnPortConnectionChanged.AddDynamic(this, &AFactoryBeltBridge::HandlePortConnectionChanged);
 		}
-
 		if (LogisticsInputPortArr[i])
 		{
-			LogisticsInputPortArr[i]->SetPortEnabled(true);
+			LogisticsInputPortArr[i]->Disconnect();
 			LogisticsInputPortArr[i]->OnPortConnectionChanged.AddDynamic(this, &AFactoryBeltBridge::HandlePortConnectionChanged);
 		}
+	}
+	
+	// 포트 기본 상태로 세팅
+	for (int i = 0; i < 4; i++)
+	{
+		if (LogisticsOutputPortArr[i]) LogisticsOutputPortArr[i]->SetPortEnabled(false);
+	}
+	
+	// 인풋 포트 순회하며 Connect검사
+	for (int i = 0; i < 4; i++)
+	{
+		if (LogisticsOutputPortArr[i] && LogisticsOutputPortArr[i]->GetIsPortEnabled())
+		{
+			continue;
+		}
+		if (LogisticsInputPortArr[i]) LogisticsInputPortArr[i]->ForceScanConnection();
 	}
 }
 

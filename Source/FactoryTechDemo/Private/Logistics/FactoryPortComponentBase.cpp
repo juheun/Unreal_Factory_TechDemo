@@ -60,6 +60,10 @@ void UFactoryPortComponentBase::SetPortBlocked(bool bNewBlocked)
 
 void UFactoryPortComponentBase::SetPortEnabled(bool bEnabled)
 {
+	if (bEnabled == bIsPortEnabled) return;
+	
+	bIsPortEnabled = bEnabled;
+	
 	// 1. 콜리전 제어
 	SetCollisionEnabled(bEnabled ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
     
@@ -67,6 +71,15 @@ void UFactoryPortComponentBase::SetPortEnabled(bool bEnabled)
 	// 단, 포트가 '연결(Connected)'된 상태라면 무조건 숨겨야 하므로 조건 추가
 	bool bShouldHideArrow = !bEnabled || ConnectedPort.IsValid();
 	PortDirArrowComponent->SetHiddenInGame(bShouldHideArrow);
+	
+	if (bEnabled)
+	{
+		ForceScanConnection();
+	}
+	else
+	{
+		Disconnect();
+	}
 }
 
 void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
@@ -85,7 +98,7 @@ void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 
 void UFactoryPortComponentBase::ScanForConnection(FVector Direction, TSubclassOf<UFactoryPortComponentBase> TargetClassType)
 {
-	if (ConnectedPort.Get()) return; // 이미 연결됐으면 스캔 X
+	if (ConnectedPort.Get() || !bIsPortEnabled ) return; // 이미 연결됐으면 스캔 X
 
 	float GridSize = GetDefault<UFactoryDeveloperSettings>()->GetGridLength();
 	FVector Start = GetComponentLocation();

@@ -36,6 +36,7 @@ public:
 	virtual void ForceScanConnection() {};
 	
 	AFactoryLogisticsObjectBase* GetPortOwner() const { return PortOwner.Get();}
+	bool GetIsPortEnabled() const { return bIsPortEnabled; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")
@@ -52,4 +53,7 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Factory|Port|State")
 	bool bIsPortBlocked = false;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Factory|Port|State")
+	bool bIsPortEnabled = true;
 };
