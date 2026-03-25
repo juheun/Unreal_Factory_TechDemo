@@ -25,6 +25,8 @@ public:
 	
 	UMaterialInterface* GetPlacePreviewMaterial() const {return PreviewObjectMaterial.LoadSynchronous();};
 	
+	UMaterialInterface* GetGridDecalMaterial() const {return GridDecalMaterial.LoadSynchronous();};
+	
 	UStaticMesh* GetPortWarningMesh() const { return PortWarningMesh.LoadSynchronous(); }
 	
 	TSubclassOf<AActor> GetPoolClass(EFactoryPoolType PoolType) const
@@ -37,6 +39,9 @@ public:
 private:
 	UPROPERTY(Config, EditAnywhere, Category="Visuals")
 	TSoftObjectPtr<UMaterialInterface> PreviewObjectMaterial;
+	
+	UPROPERTY(Config, EditAnywhere, Category="Visuals")
+	TSoftObjectPtr<UMaterialInterface> GridDecalMaterial;
 	
 	UPROPERTY(Config, EditAnywhere, Category="Visuals")
 	TSoftObjectPtr<UStaticMesh> PortWarningMesh;
