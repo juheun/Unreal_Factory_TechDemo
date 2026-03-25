@@ -229,13 +229,17 @@ void AFactoryBelt::UpdateSplinePath(EBeltType Type)
 	if (LogisticsOutputPortArr.IsValidIndex(0) && LogisticsOutputPortArr[0])
 	{
 		// 타입에 따른 포트 위치,회전값 설정
-		FVector OutPutPort = EndPos;
-		OutPutPort.Z = BeltHeight * 0.5f;
-		LogisticsOutputPortArr[0]->SetRelativeLocation(OutPutPort);
 		float TargetYaw = 0.f;
 		if (Type == EBeltType::LeftTurn) TargetYaw = -90.f;
 		else if (Type == EBeltType::RightTurn) TargetYaw = 90.f;
 		
+		FVector OutPutPort = EndPos;
+		OutPutPort.Z = BeltHeight * 0.5f;
+		
+		float PortOffset = LogisticsOutputPortArr[0]->GetScaledBoxExtent().X;
+		FVector ForwardDir = FRotator(0.f, TargetYaw, 0.f).Vector();
+		OutPutPort -= ForwardDir * PortOffset;
+		LogisticsOutputPortArr[0]->SetRelativeLocation(OutPutPort);
 		LogisticsOutputPortArr[0]->SetRelativeRotation(FRotator(0, TargetYaw, 0));
 	}
 
