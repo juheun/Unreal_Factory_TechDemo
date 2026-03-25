@@ -114,6 +114,11 @@ void AFactoryBeltBridge::PlanCycle()
 	}
 }
 
+void AFactoryBeltBridge::LatePlanCycle()
+{
+	PlanCycle();
+}
+
 void AFactoryBeltBridge::ExecuteCycle()
 {
 	for (int i = 0; i < 4; i++)

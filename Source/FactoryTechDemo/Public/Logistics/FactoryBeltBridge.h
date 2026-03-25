@@ -23,6 +23,7 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	virtual void PlanCycle() override;
+	virtual void LatePlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	

@@ -93,8 +93,15 @@ void AFactoryBeltRouter::PlanCycle()
 	}
 }
 
+void AFactoryBeltRouter::LatePlanCycle()
+{
+	PlanCycle();
+}
+
 void AFactoryBeltRouter::ExecuteCycle()
 {
+	if (CurrentItem.ItemData) return;
+	
 	int32 MaxInputPorts = LogisticsInputPortArr.Num();
 	if (MaxInputPorts <= 0) return;
 	

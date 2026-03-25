@@ -166,6 +166,14 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	{
 		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
 		{
+			LogisticsObject->LatePlanCycle();
+		}
+	}
+	
+	for (const auto& WeakObjectPtr : RegisteredLogisticsObjectArr)
+	{
+		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
+		{
 			LogisticsObject->ExecuteCycle();
 		}
 	}

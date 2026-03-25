@@ -22,9 +22,12 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	virtual void PlanCycle() override;
+	virtual void LatePlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	virtual void Tick(float DeltaSeconds) override;
+	
+	void TryPushOutputToPorts();
 	
 	virtual bool CanPushItemFromBeforeObject(
 		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;

@@ -76,15 +76,14 @@ void AFactoryBelt::PlanCycle()
 	
 	bIsBeltStop = true;
 	
-	UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[0]->GetConnectedInput();
-	if (!TargetPort) return;
-	
-	if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItem.ItemData))
-	{
-		TargetPort->PendingItem = CurrentItem;	// 상대방 Input에 아이템 밀어넣기
-		CurrentItem = FFactoryItemInstance();
-		bIsBeltStop = false;
-	}
+	TryPushOutputToPorts();
+}
+
+void AFactoryBelt::LatePlanCycle()
+{
+	if (!bIsBeltStop || !CurrentItem.ItemData || !LogisticsOutputPortArr.IsValidIndex(0)) return;
+
+	TryPushOutputToPorts();
 }
 
 void AFactoryBelt::ExecuteCycle()
@@ -122,6 +121,19 @@ void AFactoryBelt::Tick(float DeltaSeconds)
 		if (!CycleSubsystem) return;
 		float Alpha = CycleSubsystem->GetCycleAlpha();
 		SetSpineDistance(Alpha);
+	}
+}
+
+void AFactoryBelt::TryPushOutputToPorts()
+{
+	UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[0]->GetConnectedInput();
+	if (!TargetPort) return;
+	
+	if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItem.ItemData))
+	{
+		TargetPort->PendingItem = CurrentItem;	// 상대방 Input에 아이템 밀어넣기
+		CurrentItem = FFactoryItemInstance();
+		bIsBeltStop = false;
 	}
 }
 

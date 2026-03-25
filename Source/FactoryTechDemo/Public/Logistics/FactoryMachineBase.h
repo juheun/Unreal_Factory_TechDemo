@@ -35,6 +35,7 @@ public:
 	virtual void InitObject(const UFactoryObjectData* Data) override;
 	
 	virtual void PlanCycle() override;
+	virtual void LatePlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	
@@ -56,6 +57,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
+	void TryPushOutputToPorts();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Factory|Machine")
 	TObjectPtr<UFactoryFacilityItemData> FacilityIdentity;

@@ -28,6 +28,8 @@ public:
 	// 서브시스템에서 호출하는 3단계 사이클	// TODO : 자식 클래스에서 구현 및 겹치는 부분 많다면 Base 클래스에서 일부 구현
 	// 현재 설비에서 다음 설비의 InputPort로 아이템을 Pending 할 수 있는지 확인 및 가능시 Pending
 	virtual void PlanCycle() PURE_VIRTUAL(AFactoryLogisticsObjectBase::PlanCycle, ; );
+	// 순환참조 등으로 PlanCycle에서 처리되지 못한 작업을 처리함
+	virtual void LatePlanCycle() {};
 	// 현재 설비의 InputPort에 Pending되어있는 아이템을 설비로 가져옴
 	virtual void ExecuteCycle() PURE_VIRTUAL(AFactoryLogisticsObjectBase::ExecuteCycle, ; );
 	// Cycle 결과에 따른 비주얼적 업데이트 실현

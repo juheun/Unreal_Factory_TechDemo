@@ -125,6 +125,9 @@ void AFactoryMachineBase::PlanCycle()
 {
 	bIsMachineBlockedOnCycle = false;
 	
+	// OutputPort로 아이템 밀어넣기 시도
+	TryPushOutputToPorts();
+	
 	// 가공 로직
 	if (bIsWorking)
 	{
@@ -147,56 +150,30 @@ void AFactoryMachineBase::PlanCycle()
 			}
 		}
 	}
-	
-	// OutputPort로 아이템 밀어넣기 시도
-	if (OutputBufferSlot.IsEmpty()) return;
-	
-	int32 MaxPorts = LogisticsOutputPortArr.Num();
-	if (MaxPorts == 0) return;
-	
-	int32 OutputPortNum = OutputPortIndex;
-	for (int i = 0; i < MaxPorts; i++)
-	{
-		if (OutputBufferSlot.IsEmpty()) break;
-		
-		int index = (OutputPortNum + i) % MaxPorts;
-		if (!LogisticsOutputPortArr.IsValidIndex(index) || !LogisticsOutputPortArr[index]) continue;
-		
-		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[index]->GetConnectedInput();
-		if (!TargetPort) continue;
-		
-		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, OutputBufferSlot.ItemData))
-		{
-			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-			if (!PoolSubsystem) return;
-			
-			FFactoryItemInstance NewInstance(OutputBufferSlot.ItemData);
-			FVector SpawnLocation = LogisticsOutputPortArr[index]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
-			FRotator SpawnRotation = LogisticsOutputPortArr[index]->GetComponentRotation();
-			AFactoryItemVisual* ItemVisual = PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(
-				EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
-			ItemVisual->UpdateVisual(OutputBufferSlot.ItemData);
-			if (ItemVisual)
-			{
-				NewInstance.VisualActor = ItemVisual;
-			}
+}
 
-			// 완성된 인스턴스를 상대방 포트에 전달
-			TargetPort->PendingItem = NewInstance;
-			OutputPortIndex = (index + 1) % MaxPorts;
-			OutputBufferSlot.Amount--;
-			
-			if (OutputBufferSlot.Amount <= 0)
-			{
-				OutputBufferSlot.Clear();
-			}
-			
-			LogisticsOutputPortArr[index]->SetPortBlocked(false);
-		}
-		else
+void AFactoryMachineBase::LatePlanCycle()
+{
+	// 아웃풋 버퍼 밀어내기 재시도
+	if (!OutputBufferSlot.IsEmpty())
+	{
+		TryPushOutputToPorts();
+	}
+
+	// 가공 완료 재시도
+	if (bIsMachineBlockedOnCycle && bIsWorking && RemainingProductionCycleTime <= 0)
+	{
+		if (TryEndCraftItem())
 		{
-			LogisticsOutputPortArr[index]->SetPortBlocked(true);
+			bIsWorking = false;
+			bIsMachineBlockedOnCycle = false;
 		}
+	}
+
+	// 가공이 완료되었거나, 원래 쉬고 있었다면 즉시 새 가공을 시작합
+	if (!bIsWorking)
+	{
+		TryCraftItem(); 
 	}
 }
 
@@ -214,18 +191,26 @@ void AFactoryMachineBase::ExecuteCycle()
 		if (!LogisticsInputPortArr.IsValidIndex(Index) || !LogisticsInputPortArr[Index]) continue;
 		if (LogisticsInputPortArr[Index]->PendingItem.IsValid())
 		{
-			if (PullItemFromInputPorts(LogisticsInputPortArr[Index]->PendingItem))
+			bool bIsPulled = PullItemFromInputPorts(LogisticsInputPortArr[Index]->PendingItem);
+			
+			if (AFactoryItemVisual* VisualActor = LogisticsInputPortArr[Index]->PendingItem.VisualActor.Get())
 			{
-				if (AFactoryItemVisual* VisualActor = LogisticsInputPortArr[Index]->PendingItem.VisualActor.Get())
+				if (UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>())
 				{
-					UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-					if (!PoolSubsystem) return;
-					
 					PoolSubsystem->ReturnItemToPool(VisualActor);
 				}
-				LogisticsInputPortArr[Index]->PendingItem = FFactoryItemInstance();
-				InputPortIndex = (Index + 1) % MaxPorts;
 			}
+			
+			if (!bIsPulled)
+			{
+				if (UFactoryWarehouseSubsystem* Warehouse = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
+				{
+					Warehouse->AddItem(LogisticsInputPortArr[Index]->PendingItem.ItemData, 1);
+				}
+			}
+
+			LogisticsInputPortArr[Index]->PendingItem = FFactoryItemInstance();
+			InputPortIndex = (Index + 1) % MaxPorts;
 		}
 	}
 	
@@ -233,13 +218,28 @@ void AFactoryMachineBase::ExecuteCycle()
 	{
 		TryCraftItem();
 	}
+	
+	// 인풋 버퍼가 공간이 있다면 모든 인풋 포트의 막힘 상태를 풀어줘야함
+	bool bHasEmptySpace = false;
+	for (const FFactorySlot& Slot : InputBufferSlots) {
+		if (!Slot.IsFull()) { bHasEmptySpace = true; break; }
+	}
+	if (bHasEmptySpace) {
+		for (auto& Port : LogisticsInputPortArr) {
+			if (Port) Port->SetPortBlocked(false);
+		}
+	}
 }
 
 void AFactoryMachineBase::UpdateView()
 {
 	// 애니메이션 재생 등
 	
-	SetFacilityBlocked(bIsMachineBlockedOnCycle);
+	// 가공 중도 아니고, 남은 재료로 새 가공을 시작할 수도 없는 상태라면 경고
+	bool bIsStarvingOrNoRecipe = !bIsWorking && AvailableRecipes.Num() == 0; 
+    
+	// (막혔거나 OR 레시피가 없거나) 둘 중 하나면 막힘 방송
+	SetFacilityBlocked(bIsMachineBlockedOnCycle || bIsStarvingOrNoRecipe);
 }
 
 bool AFactoryMachineBase::CanPushItemFromBeforeObject(
@@ -299,6 +299,64 @@ bool AFactoryMachineBase::PullItemFromInputPorts(FFactoryItemInstance& Item)
 		}
 	}
 	return false; // 버퍼 꽉 참	
+}
+
+void AFactoryMachineBase::TryPushOutputToPorts()
+{
+	for (auto& Port : LogisticsOutputPortArr)
+	{
+		if (Port) Port->SetPortBlocked(false);
+	}
+	
+	if (OutputBufferSlot.IsEmpty()) return;
+	
+	int32 MaxPorts = LogisticsOutputPortArr.Num();
+	if (MaxPorts == 0) return;
+	
+	int32 OutputPortNum = OutputPortIndex;
+	for (int i = 0; i < MaxPorts; i++)
+	{
+		if (OutputBufferSlot.IsEmpty()) break;
+		
+		int index = (OutputPortNum + i) % MaxPorts;
+		if (!LogisticsOutputPortArr.IsValidIndex(index) || !LogisticsOutputPortArr[index]) continue;
+		
+		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[index]->GetConnectedInput();
+		if (!TargetPort || TargetPort->PendingItem.IsValid()) continue;
+		
+		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, OutputBufferSlot.ItemData))
+		{
+			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+			if (!PoolSubsystem) return;
+			
+			FFactoryItemInstance NewInstance(OutputBufferSlot.ItemData);
+			FVector SpawnLocation = LogisticsOutputPortArr[index]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
+			FRotator SpawnRotation = LogisticsOutputPortArr[index]->GetComponentRotation();
+			AFactoryItemVisual* ItemVisual = PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(
+				EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
+			ItemVisual->UpdateVisual(OutputBufferSlot.ItemData);
+			if (ItemVisual)
+			{
+				NewInstance.VisualActor = ItemVisual;
+			}
+
+			// 완성된 인스턴스를 상대방 포트에 전달
+			TargetPort->PendingItem = NewInstance;
+			OutputPortIndex = (index + 1) % MaxPorts;
+			OutputBufferSlot.Amount--;
+			
+			if (OutputBufferSlot.Amount <= 0)
+			{
+				OutputBufferSlot.Clear();
+			}
+			
+			LogisticsOutputPortArr[index]->SetPortBlocked(false);
+		}
+		else
+		{
+			LogisticsOutputPortArr[index]->SetPortBlocked(true);
+		}
+	}
 }
 
 bool AFactoryMachineBase::TryCraftItem()
