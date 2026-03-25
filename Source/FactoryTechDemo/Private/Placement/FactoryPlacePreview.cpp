@@ -27,6 +27,7 @@ AFactoryPlacePreview::AFactoryPlacePreview()
 	GridDecalComponent->SetupAttachment(RootComponent);
 	GridDecalComponent->SetRelativeLocation(FVector(0.f, 0.f, 1.f));	// 데칼 적용을 위해 살짝 들어올림
 	GridDecalComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	// TODO : DeveloperSetting에서 받아오게 변경
 	ConstructorHelpers::FObjectFinder<UMaterialInterface> GridMatAsset(TEXT("/Game/Material/M_BuildGrid.M_BuildGrid"));
 	if (GridMatAsset.Succeeded())
 	{
@@ -78,20 +79,35 @@ void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 	GridDecalComponent->DecalSize = FVector(200.f, DecalRangeX, DecalRangeY);	// 투사깊이, x, y
 }
 
-bool AFactoryPlacePreview::UpdateOverlapValidity()
+EOverlapValidityResult AFactoryPlacePreview::UpdateOverlapValidity()
 {
 	TArray<AFactoryPlaceObjectBase*> OverlappedObjects = GetOverlappingPlaceObjects();
-
-	bIsPlacementValid = (OverlappedObjects.Num() == 0);
-	return bIsPlacementValid;
+	
+	if (OverlappedObjects.Num() == 0)
+	{
+		CurrentValidity = EOverlapValidityResult::Valid;
+		return CurrentValidity;
+	}
+	
+	CurrentValidity = EOverlapValidityResult::Invalid;
+	return CurrentValidity;
 }
 
 void AFactoryPlacePreview::SetVisualValidity(const bool bIsGlobalValid)
 {
+	if (CurrentValidity == EOverlapValidityResult::Skip)
+	{
+		SetActorHiddenInGame(true);
+		return;
+	}
+	
+	SetActorHiddenInGame(false);
+	
 	if (PreviewDynamicMaterial)
     {
         // 전체 경로의 유효성에 따라 색상 변경
-        FLinearColor TargetColor = bIsGlobalValid ? FLinearColor::Gray : FLinearColor::Red;
+        FLinearColor TargetColor = 
+        	(bIsGlobalValid && CurrentValidity != EOverlapValidityResult::Invalid) ? FLinearColor::Green : FLinearColor::Red;
         PreviewDynamicMaterial->SetVectorParameterValue(TEXT("Color"), TargetColor);
     }
 }

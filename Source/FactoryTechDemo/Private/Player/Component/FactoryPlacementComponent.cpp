@@ -5,10 +5,12 @@
 
 #include "EnhancedInputComponent.h"
 #include "Logistics/FactoryBelt.h"
+#include "Logistics/FactoryBeltBridge.h"
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "Logistics/FactoryOutputPortComponent.h"
+#include "Placement/FactoryBeltBridgePreview.h"
 #include "Placement/FactoryBeltPreview.h"
 #include "Placement/FactoryObjectData.h"
 #include "Placement/FactoryPlaceObjectBase.h"
@@ -61,6 +63,13 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 {
 	if (CurrentPlacementMode == EPlacementMode::None || !PlaceObjectPivotActor) return;
 	
+	// 유효성 검사 람다 생성
+	auto CheckValidity = [&]() -> bool {
+		for (AFactoryPlacePreview* Preview : ActivePreviews)
+			if (Preview->UpdateOverlapValidity() == EOverlapValidityResult::Invalid) return false;
+		return true;
+	};
+	
 	// 마우스 위치로 피벗 스냅
 	FVector NewLocation;
 	if (TryGetPointingGridLocation(NewLocation))
@@ -72,58 +81,21 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 			// 기본 경로로 프리뷰를 생성
 			BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, false));
 			
-			// 유효성 검사 람다 생성
-			auto CheckValidity = [&]() -> bool {
-				for (AFactoryPlacePreview* Preview : ActivePreviews)
-					if (!Preview->UpdateOverlapValidity()) return false;
-				return true;
-			};
-			
-			// 프리뷰 유효성 검사
-			bool bGlobalValid = CheckValidity();
-
-			// 만약 기본 경로가 Invalid라면
-			if (!bGlobalValid)
+			// 프리뷰 유효성 검사하여 만약 기본 경로가 Invalid라면
+			if (!CheckValidity())
 			{
 				// 대안 경로로 다시 생성
 				BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, true));
-              
-				// 대안 경로에 대해서도 다시 한 번 유효성 검사 세팅
-				bGlobalValid = CheckValidity();
-			}
-
-			// 최종 유효성 검사 결과 적용
-			for (AFactoryPlacePreview* Preview : ActivePreviews)
-			{
-				Preview->SetVisualValidity(bGlobalValid);
 			}
 		}
 		else
 		{
 			PlaceObjectPivotActor->SetActorLocation(NewLocation);
-			
-			// 단일 배치 모드 유효성 검사
-			bool bGlobalValid = true;
-			for (AFactoryPlacePreview* Preview : ActivePreviews)
-			{
-				if (!Preview->UpdateOverlapValidity()) bGlobalValid = false;
-			}
-			for (AFactoryPlacePreview* Preview : ActivePreviews)
-			{
-				Preview->SetVisualValidity(bGlobalValid);
-			}
 		}
 	}
 	
 	// 유효성(충돌) 검사
-	bool bGlobalValid = true;
-	for (AFactoryPlacePreview* Preview : ActivePreviews)
-	{
-		if (!Preview->UpdateOverlapValidity())
-		{
-			bGlobalValid = false;
-		}
-	}
+	bool bGlobalValid = CheckValidity();
 	
 	// 유효성 검사 결과 적용
 	for (AFactoryPlacePreview* Preview : ActivePreviews)
@@ -339,82 +311,87 @@ void UFactoryPlacementComponent::RotatePlacementPreview()
 
 bool UFactoryPlacementComponent::PlaceObject()
 {
-	bool bGlobalValid = true;
+	// Invalid가 하나라도 있다면 배치 불가 처리
+	if (ActivePreviews.Num() <= 0) return false;
 	for (auto Preview : ActivePreviews)
 	{
-		if (!Preview->GetPlacementValid()) { if (!Preview->GetPlacementValid()) bGlobalValid = false; }
+		if (Preview->UpdateOverlapValidity() == EOverlapValidityResult::Invalid) 
+		{ 
+			return false;
+		}
 	}
 	
-	if ( bGlobalValid && ActivePreviews.Num() > 0)
+	if (CurrentPlacementMode == EPlacementMode::Move)
 	{
-		if (CurrentPlacementMode == EPlacementMode::Move)
+		for (auto& LogisticsObjectBase : SelectedLogisticsObjectBases)
 		{
-			for (auto& LogisticsObjectBase : SelectedLogisticsObjectBases)
-			{
-				LogisticsObjectBase->Destroy();
-			}
-			SelectedLogisticsObjectBases.Empty();
+			LogisticsObjectBase->Destroy();
 		}
-		
-		for (auto Preview : ActivePreviews)
-		{
-			if (!Preview || !Preview->GetObjectData()) continue;
-			
-			// 만약 벨트 배치 로직에서 겹쳐있는 벨트가 있다면 선제적으로 수납처리함
-			if (CurrentPlacementMode == EPlacementMode::BeltPlace)
-			{
-				TArray<AFactoryPlaceObjectBase*> OverlappedObjects = Preview->GetOverlappingPlaceObjects();
-             
-				for (AFactoryPlaceObjectBase* OldObj : OverlappedObjects)
-				{
-					if (AFactoryBelt* OldBelt = Cast<AFactoryBelt>(OldObj))
-					{
-						OldBelt->Retrieve(); 
-					}
-				}
-			}
-			
-			// 실제 객체 배치 시작
-			FActorSpawnParameters Params; 
-			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			AFactoryPlaceObjectBase* NewActor = GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
-				Preview->GetObjectData()->PlaceObjectBP, 
-				Preview->GetActorLocation(), 
-				Preview->GetActorRotation(), 
-				Params);
-			
-			if (NewActor)
-			{
-				NewActor->InitObject(Preview->GetObjectData());
-				if (AFactoryBelt* Belt = Cast<AFactoryBelt>(NewActor))
-				{
-					// 벨트라면 벨트 타입 설정
-					if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
-					{
-						Belt->SetBeltType(BeltPreview->GetBeltType());
-					}
-				}
-				
-				// 배치된 객체가 인벤토리에서 소모되어야 하는 객체라면 배치되었음을 방송함
-				if (CurrentPlacementMode == EPlacementMode::PlaceFromInventory && NewActor->GetObjectData()->bRefundItemOnDestroy)
-				{
-					OnObjectPlacedFromInventorySignature.Broadcast(NewActor->GetObjectData()->RepresentingItemData, 1);
-				}
-			}
-		}
-		
-		ClearAllPreviews();
-		
-		if (CurrentPlacementMode != EPlacementMode::BeltPlace)
-		{
-			CurrentPlacementMode = EPlacementMode::None;
-		}
-		
-		OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
-		return true;
+		SelectedLogisticsObjectBases.Empty();
 	}
 	
-	return false;
+	for (auto Preview : ActivePreviews)
+	{
+		if (!Preview || !Preview->GetObjectData()) continue;
+		
+		// 가장 최신 Validity데이터 갱신
+		EOverlapValidityResult ValidityResult = Preview->UpdateOverlapValidity();
+		
+		//만약 Skip이면 건너뜀
+		if (ValidityResult == EOverlapValidityResult::Skip)
+		{
+			continue;
+		}
+		
+		// 만약 Replace면 이전에 있는 객체를 선제적으로 없앰
+		if (ValidityResult == EOverlapValidityResult::Replace)
+		{
+			TArray<AFactoryPlaceObjectBase*> OverlappedObjects = Preview->GetOverlappingPlaceObjects();
+         
+			for (AFactoryPlaceObjectBase* OldObj : OverlappedObjects)
+			{
+				OldObj->Retrieve();
+			}
+		}
+		
+		// 실제 객체 배치 시작
+		FActorSpawnParameters Params; 
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AFactoryPlaceObjectBase* NewActor = GetWorld()->SpawnActor<AFactoryPlaceObjectBase>(
+			Preview->GetObjectData()->PlaceObjectBP, 
+			Preview->GetActorLocation(), 
+			Preview->GetActorRotation(), 
+			Params);
+		
+		if (NewActor)
+		{
+			NewActor->InitObject(Preview->GetObjectData());
+			if (AFactoryBelt* Belt = Cast<AFactoryBelt>(NewActor))
+			{
+				// 벨트라면 벨트 타입 설정
+				if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
+				{
+					Belt->SetBeltType(BeltPreview->GetBeltType());
+				}
+			}
+			
+			// 배치된 객체가 인벤토리에서 소모되어야 하는 객체라면 배치되었음을 방송함
+			if (CurrentPlacementMode == EPlacementMode::PlaceFromInventory && NewActor->GetObjectData()->bRefundItemOnDestroy)
+			{
+				OnObjectPlacedFromInventorySignature.Broadcast(NewActor->GetObjectData()->RepresentingItemData, 1);
+			}
+		}
+	}
+	
+	ClearAllPreviews();
+	
+	if (CurrentPlacementMode != EPlacementMode::BeltPlace)
+	{
+		CurrentPlacementMode = EPlacementMode::None;
+	}
+	
+	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
+	return true;
 }
 
 void UFactoryPlacementComponent::CancelPlaceObject()
@@ -510,6 +487,7 @@ void UFactoryPlacementComponent::HandleBeltPlacementClick()
 		else
 		{
 			UE_LOG(LogTemp, Error, TEXT("UFactoryPlacementComponent : HandleBeltPlacementClick에서 AFactoryBeltPreview Cast 실패"));
+			NextStartDir = LastPreview->GetActorForwardVector();
 		}
 		
 		if (PlaceObject())
@@ -536,12 +514,21 @@ void UFactoryPlacementComponent::BeltPlacePreviewUpdate(TArray<FBeltPlacementDat
 	
 	for (const FBeltPlacementData& Data : BeltPlacementDatas)
 	{
-		AFactoryPlacePreview* Preview = CreateAndInitPreview(BeltData, GridToWorld(Data.GridPoint), Data.Rotation);
+		const UFactoryObjectData* TargetData = Data.bIsBridge ? BeltBridgeData : BeltData;
 		
-		if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
+		AFactoryPlacePreview* Preview = CreateAndInitPreview(TargetData, GridToWorld(Data.GridPoint), Data.Rotation);
+		
+		if (Data.bIsBridge)
 		{
-			BeltPreview->SetBeltType(Data.Type);
-			ActivePreviews.Add(BeltPreview);
+			ActivePreviews.Add(Preview);	// 브릿지는 회전이나 Type 설정 필요없음
+		}
+		else
+		{
+			if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview))
+			{
+				BeltPreview->SetBeltType(Data.Type);
+				ActivePreviews.Add(BeltPreview);
+			}
 		}
 	}
 }
@@ -627,6 +614,22 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
     TArray<FBeltPlacementData> OutBeltPath;
     for (int i = 0; i < Points.Num(); i++)
     {
+    	// 만약 벨트 브릿지가 있다면 해당 위치는 프리뷰를 생성하지 않도록 변경
+    	FVector CurrentLoc = GridToWorld(Points[i]);
+    	FHitResult TileHit;
+    	FVector TraceStart = CurrentLoc + FVector(0, 0, 50.f);
+    	FVector TraceEnd = CurrentLoc - FVector(0, 0, 50.f);
+    	FCollisionObjectQueryParams ObjectParams;
+    	ObjectParams.AddObjectTypesToQuery(ECC_GameTraceChannel3);
+    	
+    	bool bHitObject = GetWorld()->LineTraceSingleByObjectType(TileHit, TraceStart, TraceEnd, ObjectParams);
+    	AActor* HitActor = bHitObject ? TileHit.GetActor() : nullptr;
+    	
+    	if (HitActor && HitActor->IsA<AFactoryBeltBridge>())
+		{
+			continue; 
+		}
+    	
         FBeltPlacementData PlacementData;
     	PlacementData.GridPoint = Points[i];
        
@@ -634,48 +637,62 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
           StartPointDir : FVector(Points[i] - Points[i - 1], 0.f).GetSafeNormal();
     	
 	    FVector EndDir;
+    	bool bIsCrossingOrthogonalBelt = false;		// 브릿지 생성 플래그
+    	
 	    if (i < Points.Num() - 1)
 	    {
     		// 중간 벨트들은 다음 벨트를 향해 방향을 잡음
     		EndDir = FVector(Points[i + 1] - Points[i], 0.f).GetSafeNormal();
+	    	
+	    	// 브릿지 생성 감지 로직
+	    	if (i > 0 && HitActor) 
+	    	{
+	    		if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
+	    		{
+	    			if (HitBelt->GetBeltType() == EBeltType::Straight)
+	    			{
+	    				FVector BeltDir = HitBelt->GetActorRotation().Vector().GetSafeNormal();
+                       
+	    				// 직교 검사
+	    				if (FMath::Abs(FVector::DotProduct(BeltDir, InDir)) < 0.1f)
+	    				{
+	    					bIsCrossingOrthogonalBelt = true;
+	    				}
+	    			}
+	    		}
+	    	}
 	    }
 	    else
 	    {
     		// 마지막 벨트. 주변 InputPort를 스캔
     		EndDir = InDir; // 기본값은 직진
 	       
-    		FVector CurrentLoc = GridToWorld(Points[i]);
 	    	bool bLastBeltOverwritten = false;
 	    	
 	    	// 마지막 벨트에 이미 벨트가 존재했었는지 확인
-	    	FHitResult BeltHit;
-	    	FVector TraceStart = CurrentLoc + FVector(0, 0, 50.f);
-	    	FVector TraceEnd = CurrentLoc - FVector(0, 0, 50.f);
-	    	FCollisionObjectQueryParams ObjectParams;
-	    	ObjectParams.AddObjectTypesToQuery(ECC_GameTraceChannel3); // PlaceObject 채널
-	    	
-	    	if (GetWorld()->LineTraceSingleByObjectType(BeltHit, TraceStart, TraceEnd, ObjectParams))
-	    	{
-	    		if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(BeltHit.GetActor()))
-	    		{
-	    			EndDir = HitBelt->GetBeltExitDirection();
-	    			bLastBeltOverwritten = true; // 벨트를 찾았으므로 포트 스캔 통과
-	    		}
-	    	}
+			if (HitActor)
+			{
+				if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
+				{
+					EndDir = HitBelt->GetBeltExitDirection();
+					bLastBeltOverwritten = true; // 벨트를 찾았으므로 포트 스캔 통과
+				}
+			}
 	    	
 	    	// 마지막 벨트의 덮어쓰기가 없을때만 주변 포트 스캔
 	    	if (!bLastBeltOverwritten)
 	    	{
 	    		int XArr[4] = {1, -1, 0, 0};
 	    		int YArr[4] = {0, 0, 1, -1};
+	    		FVector PortSearchLoc = FVector(CurrentLoc.X, CurrentLoc.Y, 5.f);		// 포트 감지위해 Z값 조정
 	       
 	    		for (int j = 0; j < 4; j++)
 	    		{
-	    			FVector SearchLoc = CurrentLoc + FVector(XArr[j] * GridLength, YArr[j] * GridLength, 5.f);
+	    			FVector SearchLoc = PortSearchLoc + FVector(XArr[j] * GridLength, YArr[j] * GridLength, 5.f);
 	    			FHitResult PortHit;
 	           
 	    			// 내 주변에 InputPort가 있는지 트레이스
-	    			if (GetWorld()->LineTraceSingleByChannel(PortHit, CurrentLoc, SearchLoc, ECC_GameTraceChannel2))
+	    			if (GetWorld()->LineTraceSingleByChannel(PortHit, PortSearchLoc, SearchLoc, ECC_GameTraceChannel2))
 	    			{
 	    				if (UFactoryInputPortComponent* InputPort = Cast<UFactoryInputPortComponent>(PortHit.GetComponent()))
 	    				{
@@ -688,9 +705,11 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
 	    	}
 	    }
        
-       PlacementData.Type = DetermineBeltType(InDir, EndDir);
-       PlacementData.Rotation = InDir.Rotation();
-       OutBeltPath.Add(PlacementData);
+        PlacementData.Type = DetermineBeltType(InDir, EndDir);
+        PlacementData.Rotation = InDir.Rotation();
+    	PlacementData.bIsBridge = bIsCrossingOrthogonalBelt;
+    	
+        OutBeltPath.Add(PlacementData);
     }
     
     return OutBeltPath;
@@ -879,6 +898,10 @@ AFactoryPlacePreview* UFactoryPlacementComponent::CreateAndInitPreview(
 	if (Data == BeltData)
 	{
 		Preview = Pool->GetItemFromPool<AFactoryBeltPreview>(EFactoryPoolType::BeltPreview, Loc, Rot);
+	}
+	else if (Data == BeltBridgeData)
+	{
+		Preview = Pool->GetItemFromPool<AFactoryBeltBridgePreview>(AFactoryBeltBridgePreview::StaticClass(), Loc, Rot);
 	}
 	else
 	{

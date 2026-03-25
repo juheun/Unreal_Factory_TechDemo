@@ -8,7 +8,6 @@
 #include "FactoryPlacementComponent.generated.h"
 
 class UFactoryItemData;
-//전방선언
 class UFactoryInputConfig;
 class UFactoryPoolSubsystem;
 class AFactoryLogisticsObjectBase;
@@ -57,6 +56,10 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Factory|Data")
 	TObjectPtr<UFactoryObjectData> BeltData;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Factory|Data")
+	TObjectPtr<UFactoryObjectData> BeltBridgeData;
+
 	
 private:
 	///// 모드 진입

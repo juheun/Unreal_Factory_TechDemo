@@ -25,7 +25,10 @@ struct FBeltPlacementData
 
 	UPROPERTY()
 	EBeltType Type; // 직선/곡선 여부
+	
+	UPROPERTY()
+	bool bIsBridge = false;
 
 	FBeltPlacementData() 
-		: GridPoint(FIntPoint::ZeroValue), Rotation(FRotator::ZeroRotator), Type(EBeltType::Straight) {}
+		: GridPoint(FIntPoint::ZeroValue), Rotation(FRotator::ZeroRotator), Type(EBeltType::Straight), bIsBridge(false) {}
 };

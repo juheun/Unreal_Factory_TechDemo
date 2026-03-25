@@ -4,6 +4,7 @@
 #include "Placement/FactoryBeltPreview.h"
 
 #include "Logistics/FactoryBelt.h"
+#include "Logistics/FactoryBeltBridge.h"
 
 
 AFactoryBeltPreview::AFactoryBeltPreview()
@@ -11,22 +12,34 @@ AFactoryBeltPreview::AFactoryBeltPreview()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-bool AFactoryBeltPreview::UpdateOverlapValidity()
+EOverlapValidityResult AFactoryBeltPreview::UpdateOverlapValidity()
 {
 	TArray<AFactoryPlaceObjectBase*> OverlappedObjects = GetOverlappingPlaceObjects();
 	
-	bool bIsOverlappingInvalidObject = false;
+	if (OverlappedObjects.Num() == 0)
+	{
+		CurrentValidity = EOverlapValidityResult::Valid;
+		return CurrentValidity;
+	}
+	
+	CurrentValidity = EOverlapValidityResult::Replace;	// 벨트를 만나면 덮어쓰기가 기본
+	
 	for (AFactoryPlaceObjectBase* PlaceObj : OverlappedObjects)
 	{
-		if (!PlaceObj->IsA<AFactoryBelt>())		// 겹친 객체중 벨트가 아닌게 있는지 검사
+		if (PlaceObj->IsA<AFactoryBeltBridge>())
 		{
-			bIsOverlappingInvalidObject = true;
-			break;
+			// 브릿지가 있는 칸이면 스킵
+			CurrentValidity = EOverlapValidityResult::Skip;
+		}
+		else if (!PlaceObj->IsA<AFactoryBelt>())
+		{
+			// 벨트나 브릿지가 아닌 객체와 겹치면 설치 불가
+			CurrentValidity = EOverlapValidityResult::Invalid;
+			return CurrentValidity;
 		}
 	}
 
-	bIsPlacementValid = !bIsOverlappingInvalidObject;
-	return bIsPlacementValid;
+	return CurrentValidity;
 }
 
 FVector AFactoryBeltPreview::GetBeltExitDirection() const

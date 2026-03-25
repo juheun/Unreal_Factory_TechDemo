@@ -11,22 +11,29 @@ AFactoryBeltBridgePreview::AFactoryBeltBridgePreview()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-bool AFactoryBeltBridgePreview::UpdateOverlapValidity()
+EOverlapValidityResult AFactoryBeltBridgePreview::UpdateOverlapValidity()
 {
 	TArray<AFactoryPlaceObjectBase*> OverlappedObjects = GetOverlappingPlaceObjects();
 	
-	bool bIsOverlappingInvalidObject = false;
+	if (OverlappedObjects.Num() == 0)
+	{
+		CurrentValidity = EOverlapValidityResult::Valid;
+		return CurrentValidity;
+	}
+	
+	CurrentValidity = EOverlapValidityResult::Replace;
+
 	for (AFactoryPlaceObjectBase* PlaceObj : OverlappedObjects)
 	{
-		if (!PlaceObj->IsA<AFactoryBelt>())		// 겹친 객체중 벨트가 아닌게 있는지 검사
+		if (!PlaceObj->IsA<AFactoryBelt>())
 		{
-			bIsOverlappingInvalidObject = true;
-			break;
+			// 벨트가 아닌 다른 구조물과 겹치면 에러!
+			CurrentValidity = EOverlapValidityResult::Invalid;
+			return CurrentValidity;
 		}
 	}
 
-	bIsPlacementValid = !bIsOverlappingInvalidObject;
-	return bIsPlacementValid;
+	return CurrentValidity;
 }
 
 

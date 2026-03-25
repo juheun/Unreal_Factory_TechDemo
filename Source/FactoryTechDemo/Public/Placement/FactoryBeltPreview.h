@@ -17,7 +17,7 @@ class FACTORYTECHDEMO_API AFactoryBeltPreview : public AFactoryPlacePreview
 public:
 	AFactoryBeltPreview();
 
-	virtual bool UpdateOverlapValidity() override;
+	virtual EOverlapValidityResult UpdateOverlapValidity() override;
 	
 	FVector GetBeltExitDirection() const;
 	void SetBeltType(const EBeltType Type);
