@@ -75,10 +75,6 @@ void AFactoryBeltBridge::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		{
 			WarehouseSubsystem->AddItem(
 				const_cast<UFactoryItemData*>(CurrentItems[i].ItemData.Get()), 1);
-			if (CurrentItems[i].VisualActor.Get())
-			{
-				PoolSubsystem->ReturnItemToPool(CurrentItems[i].VisualActor.Get()); 
-			}
 		}
 	}
 	
@@ -89,10 +85,6 @@ void AFactoryBeltBridge::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		{
 			WarehouseSubsystem->AddItem(
 				const_cast<UFactoryItemData*>(Port->PendingItem.ItemData.Get()), 1);
-			if (Port->PendingItem.VisualActor.IsValid())
-			{
-				PoolSubsystem->ReturnItemToPool(Port->PendingItem.VisualActor.Get()); 
-			}
 		}
 	}
 }
@@ -114,16 +106,6 @@ void AFactoryBeltBridge::PlanCycle()
 		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItems[i].ItemData))
 		{
 			FFactoryItemInstance NewInstance(CurrentItems[i].ItemData);
-			FVector SpawnLocation = LogisticsOutputPortArr[Opposite]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
-			FRotator SpawnRotation = LogisticsOutputPortArr[Opposite]->GetComponentRotation();
-			AFactoryItemVisual* ItemVisual = PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(
-				EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
-			ItemVisual->UpdateVisual(CurrentItems[i].ItemData);
-			if (ItemVisual)
-			{
-				NewInstance.VisualActor = ItemVisual;
-			}
-			
 			TargetPort->PendingItem = NewInstance;
 			CurrentItems[i] = FFactoryItemInstance();
 		}
@@ -145,14 +127,6 @@ void AFactoryBeltBridge::ExecuteCycle()
 		if (!CurrentItems[i].IsValid())
 		{
 			CurrentItems[i] = LogisticsInputPortArr[i]->PendingItem;
-			
-			if (AFactoryItemVisual* VisualActor = CurrentItems[i].VisualActor.Get())
-			{
-				if (UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>())
-				{
-					PoolSubsystem->ReturnItemToPool(VisualActor);
-				}
-			}
 			LogisticsInputPortArr[i]->PendingItem = FFactoryItemInstance();
 		}
 	}

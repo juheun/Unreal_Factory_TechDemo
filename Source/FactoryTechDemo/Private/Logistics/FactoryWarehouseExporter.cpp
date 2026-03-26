@@ -3,7 +3,6 @@
 
 #include "Logistics/FactoryWarehouseExporter.h"
 
-#include "Items/FactoryItemVisual.h"
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
@@ -74,16 +73,7 @@ void AFactoryWarehouseExporter::PlanCycle()
 				if (!PoolSubsystem) return;
 				
 				FFactoryItemInstance NewInstance(TargetItemData);
-				FVector SpawnLocation = TargetPort->GetComponentLocation(); // 일단 포트 위치에 스폰
-				FRotator SpawnRotation = TargetPort->GetComponentRotation();
-				AFactoryItemVisual* ItemVisual = 
-					PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
-				if (ItemVisual)
-				{
-					ItemVisual->UpdateVisual(TargetItemData);
-					NewInstance.VisualActor = ItemVisual;
-					TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
-				}
+				TargetPort->PendingItem = NewInstance;	// 상대방 Input에 아이템 밀어넣기
 				LogisticsOutputPortArr[0]->SetPortBlocked(false);
 			}
 			else

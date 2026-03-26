@@ -16,6 +16,8 @@ public:
 	AFactoryItemVisual();
 	
 	void UpdateVisual(const class UFactoryItemData* ItemData);	// 아이템의 외관 업데이트
+	
+	UStaticMeshComponent* GetMeshComponent() const {return MeshComponent;}
 
 protected:
 	UPROPERTY(VisibleAnywhere)

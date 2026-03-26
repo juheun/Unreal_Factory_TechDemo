@@ -11,7 +11,6 @@ class AFactoryItemVisual;
 UENUM(BlueprintType)
 enum class EFactoryPoolType : uint8
 {
-	ItemVisual,
 	BeltPreview,
 };
 
@@ -29,6 +28,9 @@ public:
 	
 	UStaticMesh* GetPortWarningMesh() const { return PortWarningMesh.LoadSynchronous(); }
 	
+	UStaticMesh* GetDefaultItemMesh() const { return DefaultItemMesh.LoadSynchronous(); }
+	UMaterialInterface* GetDefaultItemMaterial() const { return DefaultItemMaterial.LoadSynchronous(); }
+	
 	TSubclassOf<AActor> GetPoolClass(EFactoryPoolType PoolType) const
 	{
 		return PoolClassMap.Contains(PoolType) ? PoolClassMap[PoolType] : nullptr;
@@ -45,6 +47,11 @@ private:
 	
 	UPROPERTY(Config, EditAnywhere, Category="Visuals")
 	TSoftObjectPtr<UStaticMesh> PortWarningMesh;
+	
+	UPROPERTY(Config, EditAnywhere, Category="Visuals|Item")
+	TSoftObjectPtr<UStaticMesh> DefaultItemMesh;
+	UPROPERTY(Config, EditAnywhere, Category="Visuals|Item")
+	TSoftObjectPtr<UMaterialInterface> DefaultItemMaterial;
 	
 	UPROPERTY(Config, EditAnywhere, Category="Pooling")
 	TMap<EFactoryPoolType, TSubclassOf<AActor>> PoolClassMap;

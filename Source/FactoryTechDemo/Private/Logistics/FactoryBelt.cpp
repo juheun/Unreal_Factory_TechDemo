@@ -8,10 +8,10 @@
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "Items/FactoryItemData.h"
-#include "Items/FactoryItemVisual.h"
 #include "Player/Component/FactoryPlacementComponent.h"
 #include "Settings/FactoryDeveloperSettings.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
+#include "Subsystems/FactoryItemRenderSubsystem.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 
@@ -40,10 +40,6 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		WarehouseSubsystem->AddItem(
 			const_cast<UFactoryItemData*>(CurrentItem.ItemData.Get()), 1);
-		if (CurrentItem.VisualActor.Get())
-		{
-			PoolSubsystem->ReturnItemToPool(CurrentItem.VisualActor.Get()); 
-		}
 	}
 	
 	//Pending된 아이템도 제거
@@ -54,11 +50,6 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		{
 			WarehouseSubsystem->AddItem(
 				const_cast<UFactoryItemData*>(PendingItem.ItemData.Get()), 1);
-			
-			if (PendingItem.VisualActor.IsValid())
-			{
-				PoolSubsystem->ReturnItemToPool(PendingItem.VisualActor.Get()); 
-			}
 		}
 	}
 }
@@ -103,27 +94,27 @@ void AFactoryBelt::ExecuteCycle()
 
 void AFactoryBelt::UpdateView()
 {
-	AFactoryItemVisual* ItemVisual = CurrentItem.VisualActor.Get();
-	if (ItemVisual)
-	{
-		float SpineAlpha = bIsBeltStop ? 1.f : 0.f;
-		SetSpineDistance(SpineAlpha);
-		ItemVisual->SetActorHiddenInGame(false);
-	}
-	SetActorTickEnabled(!bIsBeltStop && ItemVisual);
+	SetActorTickEnabled(CurrentItem.IsValid());
 }
 
 void AFactoryBelt::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
-	AFactoryItemVisual* ItemVisual = CurrentItem.VisualActor.Get();
-	if (ItemVisual)
+	UFactoryItemRenderSubsystem* RenderSubsystem = GetWorld()->GetSubsystem<UFactoryItemRenderSubsystem>();
+	if (RenderSubsystem && CurrentItem.ItemData)
 	{
-		UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>();
-		if (!CycleSubsystem) return;
-		float Alpha = CycleSubsystem->GetCycleAlpha();
-		SetSpineDistance(Alpha);
+		float Alpha = bIsBeltStop ? 1.0f : 0.0f;
+		
+		if (!bIsBeltStop)
+		{
+			if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
+			{
+				Alpha = CycleSubsystem->GetCycleAlpha();
+			}
+		}
+		FTransform ItemTransform = GetSpineDistance(Alpha);
+		RenderSubsystem->RequestRenderItem(CurrentItem.ItemData, ItemTransform);
 	}
 }
 
@@ -274,17 +265,13 @@ void AFactoryBelt::UpdateBeltVisual(EBeltType Type)
 	}
 }
 
-void AFactoryBelt::SetSpineDistance(float Alpha)
+FTransform AFactoryBelt::GetSpineDistance(float Alpha)
 {
 	float TargetDistance = Alpha * TotalSpineLength;
 		
 	FVector NewLoc = SplineComponent->GetLocationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
 	FRotator NewRot = SplineComponent->GetRotationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
-	
-	if (AFactoryItemVisual* ItemVisual = CurrentItem.VisualActor.Get())
-	{
-		ItemVisual->SetActorLocationAndRotation(NewLoc, NewRot);
-	}
+	return FTransform(NewRot, NewLoc);
 }
 
 #pragma endregion

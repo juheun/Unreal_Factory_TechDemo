@@ -57,7 +57,7 @@ protected:
 	
 	void UpdateSplinePath(EBeltType Type);
 	void UpdateBeltVisual(EBeltType Type);
-	void SetSpineDistance(float Alpha);
+	FTransform GetSpineDistance(float Alpha);
 	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
 	virtual void OnConstruction(const FTransform& Transform) override;
 	

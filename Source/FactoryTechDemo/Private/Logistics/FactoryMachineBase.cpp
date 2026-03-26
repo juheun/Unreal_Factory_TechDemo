@@ -193,14 +193,6 @@ void AFactoryMachineBase::ExecuteCycle()
 		{
 			bool bIsPulled = PullItemFromInputPorts(LogisticsInputPortArr[Index]->PendingItem);
 			
-			if (AFactoryItemVisual* VisualActor = LogisticsInputPortArr[Index]->PendingItem.VisualActor.Get())
-			{
-				if (UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>())
-				{
-					PoolSubsystem->ReturnItemToPool(VisualActor);
-				}
-			}
-			
 			if (!bIsPulled)
 			{
 				if (UFactoryWarehouseSubsystem* Warehouse = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
@@ -330,16 +322,6 @@ void AFactoryMachineBase::TryPushOutputToPorts()
 			if (!PoolSubsystem) return;
 			
 			FFactoryItemInstance NewInstance(OutputBufferSlot.ItemData);
-			FVector SpawnLocation = LogisticsOutputPortArr[index]->GetComponentLocation();	// 현재 내 Output 포트 위치에 스폰
-			FRotator SpawnRotation = LogisticsOutputPortArr[index]->GetComponentRotation();
-			AFactoryItemVisual* ItemVisual = PoolSubsystem->GetItemFromPool<AFactoryItemVisual>(
-				EFactoryPoolType::ItemVisual, SpawnLocation, SpawnRotation);
-			ItemVisual->UpdateVisual(OutputBufferSlot.ItemData);
-			if (ItemVisual)
-			{
-				NewInstance.VisualActor = ItemVisual;
-			}
-
 			// 완성된 인스턴스를 상대방 포트에 전달
 			TargetPort->PendingItem = NewInstance;
 			OutputPortIndex = (index + 1) % MaxPorts;

@@ -82,20 +82,7 @@ void AFactoryWarehouseImporter::ExecuteCycle()
 				CachedLastImportedItem = InputPort->PendingItem.ItemData;
 				OnImportItemChanged.Broadcast(InputPort->PendingItem.ItemData);
 			}
-		
-			if (AFactoryItemVisual* ItemVisual = InputPort->PendingItem.VisualActor.Get())
-			{
-				if (UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>())
-				{
-					PoolSubsystem->ReturnItemToPool(ItemVisual);
-				}
-				else
-				{
-					ItemVisual->Destroy();
-				}
-			
-				InputPort->PendingItem = FFactoryItemInstance();
-			}
+			InputPort->PendingItem = FFactoryItemInstance();
 			InputPort->SetPortBlocked(false);
 		}
 		else
