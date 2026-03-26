@@ -3,9 +3,7 @@
 
 #include "Logistics/FactoryWarehouseImporter.h"
 
-#include "Items/FactoryItemVisual.h"
 #include "Logistics/FactoryInputPortComponent.h"
-#include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/World/FactoryPortBlockWarningComponent.h"
 #include "UI/World/FactoryRecipeBillboardComponent.h"

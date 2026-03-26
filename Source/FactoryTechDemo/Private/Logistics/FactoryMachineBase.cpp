@@ -3,7 +3,6 @@
 
 #include "Logistics/FactoryMachineBase.h"
 
-#include "Items/FactoryItemVisual.h"
 #include "Items/FactoryRecipeData.h"
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"

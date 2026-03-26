@@ -3,7 +3,6 @@
 
 #include "Logistics/FactoryBeltRouter.h"
 
-#include "Items/FactoryItemVisual.h"
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
