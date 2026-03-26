@@ -20,7 +20,11 @@ UFactoryInteractionComponent::UFactoryInteractionComponent()
 void UFactoryInteractionComponent::SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp,
 	const UFactoryInputConfig* InputConfig)
 {
-	PlayerInputComp->BindAction(InputConfig->InteractAction, ETriggerEvent::Started, this, &UFactoryInteractionComponent::PerformInteraction);
+	if (InputConfig)
+	{
+		PlayerInputComp->BindAction(InputConfig->InteractAction, ETriggerEvent::Started, this, &UFactoryInteractionComponent::PerformInteraction);
+		PlayerInputComp->BindAction(InputConfig->InteractScrollAction, ETriggerEvent::Triggered, this, &UFactoryInteractionComponent::ScrollInteractionOptions);
+	}
 }
 
 void UFactoryInteractionComponent::BeginPlay()
@@ -43,9 +47,9 @@ void UFactoryInteractionComponent::BeginPlay()
 	}
 }
 
-void UFactoryInteractionComponent::UpdateInteraction() const
+void UFactoryInteractionComponent::UpdateInteraction()
 {
-	// TODO : 여러 상호작용 대상을 찾도록 변경
+	// TODO : 필요시 여러 상호작용 대상을 찾도록 변경
 	AFactoryPlayerController* Controller = CachedPlayerController.Get();
 	if (!Controller) return;
 
@@ -60,15 +64,31 @@ void UFactoryInteractionComponent::UpdateInteraction() const
 	{
 		if (TScriptInterface<IFactoryInteractable> BestTarget = FindBestInteractable(ViewMode))
 		{
-			FText Text;
-			if (BestTarget->TryGetInteractText(PlacementMode, Text))
+			if (BestTarget != CurrentInteractTarget)
 			{
-				InteractionPromptWidget->SetInteractionText(Text);
+				CurrentInteractTarget = BestTarget;
+				CurrentSelectedIndex = 0;
+				CurrentOptions.Empty();
+				if (BestTarget->TryGetInteractionOptions(PlacementMode, CurrentOptions))
+				{
+					InteractionPromptWidget->SetInteractionTextList(CurrentOptions, CurrentSelectedIndex);
+				}
+			}
+			
+			if (CurrentOptions.Num() > 0)
+			{
 				InteractionPromptWidget->SetVisibility(ESlateVisibility::Visible);
-				
 				return;
 			}
 		}
+	}
+	
+	// 만약 타겟이 없거나 숨겨야 할 때 초기화
+	if (CurrentInteractTarget != nullptr)
+	{
+		CurrentInteractTarget = nullptr;
+		CurrentOptions.Empty();
+		CurrentSelectedIndex = 0;
 	}
 	
 	InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
@@ -78,10 +98,32 @@ void UFactoryInteractionComponent::PerformInteraction()
 {
 	if (AFactoryPlayerController* Controller = CachedPlayerController.Get())
 	{
-		if (TScriptInterface<IFactoryInteractable> Target = FindBestInteractable(Controller->GetCurrentViewMode()))
+		if (CurrentInteractTarget && CurrentOptions.IsValidIndex(CurrentSelectedIndex))
 		{
-			Target->Interact(Controller->GetPawn(), Controller->GetCurrentPlacementMode());
+			CurrentInteractTarget->Interact(
+				Controller->GetPawn(), Controller->GetCurrentPlacementMode(), CurrentSelectedIndex);
 		}
+	}
+}
+
+void UFactoryInteractionComponent::ScrollInteractionOptions(const FInputActionValue& Value)
+{
+	if (CurrentOptions.Num() <= 1) return; // 옵션이 2개 이상이 아니라 실행 될 필요가 없는 경우
+	
+	float ScrollValue = Value.Get<float>();
+	if (ScrollValue > 0.f) // 휠 업
+	{
+		CurrentSelectedIndex--;
+	}
+	else if (ScrollValue < 0.f)	// 휠 다운
+	{
+		CurrentSelectedIndex++;
+	}
+	CurrentSelectedIndex = FMath::Clamp(CurrentSelectedIndex, 0, CurrentOptions.Num() - 1);
+	
+	if (InteractionPromptWidget)
+	{
+		InteractionPromptWidget->SetInteractionTextList(CurrentOptions, CurrentSelectedIndex);
 	}
 }
 

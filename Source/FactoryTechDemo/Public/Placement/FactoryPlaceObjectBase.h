@@ -27,8 +27,8 @@ public:
 	virtual void InitObject(const UFactoryObjectData* Data);
 	virtual void Tick(float DeltaTime) override;
 	
-	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode) override;
-	virtual bool TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const override;
+	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode, int32 OptionIndex = 0) override;
+	virtual bool TryGetInteractionOptions(const EPlacementMode CurrentMode, TArray<FInteractionOption>& OutOptions) const override;
 	void Retrieve();
 	
 	UStaticMesh* GetStaticMesh() const {return MeshComponent->GetStaticMesh();};

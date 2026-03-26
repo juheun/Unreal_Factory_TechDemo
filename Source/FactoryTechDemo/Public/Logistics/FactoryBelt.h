@@ -33,6 +33,9 @@ public:
 		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
 	
 	void SetBeltType(EBeltType Type);
+	
+	virtual bool TryGetInteractionOptions(const EPlacementMode CurrentMode, TArray<FInteractionOption>& OutOptions) const override;
+	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode, int32 OptionIndex = 0) override;
 
 	// 벨트의 타입을 고려한 실제 배출 방향을 반환
 	FVector GetBeltExitDirection() const;
@@ -57,6 +60,9 @@ protected:
 	void SetSpineDistance(float Alpha);
 	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+	
+	void MassRetrieve();
+	TSet<AFactoryBelt*> GetConnectedBeltLine();
 	
 	const float BeltHeight = 20.f;
 	bool bIsBeltStop = false;

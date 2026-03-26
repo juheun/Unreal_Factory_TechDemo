@@ -34,10 +34,10 @@ void AFactoryInteractionPoint::OnConstruction(const FTransform& Transform)
 		{
 			WidgetComponent->InitWidget();
 		}
-		FText DisplayText;
-		if (TryGetInteractText(EPlacementMode::None, DisplayText))
+		TArray<FInteractionOption> Options;
+		if (TryGetInteractionOptions(EPlacementMode::None, Options))
 		{
-			UpdateWidgetText(DisplayText);
+			UpdateWidgetText(Options[0].DisplayText);
 		}
 	}
 }
@@ -47,15 +47,15 @@ void AFactoryInteractionPoint::BeginPlay()
 	Super::BeginPlay();
 	if (WidgetComponent)
 	{
-		FText DisplayText;
-		if (TryGetInteractText(EPlacementMode::None, DisplayText))
+		TArray<FInteractionOption> Options;
+		if (TryGetInteractionOptions(EPlacementMode::None, Options) && Options.Num() > 0)
 		{
-			UpdateWidgetText(DisplayText);
+			UpdateWidgetText(Options[0].DisplayText);
 		}
 	}
 }
 
-void AFactoryInteractionPoint::Interact(const AActor* Interactor, const EPlacementMode CurrentMode)
+void AFactoryInteractionPoint::Interact(const AActor* Interactor, const EPlacementMode CurrentMode, int32 OptionIndex)
 {
 	if (!ItemData || !Interactor || Amount <= 0) return;
 	if (CurrentMode != EPlacementMode::None) return;
@@ -100,13 +100,15 @@ void AFactoryInteractionPoint::Interact(const AActor* Interactor, const EPlaceme
 	}
 }
 
-bool AFactoryInteractionPoint::TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const
+bool AFactoryInteractionPoint::TryGetInteractionOptions(const EPlacementMode CurrentMode, TArray<FInteractionOption>& OutOptions) const
 {
 	if (CurrentMode != EPlacementMode::None) return false;
 	
+	FText ResultText;
+	
 	if (!InteractText.IsEmpty())
 	{
-		OutText = InteractText;
+		ResultText = InteractText;
 	}
 	else
 	{
@@ -131,9 +133,15 @@ bool AFactoryInteractionPoint::TryGetInteractText(const EPlacementMode CurrentMo
 			ModeStr = TEXT("감소");
 			break;
 		}
-		OutText = FText::FromString(FString::Printf(
+		ResultText = FText::FromString(FString::Printf(
 			TEXT("%s에 %s %d개 %s"), *TargetStr, *ItemData->ItemName.ToString(), Amount, *ModeStr));
 	}
+	
+	FInteractionOption Option;
+	Option.OptionID = TEXT("DefaultInteractPoint");
+	Option.DisplayText = ResultText;
+	OutOptions.Add(Option);
+	
 	return true;
 }
 

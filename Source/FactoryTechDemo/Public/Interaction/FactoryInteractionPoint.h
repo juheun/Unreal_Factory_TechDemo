@@ -31,8 +31,8 @@ public:
 	virtual void BeginPlay() override;
 	
 	// 사용자가 액터와 상호작용할 때 호출되는 함수
-	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode) override;
-	virtual bool TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const override;
+	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode, int32 OptionIndex = 0) override;
+	virtual bool TryGetInteractionOptions(const EPlacementMode CurrentMode, TArray<FInteractionOption>& OutOptions) const override;
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Factory|InteractionPoint")

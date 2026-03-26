@@ -64,7 +64,7 @@ void AFactoryPlaceObjectBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void AFactoryPlaceObjectBase::Interact(const AActor* Interactor, const EPlacementMode CurrentMode)
+void AFactoryPlaceObjectBase::Interact(const AActor* Interactor, const EPlacementMode CurrentMode, int32 OptionIndex)
 {
 	if (CurrentMode == EPlacementMode::Retrieve)
 	{
@@ -85,20 +85,29 @@ void AFactoryPlaceObjectBase::Interact(const AActor* Interactor, const EPlacemen
 	}
 }
 
-bool AFactoryPlaceObjectBase::TryGetInteractText(const EPlacementMode CurrentMode, FText& OutText) const
+bool AFactoryPlaceObjectBase::TryGetInteractionOptions(const EPlacementMode CurrentMode, TArray<FInteractionOption>& OutOptions) const
 {
 	if (!PlacementDataAsset) return false;
+	
+	OutOptions.Empty();
 	FText Name = PlacementDataAsset->ObjectName;
+	
 	if (CurrentMode == EPlacementMode::Retrieve)
 	{
-		OutText = FText::Format(FText::FromString(TEXT("{0} 수납")), Name);
+		FInteractionOption RetrieveOption;
+		RetrieveOption.OptionID = FName("Retrieve");
+		RetrieveOption.DisplayText = FText::Format(FText::FromString(TEXT("{0} 수납")), Name);
+		OutOptions.Add(RetrieveOption);
 		return true;
 	}
 	else if (CurrentMode == EPlacementMode::None)
 	{
 		if (PlacementDataAsset->FacilityPanelBP)
 		{
-			OutText = FText::Format(FText::FromString(TEXT("{0} 패널 열기")), Name);
+			FInteractionOption OpenPanelOption;
+			OpenPanelOption.OptionID = FName("OpenPanel");
+			OpenPanelOption.DisplayText = FText::Format(FText::FromString(TEXT("{0} 패널 열기")), Name);
+			OutOptions.Add(OpenPanelOption);
 			return true;
 		}
 		return false;

@@ -6,6 +6,8 @@
 #include "Blueprint/UserWidget.h"
 #include "FactoryInteractionWidget.generated.h"
 
+struct FInteractionOption;
+class UVerticalBox;
 /**
  * 
  */
@@ -15,9 +17,9 @@ class FACTORYTECHDEMO_API UFactoryInteractionWidget : public UUserWidget
 	GENERATED_BODY()
 	
 public:
-	void SetInteractionText(const FText& Text);
+	void SetInteractionTextList(const TArray<FInteractionOption>& Options, int32 SelectedIndex);
 	
 protected:
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<class UTextBlock> InteractionTextBlock;
+	TObjectPtr<UVerticalBox> InteractionListPanel;
 };

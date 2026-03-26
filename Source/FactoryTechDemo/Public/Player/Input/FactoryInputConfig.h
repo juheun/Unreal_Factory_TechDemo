@@ -47,6 +47,8 @@ public:
 	// Specific - Normal
 	UPROPERTY(EditAnywhere, Category = "Specific|Normal") 
 	TObjectPtr<UInputAction> InteractAction;
+	UPROPERTY(EditAnywhere, Category = "Specific|Normal")
+	TObjectPtr<UInputAction> InteractScrollAction;
 	UPROPERTY(EditAnywhere, Category = "Specific|Normal") 
 	TObjectPtr<UInputAction> ToggleRetrieveModeAction;
 	// Specific - Top

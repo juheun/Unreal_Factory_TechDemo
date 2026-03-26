@@ -9,6 +9,7 @@
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "Items/FactoryItemData.h"
 #include "Items/FactoryItemVisual.h"
+#include "Player/Component/FactoryPlacementComponent.h"
 #include "Settings/FactoryDeveloperSettings.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
@@ -68,6 +69,8 @@ void AFactoryBelt::OnConstruction(const FTransform& Transform)
 	
 	SetBeltType(BeltType);
 }
+
+#pragma region Belt Logic
 
 void AFactoryBelt::PlanCycle()
 {
@@ -283,5 +286,108 @@ void AFactoryBelt::SetSpineDistance(float Alpha)
 		ItemVisual->SetActorLocationAndRotation(NewLoc, NewRot);
 	}
 }
+
+#pragma endregion
+
+#pragma region interact logic
+
+bool AFactoryBelt::TryGetInteractionOptions(const EPlacementMode CurrentMode,
+	TArray<FInteractionOption>& OutOptions) const
+{
+	if (CurrentMode == EPlacementMode::Retrieve)
+	{
+		// 전체 수납
+		FInteractionOption MassOption;
+		MassOption.OptionID = TEXT("MassRetrieve");
+		MassOption.DisplayText = FText::FromString(TEXT("컨베이어 벨트 라인 전체 수납"));
+		OutOptions.Add(MassOption);
+		
+		// 단일 수납
+		FInteractionOption SingleOption;
+		SingleOption.OptionID = TEXT("SingleRetrieve");
+		SingleOption.DisplayText = FText::FromString(TEXT("컨베이어 벨트 단일 수납"));
+		OutOptions.Add(SingleOption);
+		
+		return true;
+	}
+	return false;
+}
+
+void AFactoryBelt::Interact(const AActor* Interactor, const EPlacementMode CurrentMode, int32 OptionIndex)
+{
+	if (CurrentMode == EPlacementMode::Retrieve)
+	{
+		if (OptionIndex == 0)
+		{
+			MassRetrieve();
+		}
+		else if (OptionIndex == 1)
+		{
+			Retrieve();
+		}
+	}
+}
+
+
+void AFactoryBelt::MassRetrieve()
+{
+	TSet<AFactoryBelt*> BeltLine = GetConnectedBeltLine();
+	
+	for (AFactoryBelt* Belt : BeltLine)
+	{
+		if (Belt) Belt->Retrieve();
+	}
+}
+
+TSet<AFactoryBelt*> AFactoryBelt::GetConnectedBeltLine()
+{
+	TSet<AFactoryBelt*> VisitedBelts;
+	TQueue<AFactoryBelt*> Queue;
+	
+	Queue.Enqueue(this);
+	VisitedBelts.Add(this);
+	
+	while (!Queue.IsEmpty())
+	{
+		AFactoryBelt* CurrentBelt;
+		Queue.Dequeue(CurrentBelt);
+		
+		// 정방향 탐색
+		if (CurrentBelt->LogisticsOutputPortArr.IsValidIndex(0) && CurrentBelt->LogisticsOutputPortArr[0])
+		{
+			if (UFactoryInputPortComponent* ConnectedIn = CurrentBelt->LogisticsOutputPortArr[0]->GetConnectedInput())
+			{
+				if (AFactoryBelt* NextBelt = Cast<AFactoryBelt>(ConnectedIn->GetPortOwner()))
+				{
+					if (!VisitedBelts.Contains(NextBelt))
+					{
+						VisitedBelts.Add(NextBelt);
+						Queue.Enqueue(NextBelt);
+					}
+				}
+			}
+		}
+		
+		// 역방향 탐색
+		if (CurrentBelt->LogisticsInputPortArr.IsValidIndex(0) && CurrentBelt->LogisticsInputPortArr[0])
+		{
+			if (UFactoryOutputPortComponent* ConnectedOut = CurrentBelt->LogisticsInputPortArr[0]->GetConnectedOutput())
+			{
+				if (AFactoryBelt* PrevBelt = Cast<AFactoryBelt>(ConnectedOut->GetPortOwner()))
+				{
+					if (!VisitedBelts.Contains(PrevBelt))
+					{
+						VisitedBelts.Add(PrevBelt);
+						Queue.Enqueue(PrevBelt);
+					}
+				}
+			}
+		}
+	}
+	
+	return VisitedBelts;
+}
+
+#pragma endregion
 
 
