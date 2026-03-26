@@ -22,7 +22,7 @@ void UFactoryInteractionComponent::SetUpInputComponent(UEnhancedInputComponent* 
 {
 	if (InputConfig)
 	{
-		PlayerInputComp->BindAction(InputConfig->InteractAction, ETriggerEvent::Started, this, &UFactoryInteractionComponent::PerformInteraction);
+		PlayerInputComp->BindAction(InputConfig->InteractAction, ETriggerEvent::Triggered, this, &UFactoryInteractionComponent::PerformInteraction);
 		PlayerInputComp->BindAction(InputConfig->InteractScrollAction, ETriggerEvent::Triggered, this, &UFactoryInteractionComponent::ScrollInteractionOptions);
 	}
 }
