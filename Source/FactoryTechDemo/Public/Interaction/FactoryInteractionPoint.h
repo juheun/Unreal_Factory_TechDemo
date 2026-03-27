@@ -36,7 +36,7 @@ public:
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Factory|InteractionPoint")
-	void UpdateWidgetText(const FText& NewText);
+	void UpdateWidgetInfo(const FText& Text, UTexture2D* Icon);
 	
 	UPROPERTY(VisibleAnywhere, Category = "Factory|InteractionPoint")
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;

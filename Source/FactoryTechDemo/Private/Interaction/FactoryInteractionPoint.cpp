@@ -20,8 +20,6 @@ AFactoryInteractionPoint::AFactoryInteractionPoint()
 	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComponent"));
 	WidgetComponent->SetupAttachment(RootComponent);
 	WidgetComponent->SetWidgetSpace(EWidgetSpace::World);
-	WidgetComponent->SetDrawSize(FVector2D(400.0f, 100.0f));
-	WidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 50.0f));
 }
 
 void AFactoryInteractionPoint::OnConstruction(const FTransform& Transform)
@@ -37,7 +35,8 @@ void AFactoryInteractionPoint::OnConstruction(const FTransform& Transform)
 		TArray<FInteractionOption> Options;
 		if (TryGetInteractionOptions(EPlacementMode::None, Options))
 		{
-			UpdateWidgetText(Options[0].DisplayText);
+			UTexture2D* TargetIcon = ItemData ? ItemData->ItemIcon : nullptr;
+			UpdateWidgetInfo(Options[0].DisplayText, TargetIcon);
 		}
 	}
 }
@@ -50,7 +49,8 @@ void AFactoryInteractionPoint::BeginPlay()
 		TArray<FInteractionOption> Options;
 		if (TryGetInteractionOptions(EPlacementMode::None, Options) && Options.Num() > 0)
 		{
-			UpdateWidgetText(Options[0].DisplayText);
+			UTexture2D* TargetIcon = ItemData ? ItemData->ItemIcon : nullptr;
+			UpdateWidgetInfo(Options[0].DisplayText, TargetIcon);
 		}
 	}
 }
