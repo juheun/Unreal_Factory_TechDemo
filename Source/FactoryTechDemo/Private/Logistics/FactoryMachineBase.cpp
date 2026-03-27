@@ -101,7 +101,6 @@ void AFactoryMachineBase::InitMachine()
 		FacilityBlockWarningComponent->OnFacilityBlockCallback(bIsMachineBlockedOnCycle);
 	}
 	
-	UStaticMesh* WarningMesh = UFactoryDeveloperSettings::Get()->GetPortWarningMesh();
 	for (auto& InputPort : LogisticsInputPortArr)
 	{
 		UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);

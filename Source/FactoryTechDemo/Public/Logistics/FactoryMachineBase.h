@@ -53,6 +53,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Factory|Machine")
 	bool TryTakeItemFromBuffer(bool bIsInputBuffer, int32 SlotIndex, int32 AmountToTake, FFactorySlot& OutTakenSlot);
 	
+	const TArray<UFactoryRecipeData*> GetAvailableRecipes() const { return AvailableRecipes; } 
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

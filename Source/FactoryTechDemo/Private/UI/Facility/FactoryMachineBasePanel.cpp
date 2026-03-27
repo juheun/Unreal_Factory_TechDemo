@@ -3,13 +3,17 @@
 
 #include "UI/Facility/FactoryMachineBasePanel.h"
 
+#include "Components/Button.h"
 #include "Components/ProgressBar.h"
+#include "Components/ScrollBox.h"
 #include "Components/VerticalBox.h"
 #include "Items/FactoryRecipeData.h"
 #include "Logistics/FactoryMachineBase.h"
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
 #include "UI/Facility/FactoryFacilitySlotWidget.h"
+#include "UI/Facility/FactoryMachineRecipeWidget.h"
+#include "UI/Facility/FactoryRecipeListPopupWidget.h"
 #include "UI/Inventory/FactoryInventorySlotWidget.h"
 
 void UFactoryMachineBasePanel::InitPanel(AFactoryPlaceObjectBase* PlaceObject)
@@ -64,6 +68,16 @@ void UFactoryMachineBasePanel::InitPanel(AFactoryPlaceObjectBase* PlaceObject)
 		}
 		
 		OnRecipeUpdated(Machine->GetCurrentRecipe());
+	}
+}
+
+void UFactoryMachineBasePanel::NativeConstruct()
+{
+	Super::NativeConstruct();
+	
+	if (OpenRecipeListPanelBtn)
+	{
+		OpenRecipeListPanelBtn->OnClicked.AddUniqueDynamic(this, &UFactoryMachineBasePanel::OnOpenRecipeListClicked);
 	}
 }
 
@@ -151,6 +165,20 @@ void UFactoryMachineBasePanel::HandleSlotDrop(UFactoryFacilitySlotWidget* Target
 					InventoryComponent->RemoveItemFromTargetSlot(InventorySlotWidget->GetSlotIndex(), InsertedAmount);
 				}
 			}
+		}
+	}
+}
+
+void UFactoryMachineBasePanel::OnOpenRecipeListClicked()
+{
+	if (RecipeListPopupWidgetBP && CachedMachine.IsValid())
+	{
+		if (UFactoryRecipeListPopupWidget* Popup = CreateWidget<UFactoryRecipeListPopupWidget>(
+			GetWorld(), RecipeListPopupWidgetBP))
+		{
+			Popup->InitPopup(CachedMachine->GetAvailableRecipes());
+            
+			Popup->AddToViewport(100);
 		}
 	}
 }

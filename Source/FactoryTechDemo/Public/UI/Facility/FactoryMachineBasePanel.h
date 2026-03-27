@@ -6,12 +6,17 @@
 #include "FactoryFacilityPanelBase.h"
 #include "FactoryMachineBasePanel.generated.h"
 
+class UFactoryRecipeListPopupWidget;
+class UFactoryMachineRecipeWidget;
 class UVerticalBox;
 class UFactoryFacilitySlotWidget;
 class AFactoryMachineBase;
 struct FFactorySlot;
 class UProgressBar;
 class UFactoryRecipeData;
+class UButton;
+class UScrollBox;
+
 /**
  * 
  */
@@ -24,6 +29,7 @@ public:
 	virtual void InitPanel(AFactoryPlaceObjectBase* PlaceObject) override;
 	
 protected:
+	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	
@@ -51,6 +57,15 @@ protected:
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UFactoryFacilitySlotWidget> OutputSlot;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> OpenRecipeListPanelBtn;
+	
+	UPROPERTY(EditDefaultsOnly, Category = UI)
+	TSubclassOf<UFactoryRecipeListPopupWidget> RecipeListPopupWidgetBP;
+	
+	UFUNCTION()
+	void OnOpenRecipeListClicked();
 	
 private:
 	UPROPERTY()
