@@ -83,6 +83,7 @@ void UFactorySmartNameplateComponent::UpdateUIPlacement(float DeltaTime, const F
 		
 		// 목표 위치 설정
 		float PushDistance = (BestFaceIndex == 0 || BestFaceIndex == 1) ? ExtentX : ExtentY;
+		PushDistance = PushDistance + 1.f;	// Z-fight 방지 위해 값을 약간 더해줌 
 		TargetLoc += Faces[BestFaceIndex] * PushDistance;
 
 		// 해당 면에서 바깥쪽을 바라보도록 회전값 설정
