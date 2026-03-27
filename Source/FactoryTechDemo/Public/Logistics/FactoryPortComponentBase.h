@@ -37,6 +37,8 @@ public:
 	
 	AFactoryLogisticsObjectBase* GetPortOwner() const { return PortOwner.Get();}
 	bool GetIsPortEnabled() const { return bIsPortEnabled; }
+	
+	UArrowComponent* GetPortDirArrowComponent() const { return PortDirArrowComponent; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")

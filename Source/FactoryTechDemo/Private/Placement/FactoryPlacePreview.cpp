@@ -3,16 +3,18 @@
 
 #include "Placement/FactoryPlacePreview.h"
 
+#include "Components/ArrowComponent.h"
 #include "Settings/FactoryDeveloperSettings.h"
 #include "Placement/FactoryObjectData.h"
 #include "Placement/FactoryPlaceObjectBase.h"
 #include "Components/BoxComponent.h"
 #include "Components/DecalComponent.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Logistics/FactoryPortComponentBase.h"
 
-// Sets default values
 AFactoryPlacePreview::AFactoryPlacePreview()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
@@ -42,53 +44,20 @@ AFactoryPlacePreview::AFactoryPlacePreview()
 void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
 {
 	if (!Data) return;
-	
 	ObjectData = Data;
-	
+
+	ClearSpawnedArrows();
+
 	if (Data->PlaceObjectBP)
 	{
 		if (AFactoryPlaceObjectBase* PlaceObjectBase = Data->PlaceObjectBP->GetDefaultObject<AFactoryPlaceObjectBase>())
 		{
 			MeshComponent->SetStaticMesh(PlaceObjectBase->GetStaticMesh());
+			SetupPortArrows(Data, PlaceObjectBase);
 		}
 	}
-	
-	const UFactoryDeveloperSettings* DeveloperSettings = GetDefault<UFactoryDeveloperSettings>();
-	if (!DeveloperSettings) return;
-	
-	if (UMaterialInterface* PreviewMaterial = DeveloperSettings->GetPlacePreviewMaterial())
-	{
-		MeshComponent->SetMaterial(0, PreviewMaterial);
-		PreviewDynamicMaterial = MeshComponent->CreateDynamicMaterialInstance(0);
-	}
-	
-	if (GridDecalComponent)
-	{
-		if (UMaterialInterface* DecalMaterial = DeveloperSettings->GetGridDecalMaterial())
-		{
-			GridDecalComponent->SetDecalMaterial(DecalMaterial);
-		}
-	}
-	
-	float GridLength = DeveloperSettings->GetGridLength();
-	
-	float BoxX = Data->GridSize.X * GridLength * 0.5f - 1.f;	// 바로 옆 그리드와 붙는것 방지하기 위해 1 빼줌
-	float BoxY = Data->GridSize.Y * GridLength * 0.5f - 1.f;
-	if (OverlapBox)
-	{
-		OverlapBox->SetBoxExtent(FVector(BoxX, BoxY, 500.f));
-	}
-	
-	int GridDecalRangeMultiplier = 5;
-	float GridDecalRange = GridLength * GridDecalRangeMultiplier;
-	
-	float DecalRangeX = BoxX + GridDecalRange;
-	float DecalRangeY = BoxY + GridDecalRange;
-	
-	if (GridDecalComponent)
-	{
-		GridDecalComponent->DecalSize = FVector(200.f, DecalRangeX, DecalRangeY);	// 투사깊이, x, y
-	}
+
+	SetupVisualsAndCollisions(Data);
 }
 
 EOverlapValidityResult AFactoryPlacePreview::UpdateOverlapValidity()
@@ -142,5 +111,107 @@ TArray<AFactoryPlaceObjectBase*> AFactoryPlacePreview::GetOverlappingPlaceObject
 		}
 	}
 	return ResultObjects;
+}
+
+void AFactoryPlacePreview::ClearSpawnedArrows()
+{
+	for (UArrowComponent* Arrow : SpawnedArrows)
+	{
+		if (Arrow) Arrow->DestroyComponent();
+	}
+	SpawnedArrows.Empty();
+}
+
+void AFactoryPlacePreview::SetupPortArrows(const UFactoryObjectData* Data, const AFactoryPlaceObjectBase* CDO)
+{
+	TArray<UArrowComponent*> BPArrows;
+	CDO->GetComponents<UArrowComponent>(BPArrows, true);
+    
+	for (UArrowComponent* Arrow : BPArrows)
+	{
+		FTransform ParentTransform = Arrow->GetAttachParent() ? Arrow->GetAttachParent()->GetRelativeTransform() : FTransform::Identity;
+		FTransform FinalTransform = Arrow->GetRelativeTransform() * ParentTransform;
+		CloneAndAttachArrow(Arrow, FinalTransform);
+	}
+	
+	if (UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(Data->PlaceObjectBP))
+	{
+		if (USimpleConstructionScript* SCS = BPClass->SimpleConstructionScript)
+		{
+			for (USCS_Node* Node : SCS->GetAllNodes())
+			{
+				if (Node->ComponentClass && Node->ComponentClass->IsChildOf(UFactoryPortComponentBase::StaticClass()))
+				{
+					if (UFactoryPortComponentBase* BPPortTemplate = Cast<UFactoryPortComponentBase>(Node->GetActualComponentTemplate(BPClass)))
+					{
+						if (UArrowComponent* TargetArrow = BPPortTemplate->GetPortDirArrowComponent())
+						{
+							FTransform PortTransform = BPPortTemplate->GetRelativeTransform();
+							FTransform ArrowLocalTransform = TargetArrow->GetRelativeTransform();
+							FTransform FinalTransform = ArrowLocalTransform * PortTransform;
+							CloneAndAttachArrow(TargetArrow, FinalTransform);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void AFactoryPlacePreview::SetupVisualsAndCollisions(const UFactoryObjectData* Data)
+{
+	const UFactoryDeveloperSettings* DeveloperSettings = GetDefault<UFactoryDeveloperSettings>();
+	if (!DeveloperSettings) return;
+    
+	// 머티리얼 세팅
+	if (UMaterialInterface* PreviewMaterial = DeveloperSettings->GetPlacePreviewMaterial())
+	{
+		MeshComponent->SetMaterial(0, PreviewMaterial);
+		PreviewDynamicMaterial = MeshComponent->CreateDynamicMaterialInstance(0);
+	}
+    
+	// 데칼 세팅
+	if (GridDecalComponent)
+	{
+		if (UMaterialInterface* DecalMaterial = DeveloperSettings->GetGridDecalMaterial())
+		{
+			GridDecalComponent->SetDecalMaterial(DecalMaterial);
+		}
+	}
+    
+	// 사이즈 계산
+	float GridLength = DeveloperSettings->GetGridLength();
+	float BoxX = Data->GridSize.X * GridLength * 0.5f - 1.f;
+	float BoxY = Data->GridSize.Y * GridLength * 0.5f - 1.f;
+    
+	if (OverlapBox)
+	{
+		OverlapBox->SetBoxExtent(FVector(BoxX, BoxY, 500.f));
+	}
+    
+	int GridDecalRangeMultiplier = 5;
+	float GridDecalRange = GridLength * GridDecalRangeMultiplier;
+    
+	if (GridDecalComponent)
+	{
+		GridDecalComponent->DecalSize = FVector(200.f, BoxX + GridDecalRange, BoxY + GridDecalRange);
+	}
+}
+
+void AFactoryPlacePreview::CloneAndAttachArrow(UArrowComponent* SourceArrow, const FTransform& RelativeTransform)
+{
+	if (!SourceArrow) return;
+
+	UArrowComponent* NewArrow = NewObject<UArrowComponent>(this);
+	NewArrow->ArrowColor = SourceArrow->ArrowColor;
+	NewArrow->ArrowSize = SourceArrow->ArrowSize;
+	NewArrow->SetArrowLength(SourceArrow->ArrowLength);
+	NewArrow->SetRelativeTransform(RelativeTransform);
+    
+	NewArrow->SetHiddenInGame(false); 
+	NewArrow->RegisterComponent();
+	NewArrow->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+    
+	SpawnedArrows.Add(NewArrow);
 }
 
