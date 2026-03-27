@@ -24,6 +24,8 @@ AFactoryBelt::AFactoryBelt()
 	SplineComponent = CreateDefaultSubobject<USplineComponent>("SplineComponent");
 	
 	SplineComponent->SetupAttachment(RootComponent);
+	
+	LogisticsObjectType = ELogisticsObjectType::Conveyor;
 }
 
 void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)

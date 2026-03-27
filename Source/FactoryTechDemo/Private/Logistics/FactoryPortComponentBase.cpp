@@ -1,6 +1,7 @@
 ﻿#include "Logistics/FactoryPortComponentBase.h"
 
 #include "Components/ArrowComponent.h"
+#include "Logistics/FactoryBelt.h"
 #include "Logistics/FactoryLogisticsObjectBase.h"
 #include "Settings/FactoryDeveloperSettings.h"
 
@@ -85,6 +86,10 @@ void UFactoryPortComponentBase::SetPortEnabled(bool bEnabled)
 void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 {
 	if (!Target) return;
+	
+	// 기획상 설비와 설비의 직결은 불가능함
+	if (Target->GetPortOwner()->GetLogisticsObjectType() == ELogisticsObjectType::Facility
+		&& GetPortOwner()->GetLogisticsObjectType() == ELogisticsObjectType::Facility) return;
 	
 	// 상호 연결 (Handshake)
 	this->ConnectedPort = Target;

@@ -11,6 +11,13 @@ class UFactoryOutputPortComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFacilityBlockedStateChanged, bool, bIsBlocked);
 
+UENUM(BlueprintType)
+enum class ELogisticsObjectType : uint8
+{
+	Conveyor,
+	Facility,
+};
+
 UCLASS(Abstract)
 class FACTORYTECHDEMO_API AFactoryLogisticsObjectBase : public AFactoryPlaceObjectBase
 {
@@ -42,6 +49,8 @@ public:
 	
 	int32 GetConnectedOutputPortNumber() const;
 	TArray<AFactoryLogisticsObjectBase*> GetConnectedInputPortsObject() const;
+	
+	ELogisticsObjectType GetLogisticsObjectType() const { return LogisticsObjectType; }
 
 protected:
 	// 포트 자동 수집 및 분류 함수
@@ -61,7 +70,9 @@ protected:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UFactoryInputPortComponent>> LogisticsInputPortArr;
 	
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Factory|State")
 	bool bIsFacilityBlocked = false;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Factory|LogisticsType")
+	ELogisticsObjectType LogisticsObjectType = ELogisticsObjectType::Conveyor;
 };

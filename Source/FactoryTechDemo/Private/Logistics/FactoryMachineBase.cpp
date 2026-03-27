@@ -28,6 +28,8 @@ AFactoryMachineBase::AFactoryMachineBase()
 	
 	FacilityBlockWarningComponent = CreateDefaultSubobject<UFactoryFacilityBlockWarningComponent>(TEXT("FacilityBlockWarningComponent"));
 	FacilityBlockWarningComponent->SetupAttachment(RootComponent);
+	
+	LogisticsObjectType = ELogisticsObjectType::Facility;
 }
 
 void AFactoryMachineBase::BeginPlay()

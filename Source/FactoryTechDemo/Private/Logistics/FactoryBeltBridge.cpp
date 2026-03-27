@@ -12,6 +12,8 @@
 AFactoryBeltBridge::AFactoryBeltBridge()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	
+	LogisticsObjectType = ELogisticsObjectType::Conveyor;
 }
 
 void AFactoryBeltBridge::BeginPlay()

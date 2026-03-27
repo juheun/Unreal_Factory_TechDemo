@@ -14,6 +14,8 @@ class UFactoryPoolSubsystem;
 AFactoryBeltRouter::AFactoryBeltRouter()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	
+	LogisticsObjectType = ELogisticsObjectType::Conveyor;
 }
 
 void AFactoryBeltRouter::EndPlay(const EEndPlayReason::Type EndPlayReason)

@@ -19,6 +19,8 @@ AFactoryWarehouseImporter::AFactoryWarehouseImporter()
 	
 	RecipeBillboardComponent = CreateDefaultSubobject<UFactoryRecipeBillboardComponent>(TEXT("RecipeBillboardComponent"));
 	RecipeBillboardComponent->SetupAttachment(RootComponent);
+	
+	LogisticsObjectType = ELogisticsObjectType::Facility;
 }
 
 

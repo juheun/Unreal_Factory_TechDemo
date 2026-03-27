@@ -23,6 +23,8 @@ AFactoryWarehouseExporter::AFactoryWarehouseExporter()
 	RecipeBillboardComponent->SetupAttachment(RootComponent);
 	
 	FacilityMenuMode = EFactoryMenuMode::FacilityOnly;
+	
+	LogisticsObjectType = ELogisticsObjectType::Facility;
 }
 
 void AFactoryWarehouseExporter::BeginPlay()
