@@ -8,7 +8,6 @@
 #include "Logistics/FactoryOutputPortComponent.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
 #include "Subsystems/FactoryDataSubsystem.h"
-#include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/World/FactoryPortBlockWarningComponent.h"
 #include "UI/World/FactoryRecipeBillboardComponent.h"
@@ -81,6 +80,9 @@ void AFactoryMachineBase::InitMachine()
 	}
 	// 아웃풋 버퍼 초기화
 	OutputBufferSlot.Clear();
+	// 아웃풋 포트 개수만큼 배열 false로 초기화
+	OutputPortBlockedStates.Init(false, LogisticsOutputPortArr.Num());
+	OutputPortPushedThisCycle.Init(false, LogisticsOutputPortArr.Num());
 	
 	// 설비 아이덴티티 기반으로 이 설비에서 가공 가능한 레시피 데이터 가져오기
 	UFactoryDataSubsystem* DataSubsystem = GetGameInstance()->GetSubsystem<UFactoryDataSubsystem>();
@@ -125,6 +127,20 @@ void AFactoryMachineBase::PlanCycle()
 {
 	bIsMachineBlockedOnCycle = false;
 	
+	// 막힘 기록상태 초기화
+	if (OutputPortBlockedStates.Num() != LogisticsOutputPortArr.Num())
+	{
+		OutputPortBlockedStates.Init(false, LogisticsOutputPortArr.Num());
+		OutputPortPushedThisCycle.Init(false, LogisticsOutputPortArr.Num());
+	}
+	else
+	{
+		for (int i = 0; i < OutputPortBlockedStates.Num(); i++)
+		{
+			OutputPortBlockedStates[i] = false;
+			OutputPortPushedThisCycle[i] = false;
+		}
+	}
 	// OutputPort로 아이템 밀어넣기 시도
 	TryPushOutputToPorts();
 	
@@ -232,6 +248,15 @@ void AFactoryMachineBase::UpdateView()
     
 	// (막혔거나 OR 레시피가 없거나) 둘 중 하나면 막힘 방송
 	SetFacilityBlocked(bIsMachineBlockedOnCycle || bIsStarvingOrNoRecipe);
+	
+	// 아웃포트 막힘 상태 방송
+	for (int i = 0; i < LogisticsOutputPortArr.Num(); i++)
+	{
+		if (LogisticsOutputPortArr[i])
+		{
+			LogisticsOutputPortArr[i]->SetPortBlocked(OutputPortBlockedStates[i]);
+		}
+	}
 }
 
 bool AFactoryMachineBase::CanPushItemFromBeforeObject(
@@ -295,11 +320,6 @@ bool AFactoryMachineBase::PullItemFromInputPorts(FFactoryItemInstance& Item)
 
 void AFactoryMachineBase::TryPushOutputToPorts()
 {
-	for (auto& Port : LogisticsOutputPortArr)
-	{
-		if (Port) Port->SetPortBlocked(false);
-	}
-	
 	if (OutputBufferSlot.IsEmpty()) return;
 	
 	int32 MaxPorts = LogisticsOutputPortArr.Num();
@@ -308,19 +328,21 @@ void AFactoryMachineBase::TryPushOutputToPorts()
 	int32 OutputPortNum = OutputPortIndex;
 	for (int i = 0; i < MaxPorts; i++)
 	{
-		if (OutputBufferSlot.IsEmpty()) break;
-		
 		int index = (OutputPortNum + i) % MaxPorts;
 		if (!LogisticsOutputPortArr.IsValidIndex(index) || !LogisticsOutputPortArr[index]) continue;
 		
-		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[index]->GetConnectedInput();
-		if (!TargetPort || TargetPort->PendingItem.IsValid()) continue;
+		if (OutputPortPushedThisCycle[index]) continue;		// 이미 Push에 성공했다면 시도할 이유가 없음
 		
-		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, OutputBufferSlot.ItemData))
+		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[index]->GetConnectedInput();
+		if (!TargetPort) continue;
+		
+		if (TargetPort->PendingItem.IsValid() ||
+			!TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, OutputBufferSlot.ItemData))
 		{
-			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-			if (!PoolSubsystem) return;
-			
+			OutputPortBlockedStates[index] = true;
+		}
+		else
+		{
 			FFactoryItemInstance NewInstance(OutputBufferSlot.ItemData);
 			// 완성된 인스턴스를 상대방 포트에 전달
 			TargetPort->PendingItem = NewInstance;
@@ -332,12 +354,11 @@ void AFactoryMachineBase::TryPushOutputToPorts()
 				OutputBufferSlot.Clear();
 			}
 			
-			LogisticsOutputPortArr[index]->SetPortBlocked(false);
+			OutputPortBlockedStates[index] = false;
+			OutputPortPushedThisCycle[index] = true;
 		}
-		else
-		{
-			LogisticsOutputPortArr[index]->SetPortBlocked(true);
-		}
+		
+		if (OutputBufferSlot.Amount <= 0) break; // 버퍼 다쓰면 종료
 	}
 }
 

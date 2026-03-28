@@ -97,6 +97,10 @@ private:
 	bool TryCraftItem();
 	bool TryEndCraftItem();
 	
+	UPROPERTY()
+	TArray<bool> OutputPortBlockedStates;	// OutputPort의 막힘 상태를 1사이클동안 기록함
+	UPROPERTY()
+	TArray<bool> OutputPortPushedThisCycle;	// OutputPort가 Push에 성공했는지 여부를 1사이클동안 기록함
 	int32 InputPortIndex = 0;
 	int32 OutputPortIndex = 0;
 	
