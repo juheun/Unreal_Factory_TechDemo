@@ -90,7 +90,7 @@ void UFactoryCycleSubsystem::SortRegisteredLogisticsObjectArr()
 					// 포인터를 통해 값을 직접 수정
 					(*OutDegreePtr)--;
 
-					if (*OutDegreePtr == 0)
+					if (*OutDegreePtr <= 0)
 					{
 						ZeroOutportQueue.Enqueue(ConnectedObject[i]);
 						OutportConnectedMap.Remove(ConnectedObject[i]);
@@ -101,34 +101,26 @@ void UFactoryCycleSubsystem::SortRegisteredLogisticsObjectArr()
 		}
 		else
 		{
-			// Queue에 남은 Object 없는 경우 순환 설비 존재. 강제로 끊어낼 설비 찾기 시작
-			AFactoryLogisticsObjectBase* CycleStarter = nullptr;
+			// Queue에 남은 Object 없는 경우 순환 설비 존재. 강제로 끊어냄
+			AFactoryLogisticsObjectBase* CycleBreaker = nullptr;
 			for (auto& Pair : OutportConnectedMap)
 			{
-				CycleStarter = Pair.Key;
+				CycleBreaker = Pair.Key;
 				break; 
 			}
-			if (CycleStarter)
+          
+			if (CycleBreaker)
 			{
-				AFactoryLogisticsObjectBase* Current = CycleStarter;
-				TSet<AFactoryLogisticsObjectBase*> Visited;
-				while (Current && !Visited.Contains(Current))
-				{
-					Visited.Add(Current);
-					const TArray<AFactoryLogisticsObjectBase*> InputObjects = Current->GetConnectedInputPortsObject();
-					if (InputObjects.Num() > 0) 
-					{
-						Current = InputObjects[0];
-					}
-					else 
-					{
-						break; 
-					}
-				}
-				ZeroOutportQueue.Enqueue(Current);
-				OutportConnectedMap.Remove(Current);
+				ZeroOutportQueue.Enqueue(CycleBreaker);
+				OutportConnectedMap.Remove(CycleBreaker);
 			}
 		}
+	}
+	
+	//  만약 SafetyCounter가 터졌더라도, 남은 객체들을 증발시키지 않고 억지로라도 배열에 넣음
+	for (auto& Pair : OutportConnectedMap)
+	{
+		SortedOutportArray.Add(Pair.Key);
 	}
 	
 	// 정렬된 배열로 갈아끼움
@@ -140,11 +132,16 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	if (!GetWorld() || !GetWorld()->IsGameWorld()) return;
 	
 	//죽은 포인터 전부 청소
-	RegisteredLogisticsObjectArr.RemoveAllSwap(
+	int32 RemovedCount = RegisteredLogisticsObjectArr.RemoveAllSwap(
 		[](const TWeakObjectPtr<AFactoryLogisticsObjectBase>& Ptr)
 		{
 			return !Ptr.IsValid();
 		});
+	// 하나라도 삭제되면 재정렬 
+	if (RemovedCount > 0)
+	{
+		bGraphDirty = true;
+	}
 	
 	if(bGraphDirty)
 	{
