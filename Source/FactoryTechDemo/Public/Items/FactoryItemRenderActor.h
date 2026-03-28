@@ -24,7 +24,7 @@ public:
 	
 private:
 	UPROPERTY()
-	TMap<const UFactoryItemData*, UInstancedStaticMeshComponent*> ItemHISMMap;
+	TMap<const UFactoryItemData*, UInstancedStaticMeshComponent*> ItemISMMap;
 	
 	TMap<const UFactoryItemData*, TArray<FTransform>> RenderRequests;	// 이번 프레임에 그려야하는 아이템 위치 배열
 };

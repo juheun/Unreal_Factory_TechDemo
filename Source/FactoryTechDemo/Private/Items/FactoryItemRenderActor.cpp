@@ -56,11 +56,11 @@ void AFactoryItemRenderActor::InitializeRenderers()
 			MID->SetTextureParameterValue(FName("ItemIcon"), ItemData->ItemIcon);
 			NewISM->SetMaterial(0, MID);
 
-			ItemHISMMap.Add(ItemData, NewISM);
+			ItemISMMap.Add(ItemData, NewISM);
 			RenderRequests.Add(ItemData, TArray<FTransform>());
 		}
 	}
-	UE_LOG(LogTemp, Warning, TEXT("ItemRenderActor 초기화 완료: 총 %d개의 HISM이 생성되었습니다."), ItemHISMMap.Num());
+	UE_LOG(LogTemp, Warning, TEXT("ItemRenderActor 초기화 완료: 총 %d개의 ISM이 생성되었습니다."), ItemISMMap.Num());
 }
 
 void AFactoryItemRenderActor::Tick(float DeltaTime)
@@ -72,7 +72,7 @@ void AFactoryItemRenderActor::Tick(float DeltaTime)
 		const UFactoryItemData* ItemData = Pair.Key;
 		TArray<FTransform>& Transforms = Pair.Value;
 
-		if (UInstancedStaticMeshComponent** FoundISM = ItemHISMMap.Find(ItemData))
+		if (UInstancedStaticMeshComponent** FoundISM = ItemISMMap.Find(ItemData))
 		{
 			UInstancedStaticMeshComponent* ISM = *FoundISM;
 			
