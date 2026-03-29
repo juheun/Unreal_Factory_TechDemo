@@ -106,15 +106,22 @@ void UFactoryMachineBasePanel::NativeTick(const FGeometry& MyGeometry, float InD
 				if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
 				{
 					float MaxTime = CachedRecipe->ProcessingTime;
-					float RemainingCycleTime = Machine->GetRemainingProductionCycleTime();
+					if (MaxTime > 0)
+					{
+						int32 RemainingCycles = Machine->GetRemainingProductionCycles();
+						float CycleInterval = CycleSubsystem->GetCycleInterval();
+						float MaxTicks = FMath::RoundToFloat( MaxTime / CycleInterval);
+						float CycleAlpha = CycleSubsystem->GetCycleAlpha();
 					
-					float CycleInterval = CycleSubsystem->GetCycleInterval();
-					float CycleAlpha = CycleSubsystem->GetCycleAlpha();
+						float ElapsedTicks = (MaxTicks - RemainingCycles) + CycleAlpha;
+						float TargetPercent = FMath::Clamp(ElapsedTicks / MaxTicks, 0.f, 1.f);
 					
-					float ElapsedTime = (MaxTime - RemainingCycleTime) + (CycleInterval * CycleAlpha);
-					float TargetPercent = FMath::Clamp(ElapsedTime / MaxTime, 0.f, 1.f);
-					
-					CraftingProgressBar->SetPercent(TargetPercent);
+						CraftingProgressBar->SetPercent(TargetPercent);
+					}
+					else
+					{
+						CraftingProgressBar->SetPercent(1.f);
+					}
 				}
 			}
 			else

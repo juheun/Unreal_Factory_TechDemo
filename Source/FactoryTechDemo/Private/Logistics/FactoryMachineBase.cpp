@@ -169,22 +169,19 @@ void AFactoryMachineBase::ExecuteCycle()
 	// 가공 로직
 	if (bIsWorking)
 	{
-		if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
+		if (RemainingProductionCycles > 0)
 		{
-			if (RemainingProductionCycleTime > 0)
+			RemainingProductionCycles -= 1;
+		}
+		if (RemainingProductionCycles <= 0)
+		{
+			if (TryEndCraftItem())
 			{
-				RemainingProductionCycleTime -= CycleSubsystem->GetCycleInterval();
+				bIsWorking = false;
 			}
-			if (RemainingProductionCycleTime <= 0)
+			else
 			{
-				if (TryEndCraftItem())
-				{
-					bIsWorking = false;
-				}
-				else
-				{
-					bIsMachineBlockedOnCycle = true;
-				}
+				bIsMachineBlockedOnCycle = true;
 			}
 		}
 	}
@@ -443,8 +440,13 @@ bool AFactoryMachineBase::TryCraftItem()
 					}
 				}
 			}
-
+			
 			// 가공 시작
+			if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
+			{
+				float Interval = CycleSubsystem->GetCycleInterval();
+				RemainingProductionCycles = FMath::RoundToInt(Recipe->ProcessingTime / Interval); // 틱 단위 변환
+			}
 			CurrentRecipe = Recipe;
 			RemainingProductionCycleTime = Recipe->ProcessingTime; // 틱 단위 변환
 			OnCurrentRecipeChanged.Broadcast(CurrentRecipe);

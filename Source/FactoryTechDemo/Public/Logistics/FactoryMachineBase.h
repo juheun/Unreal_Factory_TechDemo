@@ -44,7 +44,7 @@ public:
 	virtual FFactoryItemInstance ConsumeItem(UFactoryOutputPortComponent* RequestPort) override;
 	
 	bool IsWorking() const { return bIsWorking; }
-	float GetRemainingProductionCycleTime() const { return RemainingProductionCycleTime; }
+	int32 GetRemainingProductionCycles() const { return RemainingProductionCycles; }
 	UFactoryRecipeData* GetCurrentRecipe() const { return CurrentRecipe; }
 	TArray<FFactorySlot> GetInputBufferSlots() const { return InputBufferSlots; }
 	FFactorySlot GetOutputBufferSlot() const { return OutputBufferSlot; }
@@ -82,7 +82,7 @@ protected:
 	FFactorySlot OutputBufferSlot;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Factory|Machine")
-	int32 RemainingProductionCycleTime;		// Cycle이 돌때마다 차감됨
+	int32 RemainingProductionCycles;		// Cycle이 돌때마다 차감됨
 	UPROPERTY(VisibleAnywhere, Category = "Factory|Machine")
 	bool bIsWorking = false;
 	
