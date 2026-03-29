@@ -162,16 +162,6 @@ void AFactoryMachineBase::LatePlanCycle()
 {
 	TryPushOutputToPorts();
 	TryPullInputFromPorts();
-	
-	if (bIsMachineBlockedOnCycle && bIsWorking && RemainingProductionCycleTime <= 0)
-	{
-		if (TryEndCraftItem())
-		{
-			bIsWorking = false;
-			bIsMachineBlockedOnCycle = false;
-		}
-	}
-	if (!bIsWorking) TryCraftItem();
 }
 
 void AFactoryMachineBase::ExecuteCycle()
