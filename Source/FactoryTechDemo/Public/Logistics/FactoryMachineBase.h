@@ -39,8 +39,9 @@ public:
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	
-	virtual bool CanPushItemFromBeforeObject(
-		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
+	virtual bool CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
+	virtual const UFactoryItemData* PeekOutputItem(UFactoryOutputPortComponent* RequestPort) override;
+	virtual FFactoryItemInstance ConsumeItem(UFactoryOutputPortComponent* RequestPort) override;
 	
 	bool IsWorking() const { return bIsWorking; }
 	float GetRemainingProductionCycleTime() const { return RemainingProductionCycleTime; }
@@ -58,8 +59,10 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
+	
+	void TryPullInputFromPorts();
 	void TryPushOutputToPorts();
+	virtual void ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item) override;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Factory|Machine")
 	TObjectPtr<UFactoryFacilityItemData> FacilityIdentity;
@@ -98,9 +101,12 @@ private:
 	bool TryEndCraftItem();
 	
 	UPROPERTY()
-	TArray<bool> OutputPortBlockedStates;	// OutputPort의 막힘 상태를 1사이클동안 기록함
+	TArray<bool> OutputPortBlockedStates;
 	UPROPERTY()
-	TArray<bool> OutputPortPushedThisCycle;	// OutputPort가 Push에 성공했는지 여부를 1사이클동안 기록함
+	TArray<bool> OutputPortPulledThisCycle;	// OutputPort가 Push에 성공했는지 여부를 1사이클동안 기록함
+	UPROPERTY()
+	TArray<bool> InputPortBlockedStates;
+	
 	int32 InputPortIndex = 0;
 	int32 OutputPortIndex = 0;
 	

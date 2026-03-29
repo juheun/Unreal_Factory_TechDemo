@@ -24,86 +24,28 @@ void AFactoryBeltRouter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	
 	UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 	if (!WarehouseSubsystem) return;
-	
-	UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-	if (!PoolSubsystem) return;
-	
+
 	if (CurrentItem.IsValid())
 	{
-		WarehouseSubsystem->AddItem(
-			const_cast<UFactoryItemData*>(CurrentItem.ItemData.Get()), 1);
-	}
-	
-	//Pending된 아이템도 제거
-	for (UFactoryInputPortComponent* Port : LogisticsInputPortArr)
-	{
-		if (Port && Port->PendingItem.IsValid())
-		{
-			WarehouseSubsystem->AddItem(
-				const_cast<UFactoryItemData*>(Port->PendingItem.ItemData.Get()), 1);
-		}
+		WarehouseSubsystem->AddItem(CurrentItem.ItemData.Get(), 1);
 	}
 }
 
 void AFactoryBeltRouter::PlanCycle()
 {
-	if (!CurrentItem.ItemData) return;
-	
-	int32 MaxOutputPorts = LogisticsOutputPortArr.Num();
-	if (MaxOutputPorts <= 0) return;
-	
-	int32 OutputPortNum = CurrentOutputIndex;
-	for (int i = 0; i < MaxOutputPorts; i++)
-	{
-		int index = (OutputPortNum + i) % MaxOutputPorts;
-		if (!LogisticsOutputPortArr.IsValidIndex(index) || !LogisticsOutputPortArr[index]) continue;
-		
-		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[index]->GetConnectedInput();
-		if (!TargetPort) continue;
-		
-		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItem.ItemData))
-		{
-			UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-			if (!PoolSubsystem) return;
-			
-			FFactoryItemInstance NewInstance(CurrentItem.ItemData);
-			TargetPort->PendingItem = NewInstance;
-			CurrentItem = FFactoryItemInstance();
-			CurrentOutputIndex = (index + 1) % MaxOutputPorts;
-			break;
-		}
-	}
+	TryPushOutputToPorts();
+	TryPullInputFromPorts();
 }
 
 void AFactoryBeltRouter::LatePlanCycle()
 {
-	PlanCycle();
+	TryPushOutputToPorts();
+	TryPullInputFromPorts();
 }
 
 void AFactoryBeltRouter::ExecuteCycle()
 {
-	if (CurrentItem.ItemData) return;
-	
-	int32 MaxInputPorts = LogisticsInputPortArr.Num();
-	if (MaxInputPorts <= 0) return;
-	
-	int32 InputPortNum = CurrentInputIndex;
-	for (int i = 0; i < MaxInputPorts; i++)
-	{
-		int index = (InputPortNum + i) % MaxInputPorts;
-		
-		if (!LogisticsInputPortArr.IsValidIndex(index) || !LogisticsInputPortArr[index]) continue;
-		if (LogisticsInputPortArr[index]->PendingItem.IsValid())
-		{
-			if (PullItemFromInputPorts(LogisticsInputPortArr[index]->PendingItem))
-			{
-				LogisticsInputPortArr[index]->PendingItem = FFactoryItemInstance();
-				CurrentInputIndex = (index + 1) % MaxInputPorts;
-				
-				break;
-			}
-		}
-	}
+	bReceivedThisCycle = false;
 }
 
 void AFactoryBeltRouter::UpdateView()
@@ -111,19 +53,109 @@ void AFactoryBeltRouter::UpdateView()
 	// 애니메이션 재생 등
 }
 
-bool AFactoryBeltRouter::CanPushItemFromBeforeObject(
-	UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
+const UFactoryItemData* AFactoryBeltRouter::PeekOutputItem(UFactoryOutputPortComponent* RequestPort)
 {
-	if (!RequestPort || RequestPort->PendingItem.IsValid()) return false;	// Pending 되어 있지 않아야 밀어넣을 수 있음
-	if (!IncomingItem) return false;
+	if (bReceivedThisCycle) return nullptr;
+	if (!CurrentItem.IsValid()) return nullptr;
 	
-	const UFactoryItemData* PendingItem = RequestPort->PendingItem.ItemData;
-	return !PendingItem && !CurrentItem.ItemData;
+	int32 Index = LogisticsOutputPortArr.IndexOfByKey(RequestPort);
+	
+	// 내가 정해둔 차례의 포트에게만 아이템을 보여줌
+	if (Index == CurrentOutputIndex) return CurrentItem.ItemData;
+	
+	return nullptr;
 }
 
-bool AFactoryBeltRouter::PullItemFromInputPorts(FFactoryItemInstance& Item)
+FFactoryItemInstance AFactoryBeltRouter::ConsumeItem(UFactoryOutputPortComponent* RequestPort)
 {
-	CurrentItem = Item;
+	if (bReceivedThisCycle) return FFactoryItemInstance();
+	if (!CurrentItem.IsValid()) return FFactoryItemInstance();
+	
+	int32 Index = LogisticsOutputPortArr.IndexOfByKey(RequestPort);
+	
+	if (Index == CurrentOutputIndex)
+	{
+		FFactoryItemInstance GivenItem = CurrentItem;
+		CurrentItem = FFactoryItemInstance();
+		CurrentOutputIndex = (CurrentOutputIndex + 1) % LogisticsOutputPortArr.Num();
+		return GivenItem;
+	}
+	
+	return FFactoryItemInstance();
+}
+
+bool AFactoryBeltRouter::CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
+{
+	if (!IncomingItem) return false;
+	if (CurrentItem.ItemData) return false;	// 이미 아이템이 있으면 받을 수 없음 
 	return true;
 }
 
+void AFactoryBeltRouter::ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item)
+{
+	if (!Item.IsValid()) return;
+	CurrentItem = Item;
+	
+	bReceivedThisCycle = true;
+}
+
+void AFactoryBeltRouter::TryPushOutputToPorts()
+{
+	if (!CurrentItem.IsValid()) return;
+	
+	int32 MaxOutputs = LogisticsOutputPortArr.Num();
+	if (MaxOutputs <= 0) return;
+	
+	int32 StartIndex = CurrentOutputIndex;
+	for (int i = 0; i < MaxOutputs; i++)
+	{
+		int32 Index = (StartIndex + i) % MaxOutputs;
+		UFactoryOutputPortComponent* OutPort = LogisticsOutputPortArr[Index];
+		if (!OutPort) continue;
+		
+		UFactoryInputPortComponent* TargetIn = OutPort->GetConnectedInput();
+		if (!TargetIn) continue;
+		
+		AFactoryLogisticsObjectBase* TargetObj = TargetIn->GetPortOwner();
+		if (!TargetObj) continue;
+		
+		// 막힌 곳은 가볍게 Skip하고 뚫린 곳에 즉시 넣음
+		if (TargetObj->CanReceiveItem(TargetIn, CurrentItem.ItemData))
+		{
+			TargetObj->ForceAcceptPushedItem(TargetIn, CurrentItem); // 상대방 버퍼로 전송 완료!
+			CurrentItem = FFactoryItemInstance(); // 내 주머니 비우기
+			CurrentOutputIndex = (Index + 1) % MaxOutputs; // 라운드 로빈 갱신
+			break;
+		}
+	}
+}
+
+void AFactoryBeltRouter::TryPullInputFromPorts()
+{
+	if (CurrentItem.ItemData) return;
+	
+	int32 MaxInputs = LogisticsInputPortArr.Num();
+	if (MaxInputs <= 0) return;
+	
+	int32 StartIndex = CurrentInputIndex;
+	for (int i = 0; i < MaxInputs; i++)
+	{
+		int Index = (StartIndex + i) % MaxInputs;
+		
+		UFactoryInputPortComponent* InputPort = LogisticsInputPortArr[Index];
+		if (!InputPort) continue;
+		UFactoryOutputPortComponent* ConnectedOut = InputPort->GetConnectedOutput();
+		if (!ConnectedOut) continue;
+		AFactoryLogisticsObjectBase* PrevObj = ConnectedOut->GetPortOwner();
+		if (!PrevObj) continue;
+		
+		const UFactoryItemData* PeekedItem = PrevObj->PeekOutputItem(ConnectedOut);
+		if (PeekedItem && CanReceiveItem(InputPort, PeekedItem))
+		{
+			FFactoryItemInstance PulledItem = PrevObj->ConsumeItem(ConnectedOut);
+			ReceiveItem(InputPort, PulledItem);
+			CurrentInputIndex = (Index + 1) % MaxInputs;	// 라운드 로빈 시작 다음차례로
+			break;
+		}
+	}
+}

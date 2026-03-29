@@ -25,13 +25,17 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Factory|Exporter|Event")
 	FOnWarehouseAmountUpdated OnWarehouseAmountUpdated;
 	
-	virtual void InitObject(const UFactoryObjectData* Data) override;
-	
 	virtual void PlanCycle() override;
+	virtual void LatePlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	
-	virtual bool CanPushItemFromBeforeObject(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
+	virtual void InitObject(const UFactoryObjectData* Data) override;
+	
+	virtual const UFactoryItemData* PeekOutputItem(UFactoryOutputPortComponent* RequestPort) override;
+	virtual FFactoryItemInstance ConsumeItem(UFactoryOutputPortComponent* RequestPort) override;
+	
+	virtual bool CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
 	
 	UFUNCTION(BlueprintCallable, Category = "Factory|Exporter")
 	void SetTargetItem(const UFactoryItemData* NewTargetItem);
@@ -41,7 +45,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
+	virtual void ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item) override;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<const UFactoryItemData> TargetItemData;
@@ -51,4 +55,15 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
 	TObjectPtr<UFactoryRecipeBillboardComponent> RecipeBillboardComponent;
+	
+private:
+	void TryPushOutputToPorts();
+	
+	int32 OutputPortIndex = 0;
+	
+	UPROPERTY()
+	TArray<bool> OutputPortBlockedStates;
+
+	UPROPERTY()
+	TArray<bool> OutputPortPulledThisCycle;
 };

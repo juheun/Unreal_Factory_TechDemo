@@ -12,7 +12,6 @@
 #include "Settings/FactoryDeveloperSettings.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
 #include "Subsystems/FactoryItemRenderSubsystem.h"
-#include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
@@ -22,7 +21,6 @@ AFactoryBelt::AFactoryBelt()
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	
 	SplineComponent = CreateDefaultSubobject<USplineComponent>("SplineComponent");
-	
 	SplineComponent->SetupAttachment(RootComponent);
 	
 	LogisticsObjectType = ELogisticsObjectType::Conveyor;
@@ -34,70 +32,20 @@ void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	
 	UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 	if (!WarehouseSubsystem) return;
-	
-	UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-	if (!PoolSubsystem) return;
-	
+
 	if (CurrentItem.IsValid())
 	{
-		WarehouseSubsystem->AddItem(
-			const_cast<UFactoryItemData*>(CurrentItem.ItemData.Get()), 1);
-	}
-	
-	//Pending된 아이템도 제거
-	if (LogisticsInputPortArr.IsValidIndex(0) && LogisticsInputPortArr[0])
-	{
-		FFactoryItemInstance& PendingItem = LogisticsInputPortArr[0]->PendingItem;
-		if (PendingItem.IsValid())
-		{
-			WarehouseSubsystem->AddItem(
-				const_cast<UFactoryItemData*>(PendingItem.ItemData.Get()), 1);
-		}
+		WarehouseSubsystem->AddItem(CurrentItem.ItemData.Get(), 1);
 	}
 }
 
 void AFactoryBelt::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	
 	SetBeltType(BeltType);
 }
 
 #pragma region Belt Logic
-
-void AFactoryBelt::PlanCycle()
-{
-	// 벨트는 무조건 Output이 하나라는 가정하에 index 0사용
-	if (!CurrentItem.ItemData || !LogisticsOutputPortArr.IsValidIndex(0)) return;
-	
-	bIsBeltStop = true;
-	
-	TryPushOutputToPorts();
-}
-
-void AFactoryBelt::LatePlanCycle()
-{
-	if (!bIsBeltStop || !CurrentItem.ItemData || !LogisticsOutputPortArr.IsValidIndex(0)) return;
-
-	TryPushOutputToPorts();
-}
-
-void AFactoryBelt::ExecuteCycle()
-{
-	// InputPort에 Pending된 아이템이 있으면 가져옴
-	if (!LogisticsInputPortArr.IsValidIndex(0) || !LogisticsInputPortArr[0]) return;
-	if (LogisticsInputPortArr[0]->PendingItem.IsValid())
-	{
-		PullItemFromInputPorts(LogisticsInputPortArr[0]->PendingItem);
-		LogisticsInputPortArr[0]->PendingItem = FFactoryItemInstance();
-		bIsBeltStop = false;
-	}
-}
-
-void AFactoryBelt::UpdateView()
-{
-	SetActorTickEnabled(CurrentItem.IsValid());
-}
 
 void AFactoryBelt::Tick(float DeltaSeconds)
 {
@@ -120,27 +68,81 @@ void AFactoryBelt::Tick(float DeltaSeconds)
 	}
 }
 
-void AFactoryBelt::TryPushOutputToPorts()
+void AFactoryBelt::PlanCycle()
 {
-	UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[0]->GetConnectedInput();
-	if (!TargetPort) return;
-	
-	if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItem.ItemData))
+	TryPullInputFromPorts();
+}
+
+void AFactoryBelt::LatePlanCycle()
+{
+	if (!CurrentItem.IsValid())
 	{
-		TargetPort->PendingItem = CurrentItem;	// 상대방 Input에 아이템 밀어넣기
-		CurrentItem = FFactoryItemInstance();
-		bIsBeltStop = false;
+		TryPullInputFromPorts();
 	}
 }
 
-bool AFactoryBelt::CanPushItemFromBeforeObject(
-	UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
+void AFactoryBelt::ExecuteCycle()
 {
-	if (!RequestPort || !LogisticsInputPortArr.IsValidIndex(0)) return false;
-	if (!IncomingItem) return false;
+	bReceivedThisCycle = false;
+}
+
+void AFactoryBelt::UpdateView()
+{
+	SetActorTickEnabled(CurrentItem.IsValid());
+}
+
+void AFactoryBelt::TryPullInputFromPorts()
+{
+	if (CurrentItem.IsValid())	//CurrentItem이 비어있지 않다는건 다음 설비가 가져가지않았고, 막혔다는뜻
+	{
+		bIsBeltStop = true;
+		return;
+	}
 	
-	const UFactoryItemData* PendingItem = RequestPort->PendingItem.ItemData;
-	return !PendingItem && !CurrentItem.ItemData;
+	if (!LogisticsInputPortArr.IsValidIndex(0) || !LogisticsInputPortArr[0]) return;
+	
+	UFactoryInputPortComponent* InputPort = LogisticsInputPortArr[0];
+	UFactoryOutputPortComponent* ConnectedOut = InputPort->GetConnectedOutput();
+	if (!ConnectedOut) return;
+	AFactoryLogisticsObjectBase* PrevObj = ConnectedOut->GetPortOwner();
+	if (!PrevObj) return;
+	
+	const UFactoryItemData* PeekedItem = PrevObj->PeekOutputItem(ConnectedOut);
+	if (PeekedItem && CanReceiveItem(InputPort, PeekedItem))
+	{
+		FFactoryItemInstance PulledItem = PrevObj->ConsumeItem(ConnectedOut);
+		ReceiveItem(InputPort, PulledItem);
+	}
+}
+
+const UFactoryItemData* AFactoryBelt::PeekOutputItem(UFactoryOutputPortComponent* RequestPort)
+{
+	if (bReceivedThisCycle) return nullptr;
+	return CurrentItem.ItemData;
+}
+
+FFactoryItemInstance AFactoryBelt::ConsumeItem(UFactoryOutputPortComponent* RequestPort)
+{
+	if (bReceivedThisCycle) return FFactoryItemInstance();
+	
+	FFactoryItemInstance InstanceToGive = CurrentItem;
+	CurrentItem = FFactoryItemInstance();
+	return InstanceToGive;
+}
+
+bool AFactoryBelt::CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
+{
+	if (!IncomingItem) return false;
+	return !CurrentItem.IsValid();
+}
+
+void AFactoryBelt::ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item)
+{
+	if (!Item.IsValid()) return;
+	CurrentItem = Item;
+	bIsBeltStop = false;
+	
+	bReceivedThisCycle = true;
 }
 
 void AFactoryBelt::SetBeltType(EBeltType Type)
@@ -178,12 +180,6 @@ FVector AFactoryBelt::GetBeltExitDirection() const
 		return FVector::ZeroVector;
 	
 	return LogisticsOutputPortArr[0]->GetForwardVector().GetSafeNormal();
-}
-
-bool AFactoryBelt::PullItemFromInputPorts(FFactoryItemInstance& Item)
-{
-	CurrentItem = Item;
-	return true;
 }
 
 void AFactoryBelt::UpdateSplinePath(EBeltType Type)
@@ -316,7 +312,6 @@ void AFactoryBelt::Interact(const AActor* Interactor, const EPlacementMode Curre
 		}
 	}
 }
-
 
 void AFactoryBelt::MassRetrieve()
 {

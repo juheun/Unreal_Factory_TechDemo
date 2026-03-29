@@ -19,25 +19,33 @@ class FACTORYTECHDEMO_API AFactoryBeltBridge : public AFactoryLogisticsObjectBas
 public:
 	AFactoryBeltBridge();
 	
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	
 	virtual void PlanCycle() override;
 	virtual void LatePlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	
-	virtual bool CanPushItemFromBeforeObject(
-		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
+	virtual bool CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
+	
+	virtual const UFactoryItemData* PeekOutputItem(UFactoryOutputPortComponent* RequestPort) override;
+	virtual FFactoryItemInstance ConsumeItem(UFactoryOutputPortComponent* RequestPort) override;
 	
 protected:
-	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+	virtual void ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item) override;
 	
 	UFUNCTION()
 	void HandlePortConnectionChanged(UFactoryPortComponentBase* Port, bool bIsConnected);
 	
 	int32 GetOppositePortIndex(int32 PortIndex) const;
 	
+private:
+	void TryPullInputFromPorts();
+	
 	UPROPERTY()
 	TArray<FFactoryItemInstance> CurrentItems;
+	
+	UPROPERTY()
+	TArray<bool> ReceivedThisCycleFlags;
 };

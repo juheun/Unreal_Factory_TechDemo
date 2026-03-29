@@ -5,7 +5,6 @@
 
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
-#include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
@@ -27,6 +26,7 @@ void AFactoryBeltBridge::BeginPlay()
 	}
 	
 	CurrentItems.SetNum(4);
+	ReceivedThisCycleFlags.Init(false, 4);
 	
 	// 포트가 마음대로 설치시 연결이 됐다면 강제로 연결을 끊어 브릿지가 통제 및 델리게이트 등록
 	for (int i = 0; i < 4; i++)
@@ -67,69 +67,30 @@ void AFactoryBeltBridge::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 	if (!WarehouseSubsystem) return;
 	
-	UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-	if (!PoolSubsystem) return;
-	
 	for (int i = 0; i < CurrentItems.Num(); i++)
 	{
 		if (CurrentItems[i].IsValid())
 		{
-			WarehouseSubsystem->AddItem(
-				const_cast<UFactoryItemData*>(CurrentItems[i].ItemData.Get()), 1);
-		}
-	}
-	
-	//Pending된 아이템도 제거
-	for (UFactoryInputPortComponent* Port : LogisticsInputPortArr)
-	{
-		if (Port && Port->PendingItem.IsValid())
-		{
-			WarehouseSubsystem->AddItem(
-				const_cast<UFactoryItemData*>(Port->PendingItem.ItemData.Get()), 1);
+			WarehouseSubsystem->AddItem(CurrentItems[i].ItemData.Get(), 1);
 		}
 	}
 }
 
 void AFactoryBeltBridge::PlanCycle()
 {
-	UFactoryPoolSubsystem* PoolSubsystem = GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
-	if (!PoolSubsystem) return;
-	
-	for (int i = 0; i < 4; i++)
-	{
-		int32 Opposite = GetOppositePortIndex(i);
-		
-		if (!CurrentItems[i].IsValid() || !LogisticsOutputPortArr[Opposite]) continue;
-		
-		UFactoryInputPortComponent* TargetPort = LogisticsOutputPortArr[Opposite]->GetConnectedInput();
-		if (!TargetPort) continue;
-		
-		if (TargetPort->GetPortOwner()->CanPushItemFromBeforeObject(TargetPort, CurrentItems[i].ItemData))
-		{
-			FFactoryItemInstance NewInstance(CurrentItems[i].ItemData);
-			TargetPort->PendingItem = NewInstance;
-			CurrentItems[i] = FFactoryItemInstance();
-		}
-	}
+	TryPullInputFromPorts();
 }
 
 void AFactoryBeltBridge::LatePlanCycle()
 {
-	PlanCycle();
+	TryPullInputFromPorts();
 }
 
 void AFactoryBeltBridge::ExecuteCycle()
 {
 	for (int i = 0; i < 4; i++)
 	{
-		if (!LogisticsInputPortArr.IsValidIndex(i) || !LogisticsInputPortArr[i]) continue;
-		if (!LogisticsInputPortArr[i]->PendingItem.IsValid()) continue;
-		
-		if (!CurrentItems[i].IsValid())
-		{
-			CurrentItems[i] = LogisticsInputPortArr[i]->PendingItem;
-			LogisticsInputPortArr[i]->PendingItem = FFactoryItemInstance();
-		}
+		ReceivedThisCycleFlags[i] = false;
 	}
 }
 
@@ -138,26 +99,61 @@ void AFactoryBeltBridge::UpdateView()
 	// 애니메이션 재생 등
 }
 
-bool AFactoryBeltBridge::CanPushItemFromBeforeObject(
-	UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
+bool AFactoryBeltBridge::CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
 {
-	if (!RequestPort || RequestPort->PendingItem.IsValid()) return false;	// Pending 되어 있지 않아야 밀어넣을 수 있음
 	if (!IncomingItem) return false;
 	
 	int32 PortIndex = LogisticsInputPortArr.IndexOfByKey(RequestPort);
 	
-	if (PortIndex != INDEX_NONE && CurrentItems.IsValidIndex(PortIndex))
+	if (PortIndex != INDEX_NONE && !CurrentItems[PortIndex].IsValid())
 	{
-		return !CurrentItems[PortIndex].IsValid();
+		return true;
 	}
-	
 	return false;
 }
 
-bool AFactoryBeltBridge::PullItemFromInputPorts(FFactoryItemInstance& Item)
+void AFactoryBeltBridge::ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item)
 {
-	// PlanCycle에서 직접 구현하여 별도로 PullItemFromInputPorts를 구현하지 않음
-	return false;
+	if (!Item.IsValid() || !RequestPort) return;
+	
+	int32 PortIndex = LogisticsInputPortArr.IndexOfByKey(RequestPort);
+	
+	if (PortIndex != INDEX_NONE && !CurrentItems[PortIndex].IsValid())
+	{
+		CurrentItems[PortIndex] = Item;
+		ReceivedThisCycleFlags[PortIndex] = true;
+	}
+}
+
+const UFactoryItemData* AFactoryBeltBridge::PeekOutputItem(UFactoryOutputPortComponent* RequestPort)
+{
+	int32 OutIndex = LogisticsOutputPortArr.IndexOfByKey(RequestPort);
+	if (OutIndex == INDEX_NONE) return nullptr;
+	
+	// 출구와 1:1로 매핑된 반대편 입구 차선을 찾음
+	int32 InIndex = GetOppositePortIndex(OutIndex);
+	if (InIndex != INDEX_NONE && CurrentItems[InIndex].IsValid() && !ReceivedThisCycleFlags[InIndex])
+	{
+		return CurrentItems[InIndex].ItemData;
+	}
+	return nullptr;
+}
+
+FFactoryItemInstance AFactoryBeltBridge::ConsumeItem(UFactoryOutputPortComponent* RequestPort)
+{
+	int32 OutIndex = LogisticsOutputPortArr.IndexOfByKey(RequestPort);
+	if (OutIndex == INDEX_NONE) return FFactoryItemInstance();
+	
+	// 출구와 1:1로 매핑된 반대편 입구 차선에서 아이템을 꺼내줌
+	int32 InIndex = GetOppositePortIndex(OutIndex);
+	if (InIndex != INDEX_NONE && CurrentItems[InIndex].IsValid() && !ReceivedThisCycleFlags[InIndex])
+	{
+		FFactoryItemInstance InstanceToGive = CurrentItems[InIndex];
+		CurrentItems[InIndex] = FFactoryItemInstance(); // 내 인벤토리 비우기
+		return InstanceToGive;
+	}
+	
+	return FFactoryItemInstance();
 }
 
 void AFactoryBeltBridge::HandlePortConnectionChanged(UFactoryPortComponentBase* Port, bool bIsConnected)
@@ -194,6 +190,31 @@ int32 AFactoryBeltBridge::GetOppositePortIndex(int32 PortIndex) const
 	if (PortIndex == 2) return 3;
 	if (PortIndex == 3) return 2;
 	return INDEX_NONE;
+}
+
+void AFactoryBeltBridge::TryPullInputFromPorts()
+{
+	for (int i = 0; i < 4; i++)
+	{
+		// 이미 이 차선에 아이템이 있다면 당겨올 필요 없음
+		if (CurrentItems[i].IsValid()) continue;
+		
+		UFactoryInputPortComponent* InPort = LogisticsInputPortArr[i];
+		if (!InPort) continue;
+		
+		UFactoryOutputPortComponent* ConnectedOut = InPort->GetConnectedOutput();
+		if (!ConnectedOut) continue;
+		
+		AFactoryLogisticsObjectBase* PrevObj = ConnectedOut->GetPortOwner();
+		if (!PrevObj) continue;
+		
+		const UFactoryItemData* PeekedItem = PrevObj->PeekOutputItem(ConnectedOut);
+		if (PeekedItem && CanReceiveItem(InPort, PeekedItem))
+		{
+			FFactoryItemInstance PulledItem = PrevObj->ConsumeItem(ConnectedOut);
+			ReceiveItem(InPort, PulledItem);
+		}
+	}
 }
 
 

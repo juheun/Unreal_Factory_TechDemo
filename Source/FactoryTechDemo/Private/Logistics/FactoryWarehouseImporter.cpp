@@ -4,6 +4,7 @@
 #include "Logistics/FactoryWarehouseImporter.h"
 
 #include "Logistics/FactoryInputPortComponent.h"
+#include "Logistics/FactoryOutputPortComponent.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/World/FactoryPortBlockWarningComponent.h"
 #include "UI/World/FactoryRecipeBillboardComponent.h"
@@ -34,12 +35,15 @@ void AFactoryWarehouseImporter::BeginPlay()
 		RecipeBillboardComponent->OnItemChangedCallback(nullptr);
 	}
 	
-	UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
-	PortBlockWarningComponent->SetupAttachment(LogisticsInputPortArr[0]);
-	float OffsetX = LogisticsInputPortArr[0]->GetScaledBoxExtent().X + 1.f;
-	PortBlockWarningComponent->AddRelativeLocation(FVector(-OffsetX, 0.f, 0.f)); // 설비에 묻히지 않게 조금 이동
-	PortBlockWarningComponent->RegisterComponent();
-	LogisticsInputPortArr[0]->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
+	if (LogisticsInputPortArr.IsValidIndex(0) && LogisticsInputPortArr[0])
+	{
+		UFactoryPortBlockWarningComponent* PortBlockWarningComponent = NewObject<UFactoryPortBlockWarningComponent>(this);
+		PortBlockWarningComponent->SetupAttachment(LogisticsInputPortArr[0]);
+		float OffsetX = LogisticsInputPortArr[0]->GetScaledBoxExtent().X + 1.f;
+		PortBlockWarningComponent->AddRelativeLocation(FVector(-OffsetX, 0.f, 0.f)); // 설비에 묻히지 않게 조금 이동
+		PortBlockWarningComponent->RegisterComponent();
+		LogisticsInputPortArr[0]->OnPortBlockedStateChanged.AddDynamic(PortBlockWarningComponent, &UFactoryPortBlockWarningComponent::OnPortBlockedCallback);
+	}
 }
 
 void AFactoryWarehouseImporter::InitObject(const UFactoryObjectData* Data)
@@ -55,52 +59,103 @@ void AFactoryWarehouseImporter::InitObject(const UFactoryObjectData* Data)
 
 void AFactoryWarehouseImporter::PlanCycle()
 {
+	TryPullInputFromPorts();
+}
+
+void AFactoryWarehouseImporter::LatePlanCycle()
+{
+	TryPullInputFromPorts();
 }
 
 void AFactoryWarehouseImporter::ExecuteCycle()
 {
-	if (!LogisticsInputPortArr.IsValidIndex(0) || !LogisticsInputPortArr[0]) return;
-	
-	UFactoryInputPortComponent* InputPort = LogisticsInputPortArr[0];
-	
-	if (InputPort->PendingItem.ItemData == nullptr)
-	{
-		// 포트에 펜딩된 아이템 없으면 막힌게 아님
-		InputPort->SetPortBlocked(false);
-		return;
-	}
-	
-	if (UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
-	{
-		int ItemAmountBeforeAdd = WarehouseSubsystem->GetItemAmount(InputPort->PendingItem.ItemData);
-		int ItemAmountAfterAdd = WarehouseSubsystem->AddItem(InputPort->PendingItem.ItemData, 1);
-		
-		if (ItemAmountBeforeAdd < ItemAmountAfterAdd)
-		{
-			if (!CachedLastImportedItem || CachedLastImportedItem != InputPort->PendingItem.ItemData)
-			{
-				CachedLastImportedItem = InputPort->PendingItem.ItemData;
-				OnImportItemChanged.Broadcast(InputPort->PendingItem.ItemData);
-			}
-			InputPort->PendingItem = FFactoryItemInstance();
-			InputPort->SetPortBlocked(false);
-		}
-		else
-		{
-			InputPort->SetPortBlocked(true);
-		}
-	}
+
 }
 
 void AFactoryWarehouseImporter::UpdateView()
 {
+	if (LogisticsInputPortArr.IsValidIndex(0) && LogisticsInputPortArr[0])
+	{
+		LogisticsInputPortArr[0]->SetPortBlocked(bIsInputBlocked);
+	}
 }
 
-bool AFactoryWarehouseImporter::CanPushItemFromBeforeObject(
-	UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
+void AFactoryWarehouseImporter::TryPullInputFromPorts()
 {
-	if (!RequestPort || !IncomingItem) return false;
+	if (!LogisticsInputPortArr.IsValidIndex(0) || !LogisticsInputPortArr[0]) return;
 	
-	return RequestPort->PendingItem.ItemData == nullptr;
+	UFactoryInputPortComponent* InputPort = LogisticsInputPortArr[0];
+	UFactoryOutputPortComponent* ConnectedOut = InputPort->GetConnectedOutput();
+	
+	if (!ConnectedOut) 
+	{
+		bIsInputBlocked = false; // 연결 안 됐으면 막힌 게 아님
+		return;
+	}
+	
+	AFactoryLogisticsObjectBase* PrevObj = ConnectedOut->GetPortOwner();
+	if (!PrevObj) return;
+	
+	const UFactoryItemData* PeekedItem = PrevObj->PeekOutputItem(ConnectedOut);
+	if (PeekedItem)
+	{
+		if (CanReceiveItem(InputPort, PeekedItem))
+		{
+			FFactoryItemInstance PulledItem = PrevObj->ConsumeItem(ConnectedOut);
+			ReceiveItem(InputPort, PulledItem);
+			bIsInputBlocked = false;
+		}
+		else
+		{
+			bIsInputBlocked = true; 
+		}
+	}
+	else
+	{
+		bIsInputBlocked = false; // 줄 게 없어서 대기 중일 뿐, 막힌 건 아님
+	}
+}
+
+void AFactoryWarehouseImporter::ProcessImport(FFactoryItemInstance Item)
+{
+	if (!Item.IsValid()) return;
+
+	if (UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
+	{
+		int ItemAmountBeforeAdd = WarehouseSubsystem->GetItemAmount(Item.ItemData);
+		int ItemAmountAfterAdd = WarehouseSubsystem->AddItem(Item.ItemData, 1);
+		
+		if (ItemAmountBeforeAdd < ItemAmountAfterAdd)
+		{
+			// UI 갱신 로직
+			if (!CachedLastImportedItem || CachedLastImportedItem != Item.ItemData)
+			{
+				CachedLastImportedItem = Item.ItemData;
+				OnImportItemChanged.Broadcast(Item.ItemData);
+			}
+			bIsInputBlocked = false;
+		}
+		else
+		{
+			// AddItem이 실패했다 = 창고 용량이 꽉 찼다
+			bIsInputBlocked = true;
+		}
+	}
+}
+
+bool AFactoryWarehouseImporter::CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem)
+{
+	if (!IncomingItem) return false;
+	
+	if (UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>())
+	{
+		return WarehouseSubsystem->GetItemAmount(IncomingItem) < WarehouseSubsystem->GetMaxItemAmount();
+	}
+	return false;
+}
+
+void AFactoryWarehouseImporter::ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item)
+{
+	ProcessImport(Item);
 }
 

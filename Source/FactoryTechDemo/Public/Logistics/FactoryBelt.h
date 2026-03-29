@@ -19,29 +19,30 @@ public:
 	// Sets default values for this actor's properties
 	AFactoryBelt();
 	
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	
 	virtual void PlanCycle() override;
 	virtual void LatePlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
-	virtual void Tick(float DeltaSeconds) override;
-	
-	void TryPushOutputToPorts();
-	
-	virtual bool CanPushItemFromBeforeObject(
-		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
 	
 	void SetBeltType(EBeltType Type);
 	
 	virtual bool TryGetInteractionOptions(const EPlacementMode CurrentMode, TArray<FInteractionOption>& OutOptions) const override;
 	virtual void Interact(const AActor* Interactor, const EPlacementMode CurrentMode, int32 OptionIndex = 0) override;
-
-	// 벨트의 타입을 고려한 실제 배출 방향을 반환
-	FVector GetBeltExitDirection() const;
+	
+	virtual const UFactoryItemData* PeekOutputItem(UFactoryOutputPortComponent* RequestPort) override;
+	virtual FFactoryItemInstance ConsumeItem(UFactoryOutputPortComponent* RequestPort) override;
+	virtual bool CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
+	
+	FVector GetBeltExitDirection() const;	// 벨트의 타입을 고려한 실제 배출 방향을 반환
 	EBeltType GetBeltType() const {return BeltType;};
 
 protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void Tick(float DeltaSeconds) override;
+	
+	virtual void OnConstruction(const FTransform& Transform) override;
+	
+	virtual void ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item) override;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Factory|Movement")
 	EBeltType BeltType;
@@ -58,13 +59,15 @@ protected:
 	void UpdateSplinePath(EBeltType Type);
 	void UpdateBeltVisual(EBeltType Type);
 	FTransform GetSpineDistance(float Alpha);
-	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
-	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	void MassRetrieve();
 	TSet<AFactoryBelt*> GetConnectedBeltLine();
 	
+private:
+	void TryPullInputFromPorts();
+	
 	const float BeltHeight = 20.f;
 	bool bIsBeltStop = false;
 	float TotalSpineLength = 0.f;
+	bool bReceivedThisCycle = false;
 };

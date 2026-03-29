@@ -17,22 +17,29 @@ class FACTORYTECHDEMO_API AFactoryBeltRouter : public AFactoryLogisticsObjectBas
 public:
 	AFactoryBeltRouter();
 	
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	
 	virtual void PlanCycle() override;
 	virtual void LatePlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	
-	virtual bool CanPushItemFromBeforeObject(
-		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
+	virtual const UFactoryItemData* PeekOutputItem(UFactoryOutputPortComponent* RequestPort) override;
+	virtual FFactoryItemInstance ConsumeItem(UFactoryOutputPortComponent* RequestPort) override;
+	virtual bool CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
 	
 protected:
-	virtual bool PullItemFromInputPorts(FFactoryItemInstance& Item) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+	virtual void ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item) override;
+	
+private:
+	void TryPushOutputToPorts();
+	void TryPullInputFromPorts();
 	
 	UPROPERTY()
 	FFactoryItemInstance CurrentItem; 
 	
 	int32 CurrentInputIndex = 0;
 	int32 CurrentOutputIndex = 0;
+	
+	bool bReceivedThisCycle = false;
 };

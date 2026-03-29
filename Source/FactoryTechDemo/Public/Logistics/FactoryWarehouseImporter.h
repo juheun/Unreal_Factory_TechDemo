@@ -21,17 +21,19 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Factory|Importer|Event")
 	FOnImportItemChanged OnImportItemChanged;
 	
-	virtual void InitObject(const UFactoryObjectData* Data) override;
-	
 	virtual void PlanCycle() override;
+	virtual void LatePlanCycle() override;
 	virtual void ExecuteCycle() override;
 	virtual void UpdateView() override;
 	
-	virtual bool CanPushItemFromBeforeObject(
-		UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
+	virtual void InitObject(const UFactoryObjectData* Data) override;
+	
+	virtual bool CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) override;
 	
 protected:
 	virtual void BeginPlay() override;
+	
+	virtual void ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item) override;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
 	TObjectPtr<UFactorySmartNameplateComponent> SmartNameplateComponent;
@@ -40,6 +42,12 @@ protected:
 	TObjectPtr<UFactoryRecipeBillboardComponent> RecipeBillboardComponent;
 	
 private:
+	void TryPullInputFromPorts();
+	void ProcessImport(FFactoryItemInstance Item);
+	
 	UPROPERTY()
 	TObjectPtr<const UFactoryItemData> CachedLastImportedItem;
+	
+	// 인풋 포트 막힘 상태 기록용
+	bool bIsInputBlocked = false;
 };
