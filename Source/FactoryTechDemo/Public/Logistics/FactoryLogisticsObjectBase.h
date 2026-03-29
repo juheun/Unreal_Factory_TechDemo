@@ -32,15 +32,17 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
-	// 서브시스템에서 호출하는 3단계 사이클	// TODO : 자식 클래스에서 구현 및 겹치는 부분 많다면 Base 클래스에서 일부 구현
-	// 현재 설비에서 다음 설비의 InputPort로 아이템을 Pending 할 수 있는지 확인 및 가능시 Pending
-	virtual void PlanCycle() PURE_VIRTUAL(AFactoryLogisticsObjectBase::PlanCycle, ; );
-	// 순환참조 등으로 PlanCycle에서 처리되지 못한 작업을 처리함
-	virtual void LatePlanCycle() {};
+	// 서브시스템에서 호출하는 사이클 내 페이즈 메서드	// TODO : 자식 클래스에서 구현 및 겹치는 부분 많다면 Base 클래스에서 일부 구현
+	// 오브젝트 내부 플래그 변수 등을 초기화하는 단계
+	virtual void InitPhase() {};
+	// 물류간 이동 로직이 시행됨
+	virtual void LogisticsPhase() PURE_VIRTUAL(AFactoryLogisticsObjectBase::LogisticsPhase, ; );
+	// 순환참조 등으로 LogisticsPhase에서 처리되지 못한 작업을 처리함
+	virtual void LateLogisticsPhase() {};
 	// 현재 설비의 InputPort에 Pending되어있는 아이템을 설비로 가져옴
-	virtual void ExecuteCycle() PURE_VIRTUAL(AFactoryLogisticsObjectBase::ExecuteCycle, ; );
+	virtual void LogicPhase() PURE_VIRTUAL(AFactoryLogisticsObjectBase::LogicPhase, ; );
 	// Cycle 결과에 따른 비주얼적 업데이트 실현
-	virtual void UpdateView() PURE_VIRTUAL(AFactoryLogisticsObjectBase::UpdateView, ; );
+	virtual void VisualPhase() PURE_VIRTUAL(AFactoryLogisticsObjectBase::VisualPhase, ; );
 	
 	// 아이템 타입을 확인해 받을 수 있는지 판단하는 함수
 	virtual bool CanReceiveItem(UFactoryInputPortComponent* RequestPort, const UFactoryItemData* IncomingItem) PURE_VIRTUAL(AFactoryLogisticsObjectBase::CanPushItemFromBeforeObject, return false; );

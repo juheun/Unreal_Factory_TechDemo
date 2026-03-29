@@ -17,10 +17,11 @@ class FACTORYTECHDEMO_API AFactoryBeltRouter : public AFactoryLogisticsObjectBas
 public:
 	AFactoryBeltRouter();
 	
-	virtual void PlanCycle() override;
-	virtual void LatePlanCycle() override;
-	virtual void ExecuteCycle() override;
-	virtual void UpdateView() override;
+	virtual void InitPhase() override;
+	virtual void LogisticsPhase() override;
+	virtual void LateLogisticsPhase() override;
+	virtual void LogicPhase() override;
+	virtual void VisualPhase() override;
 	
 	virtual const UFactoryItemData* PeekOutputItem(UFactoryOutputPortComponent* RequestPort) override;
 	virtual FFactoryItemInstance ConsumeItem(UFactoryOutputPortComponent* RequestPort) override;

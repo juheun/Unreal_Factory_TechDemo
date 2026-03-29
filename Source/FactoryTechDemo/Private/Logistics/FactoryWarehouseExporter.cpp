@@ -61,27 +61,31 @@ void AFactoryWarehouseExporter::InitObject(const UFactoryObjectData* Data)
 	}
 }
 
-void AFactoryWarehouseExporter::PlanCycle()
+void AFactoryWarehouseExporter::InitPhase()
 {
 	for (int i = 0; i < OutputPortPulledThisCycle.Num(); i++)
 	{
 		OutputPortBlockedStates[i] = false;
 		OutputPortPulledThisCycle[i] = false;
 	}
-	TryPushOutputToPorts();
 }
 
-void AFactoryWarehouseExporter::LatePlanCycle()
+void AFactoryWarehouseExporter::LogisticsPhase()
 {
 	TryPushOutputToPorts();
 }
 
-void AFactoryWarehouseExporter::ExecuteCycle()
+void AFactoryWarehouseExporter::LateLogisticsPhase()
+{
+	TryPushOutputToPorts();
+}
+
+void AFactoryWarehouseExporter::LogicPhase()
 {
 
 }
 
-void AFactoryWarehouseExporter::UpdateView()
+void AFactoryWarehouseExporter::VisualPhase()
 {
 	UFactoryWarehouseSubsystem* Warehouse = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 	
@@ -120,7 +124,7 @@ void AFactoryWarehouseExporter::ReceiveItem(UFactoryInputPortComponent* RequestP
 
 void AFactoryWarehouseExporter::TryPushOutputToPorts()
 {
-	// TODO : WarehouseExporter가 라운드 로빈 방식으로 작동하게끔 조정필요
+	// TODO : 전체 WarehouseExporter가 라운드 로빈 방식으로 작동하게끔 조정필요
 	if (!TargetItemData) return;
 	
 	UFactoryWarehouseSubsystem* Warehouse = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();

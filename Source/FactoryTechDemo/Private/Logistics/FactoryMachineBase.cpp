@@ -124,7 +124,7 @@ void AFactoryMachineBase::InitMachine()
 	}
 }
 
-void AFactoryMachineBase::PlanCycle()
+void AFactoryMachineBase::InitPhase()
 {
 	bIsMachineBlockedOnCycle = false;
 	
@@ -152,19 +152,22 @@ void AFactoryMachineBase::PlanCycle()
 		{
 			InputPortBlockedStates[i] = false;
 		}
-	}
-	
-	TryPushOutputToPorts();
-	TryPullInputFromPorts();
+	}	
 }
 
-void AFactoryMachineBase::LatePlanCycle()
+void AFactoryMachineBase::LogisticsPhase()
 {
 	TryPushOutputToPorts();
 	TryPullInputFromPorts();
 }
 
-void AFactoryMachineBase::ExecuteCycle()
+void AFactoryMachineBase::LateLogisticsPhase()
+{
+	TryPushOutputToPorts();
+	TryPullInputFromPorts();
+}
+
+void AFactoryMachineBase::LogicPhase()
 {
 	// 가공 로직
 	if (bIsWorking)
@@ -191,7 +194,7 @@ void AFactoryMachineBase::ExecuteCycle()
 	}
 }
 
-void AFactoryMachineBase::UpdateView()
+void AFactoryMachineBase::VisualPhase()
 {
 	// 애니메이션 재생 등
 	
@@ -448,7 +451,6 @@ bool AFactoryMachineBase::TryCraftItem()
 				RemainingProductionCycles = FMath::RoundToInt(Recipe->ProcessingTime / Interval); // 틱 단위 변환
 			}
 			CurrentRecipe = Recipe;
-			RemainingProductionCycleTime = Recipe->ProcessingTime; // 틱 단위 변환
 			OnCurrentRecipeChanged.Broadcast(CurrentRecipe);
 			bIsWorking = true;
 			return true;

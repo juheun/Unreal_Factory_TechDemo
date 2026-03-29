@@ -19,10 +19,11 @@ public:
 	// Sets default values for this actor's properties
 	AFactoryBelt();
 	
-	virtual void PlanCycle() override;
-	virtual void LatePlanCycle() override;
-	virtual void ExecuteCycle() override;
-	virtual void UpdateView() override;
+	virtual void InitPhase() override;
+	virtual void LogisticsPhase() override;
+	virtual void LateLogisticsPhase() override;
+	virtual void LogicPhase() override;
+	virtual void VisualPhase() override;
 	
 	void SetBeltType(EBeltType Type);
 	

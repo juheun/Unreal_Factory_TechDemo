@@ -57,22 +57,26 @@ void AFactoryWarehouseImporter::InitObject(const UFactoryObjectData* Data)
 	}
 }
 
-void AFactoryWarehouseImporter::PlanCycle()
+void AFactoryWarehouseImporter::InitPhase()
+{
+}
+
+void AFactoryWarehouseImporter::LogisticsPhase()
 {
 	TryPullInputFromPorts();
 }
 
-void AFactoryWarehouseImporter::LatePlanCycle()
+void AFactoryWarehouseImporter::LateLogisticsPhase()
 {
 	TryPullInputFromPorts();
 }
 
-void AFactoryWarehouseImporter::ExecuteCycle()
+void AFactoryWarehouseImporter::LogicPhase()
 {
 
 }
 
-void AFactoryWarehouseImporter::UpdateView()
+void AFactoryWarehouseImporter::VisualPhase()
 {
 	if (LogisticsInputPortArr.IsValidIndex(0) && LogisticsInputPortArr[0])
 	{

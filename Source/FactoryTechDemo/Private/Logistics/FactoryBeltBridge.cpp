@@ -76,17 +76,7 @@ void AFactoryBeltBridge::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 }
 
-void AFactoryBeltBridge::PlanCycle()
-{
-	TryPullInputFromPorts();
-}
-
-void AFactoryBeltBridge::LatePlanCycle()
-{
-	TryPullInputFromPorts();
-}
-
-void AFactoryBeltBridge::ExecuteCycle()
+void AFactoryBeltBridge::InitPhase()
 {
 	for (int i = 0; i < 4; i++)
 	{
@@ -94,7 +84,22 @@ void AFactoryBeltBridge::ExecuteCycle()
 	}
 }
 
-void AFactoryBeltBridge::UpdateView()
+void AFactoryBeltBridge::LogisticsPhase()
+{
+	TryPullInputFromPorts();
+}
+
+void AFactoryBeltBridge::LateLogisticsPhase()
+{
+	TryPullInputFromPorts();
+}
+
+void AFactoryBeltBridge::LogicPhase()
+{
+
+}
+
+void AFactoryBeltBridge::VisualPhase()
 {
 	// 애니메이션 재생 등
 }

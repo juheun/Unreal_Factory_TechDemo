@@ -150,12 +150,20 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	}
 	
 	LastStartCycleTime = GetWorld()->GetTimeSeconds();
+	
+	for (const auto& WeakObjectPtr : RegisteredLogisticsObjectArr)
+	{
+		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
+		{
+			LogisticsObject->InitPhase();
+		}
+	}
 
 	for (const auto& WeakObjectPtr : RegisteredLogisticsObjectArr)
 	{
 		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
 		{
-			LogisticsObject->PlanCycle();
+			LogisticsObject->LogisticsPhase();
 		}
 	}
 	
@@ -163,7 +171,7 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	{
 		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
 		{
-			LogisticsObject->LatePlanCycle();
+			LogisticsObject->LateLogisticsPhase();
 		}
 	}
 	
@@ -171,7 +179,7 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	{
 		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
 		{
-			LogisticsObject->ExecuteCycle();
+			LogisticsObject->LogicPhase();
 		}
 	}
 	
@@ -179,7 +187,7 @@ void UFactoryCycleSubsystem::OnFactoryCycle()
 	{
 		if (AFactoryLogisticsObjectBase* LogisticsObject =  WeakObjectPtr.Get())
 		{
-			LogisticsObject->UpdateView();
+			LogisticsObject->VisualPhase();
 		}
 	}
 }

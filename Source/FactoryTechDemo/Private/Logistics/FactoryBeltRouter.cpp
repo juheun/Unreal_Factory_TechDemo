@@ -5,7 +5,6 @@
 
 #include "Logistics/FactoryInputPortComponent.h"
 #include "Logistics/FactoryOutputPortComponent.h"
-#include "Subsystems/FactoryPoolSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 
 
@@ -31,24 +30,28 @@ void AFactoryBeltRouter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 }
 
-void AFactoryBeltRouter::PlanCycle()
-{
-	TryPushOutputToPorts();
-	TryPullInputFromPorts();
-}
-
-void AFactoryBeltRouter::LatePlanCycle()
-{
-	TryPushOutputToPorts();
-	TryPullInputFromPorts();
-}
-
-void AFactoryBeltRouter::ExecuteCycle()
+void AFactoryBeltRouter::InitPhase()
 {
 	bReceivedThisCycle = false;
 }
 
-void AFactoryBeltRouter::UpdateView()
+void AFactoryBeltRouter::LogisticsPhase()
+{
+	TryPushOutputToPorts();
+	TryPullInputFromPorts();
+}
+
+void AFactoryBeltRouter::LateLogisticsPhase()
+{
+	TryPushOutputToPorts();
+	TryPullInputFromPorts();
+}
+
+void AFactoryBeltRouter::LogicPhase()
+{
+}
+
+void AFactoryBeltRouter::VisualPhase()
 {
 	// 애니메이션 재생 등
 }
@@ -102,6 +105,7 @@ void AFactoryBeltRouter::ReceiveItem(UFactoryInputPortComponent* RequestPort, FF
 void AFactoryBeltRouter::TryPushOutputToPorts()
 {
 	if (!CurrentItem.IsValid()) return;
+	if (bReceivedThisCycle) return;		// 이번사이클에 들어왔다면 밀어낼 수 없게 방어
 	
 	int32 MaxOutputs = LogisticsOutputPortArr.Num();
 	if (MaxOutputs <= 0) return;

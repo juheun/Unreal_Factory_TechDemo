@@ -25,10 +25,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Factory|Exporter|Event")
 	FOnWarehouseAmountUpdated OnWarehouseAmountUpdated;
 	
-	virtual void PlanCycle() override;
-	virtual void LatePlanCycle() override;
-	virtual void ExecuteCycle() override;
-	virtual void UpdateView() override;
+	virtual void InitPhase() override;
+	virtual void LogisticsPhase() override;
+	virtual void LateLogisticsPhase() override;
+	virtual void LogicPhase() override;
+	virtual void VisualPhase() override;
 	
 	virtual void InitObject(const UFactoryObjectData* Data) override;
 	

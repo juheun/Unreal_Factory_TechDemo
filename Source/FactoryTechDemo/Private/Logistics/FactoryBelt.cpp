@@ -68,12 +68,17 @@ void AFactoryBelt::Tick(float DeltaSeconds)
 	}
 }
 
-void AFactoryBelt::PlanCycle()
+void AFactoryBelt::InitPhase()
+{
+	bReceivedThisCycle = false;
+}
+
+void AFactoryBelt::LogisticsPhase()
 {
 	TryPullInputFromPorts();
 }
 
-void AFactoryBelt::LatePlanCycle()
+void AFactoryBelt::LateLogisticsPhase()
 {
 	if (!CurrentItem.IsValid())
 	{
@@ -81,12 +86,11 @@ void AFactoryBelt::LatePlanCycle()
 	}
 }
 
-void AFactoryBelt::ExecuteCycle()
+void AFactoryBelt::LogicPhase()
 {
-	bReceivedThisCycle = false;
 }
 
-void AFactoryBelt::UpdateView()
+void AFactoryBelt::VisualPhase()
 {
 	SetActorTickEnabled(CurrentItem.IsValid());
 }
