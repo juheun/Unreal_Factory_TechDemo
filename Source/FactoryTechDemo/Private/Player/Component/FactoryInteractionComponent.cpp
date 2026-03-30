@@ -41,13 +41,20 @@ void UFactoryInteractionComponent::BeginPlay()
 			if (InteractionPromptWidget)
 			{
 				InteractionPromptWidget->AddToViewport();
-				InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
+				InteractionPromptWidget->SetVisibility(ESlateVisibility::Collapsed);
 			}
+		}
+		
+		Controller->OnViewModeChanged.AddDynamic(this, &UFactoryInteractionComponent::OnViewModeChangedCallback);
+		
+		if (UFactoryPlacementComponent* PlacementComp = Controller->GetComponentByClass<UFactoryPlacementComponent>())
+		{
+			PlacementComp->OnPlacementModeChanged.AddDynamic(this, &UFactoryInteractionComponent::OnPlacementModeChangedCallback);
 		}
 	}
 }
 
-void UFactoryInteractionComponent::UpdateInteraction()
+void UFactoryInteractionComponent::UpdateInteractionTextList()
 {
 	// TODO : 필요시 여러 상호작용 대상을 찾도록 변경
 	AFactoryPlayerController* Controller = CachedPlayerController.Get();
@@ -74,24 +81,14 @@ void UFactoryInteractionComponent::UpdateInteraction()
 					InteractionPromptWidget->SetInteractionTextList(CurrentOptions, CurrentSelectedIndex);
 				}
 			}
-			
-			if (CurrentOptions.Num() > 0)
-			{
-				InteractionPromptWidget->SetVisibility(ESlateVisibility::Visible);
-				return;
-			}
+			bool bIsOptionExist = CurrentOptions.Num() > 0;
+			InteractionPromptWidget->SetVisibility(bIsOptionExist ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+			return;
 		}
 	}
 	
 	// 만약 타겟이 없거나 숨겨야 할 때 초기화
-	if (CurrentInteractTarget != nullptr)
-	{
-		CurrentInteractTarget = nullptr;
-		CurrentOptions.Empty();
-		CurrentSelectedIndex = 0;
-	}
-	
-	InteractionPromptWidget->SetVisibility(ESlateVisibility::Hidden);
+	ResetInteractionTextList();
 }
 
 void UFactoryInteractionComponent::PerformInteraction()
@@ -186,6 +183,28 @@ TScriptInterface<IFactoryInteractable> UFactoryInteractionComponent::FindBestInt
 	}
 
 	return nullptr;
+}
+
+void UFactoryInteractionComponent::ResetInteractionTextList()
+{
+	CurrentInteractTarget = nullptr;
+	CurrentOptions.Empty();
+	CurrentSelectedIndex = 0;
+	
+	if (InteractionPromptWidget)
+	{
+		InteractionPromptWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UFactoryInteractionComponent::OnViewModeChangedCallback(EFactoryViewModeType NewViewMode)
+{
+	ResetInteractionTextList();
+}
+
+void UFactoryInteractionComponent::OnPlacementModeChangedCallback(EPlacementMode NewPlacementMode)
+{
+	ResetInteractionTextList();
 }
 
 

@@ -41,6 +41,7 @@ class FACTORYTECHDEMO_API AFactoryPlayerController : public APlayerController
 public:
     AFactoryPlayerController();
     
+    UPROPERTY(BlueprintAssignable, Category = "Factory")
     FOnViewModeChangedSignature OnViewModeChanged;
 
     // --- 엔진 오버라이드 ---

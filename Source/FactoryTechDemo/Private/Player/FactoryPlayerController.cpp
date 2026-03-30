@@ -82,7 +82,7 @@ void AFactoryPlayerController::PlayerTick(float DeltaTime)
     }
     if (InteractionComponent)
     {
-        InteractionComponent->UpdateInteraction();
+        InteractionComponent->UpdateInteractionTextList();
     }
 }
 
@@ -283,7 +283,8 @@ void AFactoryPlayerController::UpdateInputMappingContext() const
 
 void AFactoryPlayerController::OnPlacementModeChangedCallback(EPlacementMode PlacementMode)
 {
-    ContextHUDComponent->OnPlacementModeChanged(PlacementMode);
+    if (ContextHUDComponent)
+        ContextHUDComponent->OnPlacementModeChanged(PlacementMode);
     UpdateInputMappingContext();
 }
 

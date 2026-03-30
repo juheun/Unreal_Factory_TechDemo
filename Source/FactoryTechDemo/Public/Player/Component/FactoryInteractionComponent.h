@@ -28,7 +28,7 @@ public:
 	virtual void BeginPlay() override;
 	
 	// Controller의 업데이트마다 호출
-	void UpdateInteraction();
+	void UpdateInteractionTextList();
 
 protected:
 	// 상호작용 실행
@@ -45,6 +45,12 @@ protected:
 private:
 	// 상호작용하기에 가장 적합한 대상 탐색
 	TScriptInterface<IFactoryInteractable> FindBestInteractable(const EFactoryViewModeType ViewMode) const;
+	void ResetInteractionTextList();
+	
+	UFUNCTION()
+	void OnViewModeChangedCallback(EFactoryViewModeType NewViewMode);
+	UFUNCTION()
+	void OnPlacementModeChangedCallback(EPlacementMode NewPlacementMode);
 	
 	UPROPERTY()
 	TScriptInterface<IFactoryInteractable> CurrentInteractTarget;
