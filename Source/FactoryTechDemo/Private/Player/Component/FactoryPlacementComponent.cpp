@@ -768,7 +768,7 @@ bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLoca
 	int XArr[4] = {1,-1,0,0};
 	int YArr[4] = {0,0,1,-1};
 	FVector StartLocation = PointingLocation + FVector(0,0,5);	// 지면과 너무 붙는 현상 방지
-	float TraceLength = GridLength * 1.5f;
+	float TraceLength = GridLength * 1.f;
 	
 	for (int i = 0; i < 4; i++)
 	{
