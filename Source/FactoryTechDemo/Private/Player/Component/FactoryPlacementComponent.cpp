@@ -304,6 +304,7 @@ void UFactoryPlacementComponent::ClearAllPreviews()
 	if (PlaceObjectPivotActor)
 	{
 		PlaceObjectPivotActor->SetHidden(true);
+		PlaceObjectPivotActor->SetActorRotation(FRotator::ZeroRotator);
 	}
 	PlaceObjectPivotGridSize = FIntPoint(1,1);
 }
