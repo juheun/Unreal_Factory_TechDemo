@@ -435,21 +435,34 @@ void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
 	else if (CurrentPlacementMode == EPlacementMode::Move && SelectedLogisticsObjectBases.Num() > 0)
 	{
 		// 모든 프리뷰 위치 포함 최소/최대 좌표 계산
-		FVector Min(FLT_MAX), Max(-FLT_MAX);
+		FVector GlobalMin(FLT_MAX), GlobalMax(-FLT_MAX);
 		for (const auto& Preview : ActivePreviews)
 		{
 			FVector Loc = Preview->GetActorLocation();
-			Min = Min.ComponentMin(Loc);
-			Max = Max.ComponentMax(Loc);
+			FIntPoint GridSize = Preview->GetObjectData()->GridSize;
+			
+			int32 Yaw = FMath::RoundToInt(Preview->GetActorRotation().Yaw);		// 객체의 회전값 불러서 필요시 XY 반전
+			FIntPoint RotatedGridSize = GridSize;
+			if (FMath::Abs(Yaw) % 180 == 90)	// 회전된 상태
+			{
+				RotatedGridSize = FIntPoint(GridSize.Y, GridSize.X);
+			}
+			
+			FVector Extent(RotatedGridSize.X * GridLength * 0.5f, RotatedGridSize.Y * GridLength * 0.5f, 0.f);
+			FVector ObjectMin = Loc - Extent;
+			FVector ObjectMax = Loc + Extent;
+			
+			GlobalMin = GlobalMin.ComponentMin(ObjectMin);
+			GlobalMax = GlobalMax.ComponentMax(ObjectMax);
 		}
 
 		// 중앙 지점으로 피벗 이동
-		FVector Center = (Min + Max) * 0.5f;
+		FVector Center = (GlobalMin + GlobalMax) * 0.5f;
 		PlaceObjectPivotActor->SetActorLocation(Center);
 
 		// 전체 그리드 크기 계산
-		int32 SizeX = FMath::RoundToInt((Max.X - Min.X) / GridLength) + 1;
-		int32 SizeY = FMath::RoundToInt((Max.Y - Min.Y) / GridLength) + 1;
+		int32 SizeX = FMath::RoundToInt((GlobalMax.X - GlobalMin.X) / GridLength);
+		int32 SizeY = FMath::RoundToInt((GlobalMax.Y - GlobalMin.Y) / GridLength);
 		PlaceObjectPivotGridSize = FIntPoint(SizeX, SizeY);
 	}
 }
