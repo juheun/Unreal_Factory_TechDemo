@@ -75,37 +75,45 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 	FVector NewLocation;
 	if (TryGetPointingGridLocation(NewLocation))
 	{
-		FIntPoint ResultPoint = WorldToGrid(NewLocation);
-		// 목적지에 설비가 있는지 1번만 검사해서 EndPoint를 스냅으로 덮어씌움
-		if (AActor* HitActor = GetFacilityAtGrid(NewLocation))
+		if (CurrentPlacementMode == EPlacementMode::BeltPlace)
 		{
-			FIntPoint SnapGrid;
-			FVector SnapDir;
-			bool bIsOutput = !bIsWaitingDetermineBeltEnd;
-			if (TryGetSmartSnapPortGrid(NewLocation, HitActor, bIsOutput, SnapGrid, SnapDir))
+			FIntPoint ResultPoint = WorldToGrid(NewLocation);
+
+			// 목적지에 설비가 있는지 1번만 검사해서 EndPoint를 스냅으로 덮어씌움
+			if (AActor* HitActor = GetFacilityAtGrid(NewLocation))
 			{
-				ResultPoint = SnapGrid;
+				FIntPoint SnapGrid;
+				FVector SnapDir;
+				bool bIsOutput = !bIsWaitingDetermineBeltEnd;
+				if (TryGetSmartSnapPortGrid(NewLocation, HitActor, bIsOutput, SnapGrid, SnapDir))
+				{
+					ResultPoint = SnapGrid;
+				}
 			}
-		}
-		
-		if (CurrentPlacementMode == EPlacementMode::BeltPlace && bIsWaitingDetermineBeltEnd)
-		{
-			FIntPoint EndPoint = ResultPoint;
-          
-			// 기본 경로로 프리뷰를 생성
-			BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, false));
 			
-			// 프리뷰 유효성 검사하여 만약 기본 경로가 Invalid라면
-			if (!CheckValidity())
+			if (bIsWaitingDetermineBeltEnd)
 			{
-				// 대안 경로로 다시 생성
-				BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, true));
+				FIntPoint EndPoint = ResultPoint;
+          
+				// 기본 경로로 프리뷰를 생성
+				BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, false));
+			
+				// 프리뷰 유효성 검사하여 만약 기본 경로가 Invalid라면
+				if (!CheckValidity())
+				{
+					// 대안 경로로 다시 생성
+					BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, true));
+				}
+			}
+			else
+			{
+				FVector ResultVector = GridToWorld(ResultPoint); 
+				PlaceObjectPivotActor->SetActorLocation(ResultVector);
 			}
 		}
 		else
 		{
-			FVector ResultVector = GridToWorld(ResultPoint); 
-			PlaceObjectPivotActor->SetActorLocation(ResultVector);
+			PlaceObjectPivotActor->SetActorLocation(NewLocation);
 		}
 	}
 	
@@ -321,6 +329,8 @@ void UFactoryPlacementComponent::RotatePlacementPreview()
 	// 피벗 자체를 돌리면 자식 프리뷰들이 함께 회전함
 	float NextYaw = FMath::GridSnap(PlaceObjectPivotActor->GetActorRotation().Yaw + 90.f, 90.f);
 	PlaceObjectPivotActor->SetActorRotation(FRotator(0.f, FRotator::NormalizeAxis(NextYaw), 0.f));
+	
+	CalculatePlacementPivotCenterAndGridSize();
 }
 
 bool UFactoryPlacementComponent::PlaceObject()
@@ -442,7 +452,13 @@ void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
 	{
 		if (const UFactoryObjectData* Data = ActivePreviews[0]->GetObjectData())
 		{
-			PlaceObjectPivotGridSize = Data->GridSize;
+			int32 Yaw = FMath::RoundToInt(PlaceObjectPivotActor->GetActorRotation().Yaw);
+			FIntPoint RotatedGridSize = Data->GridSize;
+			if (FMath::Abs(Yaw) % 180 == 90)
+			{
+				RotatedGridSize = FIntPoint(Data->GridSize.Y, Data->GridSize.X);
+			}
+			PlaceObjectPivotGridSize = RotatedGridSize;
 			PlaceObjectPivotActor->SetActorLocation(ActivePreviews[0]->GetActorLocation());
 		}
 	}
