@@ -7,6 +7,7 @@
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "FactoryPlacementComponent.generated.h"
 
+class UFactoryPortComponentBase;
 class UFactoryItemData;
 class UFactoryInputConfig;
 class UFactoryPoolSubsystem;
@@ -102,16 +103,18 @@ private:
 	bool TryGetPointingGridLocation(FVector& OutResultVec) const;
 	// 지정된 위치에 벨트 배치가 가능한지 확인 및 설치가능 여부 반환
 	bool TryGetBeltStartData(const FVector& PointingLocation, FIntPoint& OutStartGrid, FVector& OutStartDir) const;
-	bool TryGetSmartSnapPortGrid(const FVector& PointingLocation, AActor* HitActor, 
-		bool bIsOutput, FIntPoint& OutGrid, FVector& OutportDir) const;
+	bool TryGetSmartSnapPortGrid(const FVector& PointingLocation, AActor* HitActor, bool bIsOutput, 
+		FIntPoint& OutGrid, UFactoryPortComponentBase*& OutPort) const;
+	bool TryFindNearPortDirection(const FVector& SearchCenter, bool bFindInputPort, FVector& OutDir) const; 
 	AActor* GetFacilityAtGrid(const FVector& GridLocation) const;
+	
 	
 	FVector CalculateSnappedLocation(FVector RawLocation, FIntPoint GridSize) const;
 	FIntPoint WorldToGrid(const FVector& WorldLocation) const;
     FVector GridToWorld(const FIntPoint& GridLocation, const float Height = 0.0f) const;
 	
 	TArray<FBeltPlacementData> CalculateBeltPath(const FIntPoint& StartPoint, const FIntPoint& EndPoint, 
-		const FVector& StartPointDir, bool bAlternativeRoute = false) const;
+		const FVector& StartPointDir, bool bAlternativeRoute = false, UFactoryPortComponentBase* TargetPort = nullptr) const;
 	EBeltType DetermineBeltType(const FVector& StartDir, const FVector& EndDir) const;
 	
 	

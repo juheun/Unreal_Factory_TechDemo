@@ -78,14 +78,14 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 		if (CurrentPlacementMode == EPlacementMode::BeltPlace)
 		{
 			FIntPoint ResultPoint = WorldToGrid(NewLocation);
+			UFactoryPortComponentBase* TargetPort = nullptr;
 
 			// 목적지에 설비가 있는지 1번만 검사해서 EndPoint를 스냅으로 덮어씌움
 			if (AActor* HitActor = GetFacilityAtGrid(NewLocation))
 			{
 				FIntPoint SnapGrid;
-				FVector SnapDir;
 				bool bIsOutput = !bIsWaitingDetermineBeltEnd;
-				if (TryGetSmartSnapPortGrid(NewLocation, HitActor, bIsOutput, SnapGrid, SnapDir))
+				if (TryGetSmartSnapPortGrid(NewLocation, HitActor, bIsOutput, SnapGrid, TargetPort))
 				{
 					ResultPoint = SnapGrid;
 				}
@@ -96,13 +96,13 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 				FIntPoint EndPoint = ResultPoint;
           
 				// 기본 경로로 프리뷰를 생성
-				BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, false));
+				BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, false, TargetPort));
 			
 				// 프리뷰 유효성 검사하여 만약 기본 경로가 Invalid라면
 				if (!CheckValidity())
 				{
 					// 대안 경로로 다시 생성
-					BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, true));
+					BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, true, TargetPort));
 				}
 			}
 			else
@@ -584,7 +584,7 @@ void UFactoryPlacementComponent::ResetBeltGuidePreview()
 }
 
 TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
-	const FIntPoint& StartPoint, const FIntPoint& EndPoint, const FVector& StartPointDir, bool bAlternativeRoute) const
+	const FIntPoint& StartPoint, const FIntPoint& EndPoint, const FVector& StartPointDir, bool bAlternativeRoute, UFactoryPortComponentBase* TargetPort) const
 {
 	TArray<FIntPoint> Points;
     Points.Add(StartPoint);
@@ -710,12 +710,16 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
 	    {
     		// 마지막 벨트. 주변 InputPort를 스캔
     		EndDir = InDir; // 기본값은 직진
-	       
 	    	bool bLastBeltOverwritten = false;
 	    	
-	    	// 마지막 벨트에 이미 벨트가 존재했었는지 확인
-			if (HitActor)
+	    	if (TargetPort)
+	    	{
+	    		EndDir = TargetPort->GetForwardVector();
+	    		bLastBeltOverwritten = true; // 강제했으므로 4방향 스캔 스킵	    		
+	    	}
+			else if (HitActor)
 			{
+	    		// 마지막 벨트에 이미 벨트가 존재했었는지 확인
 				if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
 				{
 					EndDir = HitBelt->GetBeltExitDirection();
@@ -726,26 +730,7 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
 	    	// 마지막 벨트의 덮어쓰기가 없을때만 주변 포트 스캔
 	    	if (!bLastBeltOverwritten)
 	    	{
-	    		int XArr[4] = {1, -1, 0, 0};
-	    		int YArr[4] = {0, 0, 1, -1};
-	    		FVector PortSearchLoc = FVector(CurrentLoc.X, CurrentLoc.Y, 5.f);		// 포트 감지위해 Z값 조정
-	       
-	    		for (int j = 0; j < 4; j++)
-	    		{
-	    			FVector SearchLoc = PortSearchLoc + FVector(XArr[j] * GridLength, YArr[j] * GridLength, 5.f);
-	    			FHitResult PortHit;
-	           
-	    			// 내 주변에 InputPort가 있는지 트레이스
-	    			if (GetWorld()->LineTraceSingleByChannel(PortHit, PortSearchLoc, SearchLoc, ECC_GameTraceChannel2))
-	    			{
-	    				if (UFactoryInputPortComponent* InputPort = Cast<UFactoryInputPortComponent>(PortHit.GetComponent()))
-	    				{
-	    					// 포트를 발견하면, 그 포트를 향하는 방향으로 EndDir을 강제 수정
-	    					EndDir = InputPort->GetForwardVector();
-	    					break; 
-	    				}
-	    			}
-	    		}
+	    		TryFindNearPortDirection(CurrentLoc, true, EndDir);
 	    	}
 	    }
        
@@ -777,7 +762,6 @@ bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLoca
                                                      FIntPoint& OutStartGrid, FVector& OutStartDir) const
 {
 	OutStartGrid = WorldToGrid(PointingLocation);
-	FHitResult HitResult;
 	
 	// 현재 클릭한 그리드에 기존 벨트가 있는지 수직으로 검사 (벨트 덮어쓰기 및 연장용)
 	if (AActor* HitActor = GetFacilityAtGrid(PointingLocation))
@@ -790,34 +774,22 @@ bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLoca
 		
 		// 설비를 눌렀고, outputPort가 있으면 자동으로 가장 가까운 outputPort 앞 그리드 선택
 		FIntPoint SnapGrid;
-		FVector SnapDir;
-		if (TryGetSmartSnapPortGrid(PointingLocation, HitActor, true, SnapGrid, SnapDir))
+		UFactoryPortComponentBase* TargetPort = nullptr;
+		
+		if (TryGetSmartSnapPortGrid(PointingLocation, HitActor, true, SnapGrid, TargetPort))
 		{
 			OutStartGrid = SnapGrid;
-			OutStartDir = SnapDir;
+			OutStartDir = TargetPort->GetForwardVector();
 			return true;
 		}
 	}
 	
 	// 설비의 Outport찾기
-	int XArr[4] = {1,-1,0,0};
-	int YArr[4] = {0,0,1,-1};
-	FVector StartLocation = PointingLocation + FVector(0,0,5);	// 지면과 너무 붙는 현상 방지
-	float TraceLength = GridLength * 1.f;
-	
-	for (int i = 0; i < 4; i++)
+	FVector FoundDir;
+	if (TryFindNearPortDirection(PointingLocation, false, FoundDir))
 	{
-		FVector SearchEnd = StartLocation + FVector(XArr[i] * TraceLength,YArr[i] * TraceLength,0);
-		
-		if (GetWorld()->LineTraceSingleByChannel(
-			HitResult, StartLocation, SearchEnd, ECC_GameTraceChannel2))	// Port 검사 채널
-		{
-			if (UFactoryOutputPortComponent* OutputPortComponent = Cast<UFactoryOutputPortComponent>(HitResult.GetComponent()))
-			{
-				OutStartDir = OutputPortComponent->GetForwardVector();
-				return true;
-			}
-		}
+		OutStartDir = FoundDir;
+		return true;
 	}
 	
 	return false;
@@ -847,10 +819,10 @@ void UFactoryPlacementComponent::DeselectObject(AFactoryLogisticsObjectBase* Tar
 
 void UFactoryPlacementComponent::ClearObject()
 {
-	for (auto Object : SelectedLogisticsObjectBases)
-	{
-		//TODO : 선택 해제된 객체에 대한 시각적 피드백 제거 구현
-	}
+	// for (auto Object : SelectedLogisticsObjectBases)
+	// {
+	// 	//TODO : 선택 해제된 객체에 대한 시각적 피드백 제거 구현
+	// }
 	SelectedLogisticsObjectBases.Empty();
 }
 
@@ -914,51 +886,80 @@ FVector UFactoryPlacementComponent::CalculateSnappedLocation(FVector RawLocation
 
 
 bool UFactoryPlacementComponent::TryGetSmartSnapPortGrid(const FVector& PointingLocation,
-	AActor* HitActor, bool bIsOutput, FIntPoint& OutGrid, FVector& OutportDir) const
+	AActor* HitActor, bool bIsOutput, FIntPoint& OutGrid, UFactoryPortComponentBase*& OutPort) const
 {
 	AFactoryLogisticsObjectBase* Facility = Cast<AFactoryLogisticsObjectBase>(HitActor);
 	if (!Facility) return false;
 	if (Facility->IsA<AFactoryBelt>())
 		return false;
 	
-	float MinDistSqr = FLT_MAX;
-	UFactoryPortComponentBase* ClosestPort = nullptr;
+	OutPort = nullptr;
 	
+	TArray<UFactoryPortComponentBase*> PortsToSearch;
 	if (bIsOutput)
 	{
-		const TArray<UFactoryOutputPortComponent*> Ports = Facility->GetOutputPorts();
-		for (auto* Port : Ports)
-		{
-			float DistSqr = FVector::DistSquared(Port->GetComponentLocation(), PointingLocation);
-			if (DistSqr < MinDistSqr)
-			{
-				MinDistSqr = DistSqr;
-				ClosestPort = Port;
-			}
-		}
+		for (auto* Port : Facility->GetOutputPorts()) { PortsToSearch.Add(Port); }
 	}
 	else
 	{
-		const TArray<UFactoryInputPortComponent*> Ports = Facility->GetInputPorts();
-		for (auto* Port : Ports)
+		for (auto* Port : Facility->GetInputPorts()) { PortsToSearch.Add(Port); }
+	}
+	
+	float MinDistSqr = FLT_MAX;
+	for (auto* Port : PortsToSearch)
+	{
+		float DistSqr = FVector::DistSquared(Port->GetComponentLocation(), PointingLocation);
+		if (DistSqr < MinDistSqr)
 		{
-			float DistSqr = FVector::DistSquared(Port->GetComponentLocation(), PointingLocation);
-			if (DistSqr < MinDistSqr)
-			{
-				MinDistSqr = DistSqr;
-				ClosestPort = Port;
-			}
+			MinDistSqr = DistSqr;
+			OutPort = Port;
 		}
 	}
 	
-	if (ClosestPort)
+	if (OutPort)
 	{
-		OutportDir = ClosestPort->GetForwardVector();
+		FVector OutportDir = OutPort->GetForwardVector();
 		int32 Sign = bIsOutput ? 1 : -1;
-		FVector PortForwardVector = ClosestPort->GetComponentLocation() + (OutportDir * GridLength * Sign);
+		FVector PortForwardVector = OutPort->GetComponentLocation() + (OutportDir * GridLength * Sign);
 		FVector SnappedPortForwardVector = CalculateSnappedLocation(PortForwardVector, FIntPoint(1,1));	// 결과값도 안전하게 스냅
 		OutGrid = WorldToGrid(SnappedPortForwardVector);
 		return true;
+	}
+	return false;
+}
+
+bool UFactoryPlacementComponent::TryFindNearPortDirection(const FVector& SearchCenter, bool bFindInputPort,
+	FVector& OutDir) const
+{
+	int XArr[4] = {1, -1, 0, 0};
+	int YArr[4] = {0, 0, 1, -1};
+	FVector StartLocation = SearchCenter + FVector(0, 0, 5.f); // 지면 간섭 방지
+	float TraceLength = GridLength; 
+	FHitResult PortHit;
+	
+	for (int i = 0; i < 4; i++)
+	{
+		FVector SearchEnd = StartLocation + FVector(XArr[i] * TraceLength, YArr[i] * TraceLength, 0.f);
+        
+		if (GetWorld()->LineTraceSingleByChannel(PortHit, StartLocation, SearchEnd, ECC_GameTraceChannel2))	// Port
+		{
+			if (bFindInputPort)
+			{
+				if (UFactoryInputPortComponent* InputPort = Cast<UFactoryInputPortComponent>(PortHit.GetComponent()))
+				{
+					OutDir = InputPort->GetForwardVector();
+					return true;
+				}
+			}
+			else
+			{
+				if (UFactoryOutputPortComponent* OutputPort = Cast<UFactoryOutputPortComponent>(PortHit.GetComponent()))
+				{
+					OutDir = OutputPort->GetForwardVector();
+					return true;
+				}
+			}
+		}
 	}
 	return false;
 }
@@ -1021,7 +1022,7 @@ AFactoryPlacePreview* UFactoryPlacementComponent::CreateAndInitPreview(
 {
 	if (!Data) return nullptr;
 	
-	AFactoryPlacePreview* Preview = nullptr;
+	AFactoryPlacePreview* Preview;
 	UFactoryPoolSubsystem* Pool = GetPool();
 	if (!Pool) return nullptr;
 	
