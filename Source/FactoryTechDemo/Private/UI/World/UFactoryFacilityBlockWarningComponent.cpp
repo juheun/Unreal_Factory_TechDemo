@@ -8,12 +8,19 @@
 
 UFactoryFacilityBlockWarningComponent::UFactoryFacilityBlockWarningComponent()
 {
-	SetDrawSize(FVector2D(100.f, 100.f));
+	SetDrawSize(FVector2D(50.f, 50.f));
 	SetHiddenInGame(true);
+}
+
+void UFactoryFacilityBlockWarningComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	SetDrawSize(FVector2D(50.f, 50.f));
 }
 
 void UFactoryFacilityBlockWarningComponent::OnFacilityBlockCallback(bool bIsBlocked)
 {
+	SetDrawSize(FVector2D(50.f, 50.f));
 	SetHiddenInGame(!bIsBlocked);
 	
 	if (!GetUserWidgetObject())
@@ -28,7 +35,7 @@ void UFactoryFacilityBlockWarningComponent::OnFacilityBlockCallback(bool bIsBloc
 }
 
 void UFactoryFacilityBlockWarningComponent::UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc,
-	const FVector& CameraForward, const FVector& OwnerLoc)
+                                                              const FVector& CameraForward, const FVector& OwnerLoc)
 {
 	Super::UpdateUIPlacement(DeltaTime, CameraLoc, CameraForward, OwnerLoc);
 	

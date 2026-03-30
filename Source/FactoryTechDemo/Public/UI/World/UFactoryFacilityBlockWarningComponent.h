@@ -19,12 +19,14 @@ public:
 	void OnFacilityBlockCallback(bool bIsBlocked);
 	
 protected:
+	virtual void BeginPlay() override;
+	
 	virtual void UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc, const FVector& CameraForward, const FVector& OwnerLoc) override;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
 	float DefaultBillboardZHeight = 400.f;
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
-	float BillboardZHeight = 200.f;
+	float BillboardZHeight = 175.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
 	float TopViewScreenOffset = 100.f;

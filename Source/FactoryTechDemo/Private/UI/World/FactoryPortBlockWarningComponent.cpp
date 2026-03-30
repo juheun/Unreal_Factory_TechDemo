@@ -15,12 +15,13 @@ UFactoryPortBlockWarningComponent::UFactoryPortBlockWarningComponent()
 	
 	SetRelativeRotation(FRotator(90.f, 0.f, 0.f));
 	SetRelativeLocation(FVector(0.f, 0.f, 50.f));
-	SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
+	SetRelativeScale3D(FVector(0.50f, 0.50f, 0.50f));
 }
 
 void UFactoryPortBlockWarningComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	SetRelativeScale3D(FVector(0.50f, 0.50f, 0.50f));
 	
 	if (const UFactoryDeveloperSettings* Settings = GetDefault<UFactoryDeveloperSettings>())
 	{
