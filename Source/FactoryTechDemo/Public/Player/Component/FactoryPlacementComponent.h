@@ -102,6 +102,9 @@ private:
 	bool TryGetPointingGridLocation(FVector& OutResultVec) const;
 	// 지정된 위치에 벨트 배치가 가능한지 확인 및 설치가능 여부 반환
 	bool TryGetBeltStartData(const FVector& PointingLocation, FIntPoint& OutStartGrid, FVector& OutStartDir) const;
+	bool TryGetSmartSnapPortGrid(const FVector& PointingLocation, AActor* HitActor, 
+		bool bIsOutput, FIntPoint& OutGrid, FVector& OutportDir) const;
+	AActor* GetFacilityAtGrid(const FVector& GridLocation) const;
 	
 	FVector CalculateSnappedLocation(FVector RawLocation, FIntPoint GridSize) const;
 	FIntPoint WorldToGrid(const FVector& WorldLocation) const;

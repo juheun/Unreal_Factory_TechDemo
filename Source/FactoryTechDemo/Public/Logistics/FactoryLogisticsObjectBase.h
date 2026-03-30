@@ -59,6 +59,8 @@ public:
 	TArray<AFactoryLogisticsObjectBase*> GetConnectedInputPortsObject() const;
 	
 	ELogisticsObjectType GetLogisticsObjectType() const { return LogisticsObjectType; }
+	const TArray<UFactoryOutputPortComponent*> GetOutputPorts() const  { return LogisticsOutputPortArr; }
+	const TArray<UFactoryInputPortComponent*> GetInputPorts() const  { return LogisticsInputPortArr; }
 
 protected:
 	// 포트 자동 수집 및 분류 함수
