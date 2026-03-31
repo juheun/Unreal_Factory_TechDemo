@@ -106,6 +106,10 @@ void AFactoryTopViewPawn::DragPan(const FInputActionValue& Value)
             {
                 return;
             }
+            if (PC->GetCurrentPlacementMode() == EPlacementMode::MultipleControl)
+            {
+                return;
+            }
         }
 
         // 유저가 땅을 잡고 끄는 느낌을 위해 -1을 곱함

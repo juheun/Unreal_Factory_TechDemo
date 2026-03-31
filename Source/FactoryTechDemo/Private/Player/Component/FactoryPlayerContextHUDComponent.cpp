@@ -75,6 +75,9 @@ void UFactoryPlayerContextHUDComponent::OnPlacementModeChanged(EPlacementMode Pl
 	case EPlacementMode::Retrieve:
 		DisplayText = TEXT("수납모드");
 		break;
+	case EPlacementMode::MultipleControl:
+		DisplayText = TEXT("다중제어 모드");
+		break;
 	case EPlacementMode::None:
 	default:
 		DisplayText = TEXT("");
@@ -110,6 +113,7 @@ void UFactoryPlayerContextHUDComponent::RefreshInputHints() const
 			HintString += TEXT("[마우스 휠] 카메라 줌 인/아웃\n");
 			HintString += TEXT("[B] 인벤토리\n");
 			HintString += TEXT("[E] 컨베이어 벨트 배치모드\n");
+			HintString += TEXT("[X] 다중 제어 모드\n");
 			HintString += TEXT("[마우스 왼쪽 버튼 길게 누르기] 설비 이동\n");
 		}
 		HintString += TEXT("[CAPSLOCK] 시점 변경\n");
@@ -118,6 +122,15 @@ void UFactoryPlayerContextHUDComponent::RefreshInputHints() const
 	{
 		HintString += TEXT("[X] 수납모드 해제\n");
 		HintString += TEXT("[F] 설비 수납\n");
+	}
+	else if (CachedPlacementMode == EPlacementMode::MultipleControl)
+	{
+		HintString += TEXT("[마우스 왼쪽 버튼] 선택\n");
+		HintString += TEXT("[마우스 오른쪽 버튼] 다중 제어모드에서 나가기\n");
+		HintString += TEXT("[마우스 왼쪽 버튼 드래그] 여러 설비 선택\n");
+		HintString += TEXT("[마우스 오른쪽 버튼 드래그] 여러 설비 선택해제\n");
+		HintString += TEXT("[M] 선택설비 이동\n");
+		HintString += TEXT("[F] 선택설비 수납\n");
 	}
 	else
 	{

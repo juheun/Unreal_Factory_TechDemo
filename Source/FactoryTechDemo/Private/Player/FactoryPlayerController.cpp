@@ -253,6 +253,7 @@ void AFactoryPlayerController::UpdateInputMappingContext() const
     
     Subsystem->RemoveMappingContext(GlobalIdleContext);
     Subsystem->RemoveMappingContext(PlacementModeContext);
+    Subsystem->RemoveMappingContext(MultipleControlModeContext);
     
     if (CurrentViewMode == EFactoryViewModeType::NormalView)
     {
@@ -263,7 +264,13 @@ void AFactoryPlayerController::UpdateInputMappingContext() const
         Subsystem->AddMappingContext(BaseTopViewContext, 0);
     }
     
-    if (GetCurrentPlacementMode() == EPlacementMode::None)
+    EPlacementMode CurrentPlacementMode = GetCurrentPlacementMode();
+    if (CurrentPlacementMode == EPlacementMode::MultipleControl && CurrentViewMode == EFactoryViewModeType::TopView)
+    {
+        Subsystem->AddMappingContext(PlacementModeContext, 1);
+        Subsystem->AddMappingContext(MultipleControlModeContext, 2);
+    }
+    else if (CurrentPlacementMode == EPlacementMode::None)
     {
         if (CurrentViewMode == EFactoryViewModeType::NormalView)
         {

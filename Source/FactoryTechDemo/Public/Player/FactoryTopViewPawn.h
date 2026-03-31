@@ -17,12 +17,12 @@ class FACTORYTECHDEMO_API AFactoryTopViewPawn : public APawn
 
 public:
     AFactoryTopViewPawn();
-    virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+    virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     void SetCameraPerspective(bool bIsPerspective);
     
 protected:
-    virtual void BeginPlay() override;
+    virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
     
     UPROPERTY(VisibleAnywhere, Category = "Factory|Camera")
     TObjectPtr<USpringArmComponent> SpringArm;

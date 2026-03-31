@@ -95,6 +95,8 @@ protected:
     TObjectPtr<UInputMappingContext> GlobalIdleContext;
     UPROPERTY(EditAnywhere, Category = "Factory|Input")
     TObjectPtr<UInputMappingContext> PlacementModeContext;
+    UPROPERTY(EditAnywhere, Category = "Factory|Input")
+    TObjectPtr<UInputMappingContext> MultipleControlModeContext;
     
     UPROPERTY(EditDefaultsOnly, Category = "Factory|Input")
     TObjectPtr<UFactoryInputConfig> InputConfig;

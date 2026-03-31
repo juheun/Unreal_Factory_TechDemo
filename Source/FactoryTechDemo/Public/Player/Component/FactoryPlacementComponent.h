@@ -7,6 +7,7 @@
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "FactoryPlacementComponent.generated.h"
 
+struct FInputActionValue;
 class UFactoryPortComponentBase;
 class UFactoryItemData;
 class UFactoryInputConfig;
@@ -25,6 +26,7 @@ enum class EPlacementMode : uint8
 	Move				UMETA(DisplayName = "Move"),
 	BeltPlace			UMETA(DisplayName = "Belt Place"),
 	Retrieve			UMETA(DisplayName = "Retrieve"),
+	MultipleControl		UMETA(DisplayName = "Multiple Control"),
 };
 
 /**
@@ -39,6 +41,7 @@ class FACTORYTECHDEMO_API UFactoryPlacementComponent : public UActorComponent
 
 public:
 	UFactoryPlacementComponent();
+	virtual void BeginPlay() override;
 	
 	// 외부 호출 함수 모음
 	void SetUpInputComponent(UEnhancedInputComponent* PlayerInputComp, const UFactoryInputConfig* InputConfig);
@@ -53,7 +56,6 @@ public:
 	FOnObjectPlacedFromInventorySignature OnObjectPlacedFromInventorySignature;
 	
 protected:
-	virtual void BeginPlay() override;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Factory|Data")
 	TObjectPtr<UFactoryObjectData> BeltData;
@@ -71,12 +73,28 @@ private:
 	void ToggleBeltPlaceMode();
 	void ToggleRetrieveMode();
 	void TryEnterMoveMode();
+	void ToggleMultipleControlMode();
 	/////
 	
-	///// 객체 선택 제어
+	///// 다중 제어
 	void SelectObject(AFactoryLogisticsObjectBase* TargetObject);	// 객체 선택. 추후 다중 선택 및 선택된 객체 그룹 이동/회전/철거 기능 구현 예정
 	void DeselectObject(AFactoryLogisticsObjectBase* TargetObject);	// 객체 선택 해제
-	void ClearObject();
+	void ClearSelectedObject();
+	
+	void OnMultipleControlAddStarted();
+	void OnMultipleControlAddCompleted();
+	
+	void OnMultipleControlRemoveStarted();
+	void OnMultipleControlRemoveCompleted();
+	
+	void BeginDragSelection(bool bIsRemove);
+	void EndDragSelection(bool bIsRemove);
+	
+	void OnMultipleControlMove();
+	void OnMultipleControlRetrieve();
+	
+	void UpdateDragSelectionBox();
+	void SelectConnectedBeltLine();
 	/////
 	
 	///// 내부 핵심 로직
@@ -107,6 +125,7 @@ private:
 		FIntPoint& OutGrid, UFactoryPortComponentBase*& OutPort) const;
 	bool TryFindNearPortDirection(const FVector& SearchCenter, bool bFindInputPort, FVector& OutDir) const; 
 	AActor* GetFacilityAtGrid(const FVector& GridLocation) const;
+	TArray<AFactoryLogisticsObjectBase*> GetFacilitiesInGridBox(const FIntPoint& StartGrid, const FIntPoint& EndGrid) const;
 	
 	
 	FVector CalculateSnappedLocation(FVector RawLocation, FIntPoint GridSize) const;
@@ -141,6 +160,14 @@ private:
 	FVector BeltStartDir;
 	bool bIsWaitingDetermineBeltEnd = false;
 	
+	//다중제어 관련 변수
+	bool bIsDraggingSelection = false;
+	bool bIsRemoveDrag = false;
+	FIntPoint SelectionDragStartPoint;
+	UPROPERTY()
+	TSet<AFactoryLogisticsObjectBase*> PreDragSelection;
+	
+	// 기본 변수
 	float GridLength = 100.f;
 	const float MaxBuildTraceDistance = 1500.f;
 };
