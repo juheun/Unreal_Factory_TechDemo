@@ -20,6 +20,7 @@
 #include "Player/Input/FactoryInputConfig.h"
 #include "Settings/FactoryDeveloperSettings.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
+#include "UI/PlayerContext/FactoryDragSelectionWidget.h"
 
 
 UFactoryPlacementComponent::UFactoryPlacementComponent()
@@ -62,6 +63,16 @@ void UFactoryPlacementComponent::BeginPlay()
     }
 	
     CachedPlayerController = Cast<AFactoryPlayerController>(GetOwner());
+	
+	if (CachedPlayerController.Get() && DragSelectionWidgetBP)
+	{
+		DragSelectionWidget = CreateWidget<UFactoryDragSelectionWidget>(CachedPlayerController.Get(), DragSelectionWidgetBP);
+		if (DragSelectionWidget)
+		{
+			DragSelectionWidget->AddToViewport();
+			DragSelectionWidget->StopDrag(); // 처음에 위젯 숨기기
+		}
+	}
 	
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Name = FName("PlaceObjectPivotActor");
@@ -249,6 +260,11 @@ void UFactoryPlacementComponent::ToggleMultipleControlMode()
 	else if (CurrentPlacementMode == EPlacementMode::MultipleControl)
 	{
 		CancelPlaceObject();
+	}
+	
+	if (DragSelectionWidget)
+	{
+		DragSelectionWidget->StopDrag();
 	}
 }
 
@@ -460,6 +476,11 @@ void UFactoryPlacementComponent::CancelPlaceObject()
 		}
 		// TODO : 상황에 따라 선택 배열이 남아있어야 할수도 있는 부분 체크
 		ClearSelectedObject(); // 선택 배열 비우기
+	}
+	
+	if (DragSelectionWidget)
+	{
+		DragSelectionWidget->StopDrag();
 	}
 	
 	ClearAllPreviews();
@@ -909,6 +930,11 @@ void UFactoryPlacementComponent::BeginDragSelection(bool bIsRemove)
         
 		PreDragSelection.Empty();
 		PreDragSelection.Append(SelectedLogisticsObjectBases);
+		
+		if (DragSelectionWidget)
+		{
+			DragSelectionWidget->StartDrag(HitLocation);
+		}
 	}
 }
 
@@ -931,6 +957,11 @@ void UFactoryPlacementComponent::EndDragSelection(bool bIsRemove)
 				ToggleMultipleControlMode();	// 단순 우클릭 처리. 선택모드 종료
 			}
 		}
+	}
+	// 드래그 선택 위젯 끄기
+	if (DragSelectionWidget)
+	{
+		DragSelectionWidget->StopDrag();
 	}
 }
 
@@ -964,6 +995,16 @@ void UFactoryPlacementComponent::UpdateDragSelectionBox()
 	for (auto* Obj : DesiredSelection)
 	{
 		SelectObject(Obj);
+	}
+	
+	// 드래그 선택 위젯 업데이트
+	if (DragSelectionWidget && CachedPlayerController.IsValid())
+	{
+		float MouseX, MouseY;
+		if (CachedPlayerController.Get()->GetMousePosition(MouseX, MouseY))
+		{
+			DragSelectionWidget->UpdateDrag(CachedPlayerController.Get(), FVector2D(MouseX, MouseY));
+		}
 	}
 }
 

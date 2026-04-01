@@ -7,6 +7,7 @@
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "FactoryPlacementComponent.generated.h"
 
+class UFactoryDragSelectionWidget;
 struct FInputActionValue;
 class UFactoryPortComponentBase;
 class UFactoryItemData;
@@ -56,6 +57,8 @@ public:
 	FOnObjectPlacedFromInventorySignature OnObjectPlacedFromInventorySignature;
 	
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
+	TSubclassOf<UFactoryDragSelectionWidget> DragSelectionWidgetBP;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Factory|Data")
 	TObjectPtr<UFactoryObjectData> BeltData;
@@ -143,6 +146,9 @@ private:
 	
 	UPROPERTY()
 	TWeakObjectPtr<AFactoryPlayerController> CachedPlayerController;
+	
+	UPROPERTY()
+	TObjectPtr<UFactoryDragSelectionWidget> DragSelectionWidget;
 	
 	// 오브젝트 다중 선택 후 이동 모드나 다중 철거 기능 구현을 위해 선택된 객체들을 저장
 	UPROPERTY()
