@@ -75,7 +75,7 @@ TArray<AFactoryLogisticsObjectBase*> UFactoryGridMathLibrary::GetFacilitiesInGri
 	return FoundFacilities;
 }
 
-AActor* UFactoryGridMathLibrary::GetFacilityAtGrid(const UObject* WorldContextObject, const FVector& GridLocation, float GridLength)
+AFactoryLogisticsObjectBase* UFactoryGridMathLibrary::GetFacilityAtGrid(const UObject* WorldContextObject, const FVector& GridLocation, float GridLength)
 {
 	FIntPoint TargetGrid = WorldToGrid(GridLocation, GridLength);
 	TArray<AFactoryLogisticsObjectBase*> Facilities = GetFacilitiesInGridBox(WorldContextObject, TargetGrid, TargetGrid, GridLength);

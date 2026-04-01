@@ -32,7 +32,7 @@ public:
 	static TArray<AFactoryLogisticsObjectBase*> GetFacilitiesInGridBox(
 		const UObject* WorldContextObject, const FIntPoint& StartGrid, const FIntPoint& EndGrid, float GridLength);
 	UFUNCTION(BlueprintCallable, Category = "Factory|GridMath", meta = (WorldContext = "WorldContextObject"))
-	static AActor* GetFacilityAtGrid(const UObject* WorldContextObject, const FVector& GridLocation, float GridLength);
+	static AFactoryLogisticsObjectBase* GetFacilityAtGrid(const UObject* WorldContextObject, const FVector& GridLocation, float GridLength);
 	
 	// 포트 스캔
 	UFUNCTION(BlueprintCallable, Category = "Factory|GridMath")
