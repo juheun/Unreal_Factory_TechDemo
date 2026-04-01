@@ -19,6 +19,7 @@
 #include "Player/Input/FactoryPlayerController.h"
 #include "Player/Input/FactoryInputConfig.h"
 #include "Core/FactoryDeveloperSettings.h"
+#include "Libraries/FactoryGridMathLibrary.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "UI/PlayerContext/FactoryDragSelectionWidget.h"
 
@@ -110,15 +111,15 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 	{
 		if (CurrentPlacementMode == EPlacementMode::BeltPlace)
 		{
-			FIntPoint ResultPoint = WorldToGrid(NewLocation);
+			FIntPoint ResultPoint = UFactoryGridMathLibrary::WorldToGrid(NewLocation, GridLength);
 			UFactoryPortComponentBase* TargetPort = nullptr;
 
 			// 목적지에 설비가 있는지 1번만 검사해서 EndPoint를 스냅으로 덮어씌움
-			if (AActor* HitActor = GetFacilityAtGrid(NewLocation))
+			if (AActor* HitActor = UFactoryGridMathLibrary::GetFacilityAtGrid(this, NewLocation, GridLength))
 			{
 				FIntPoint SnapGrid;
 				bool bIsOutput = !bIsWaitingDetermineBeltEnd;
-				if (TryGetSmartSnapPortGrid(NewLocation, HitActor, bIsOutput, SnapGrid, TargetPort))
+				if (UFactoryGridMathLibrary::TryGetSmartSnapPortGrid(NewLocation, HitActor, bIsOutput, SnapGrid, TargetPort, GridLength))
 				{
 					ResultPoint = SnapGrid;
 				}
@@ -140,7 +141,7 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 			}
 			else
 			{
-				FVector ResultVector = GridToWorld(ResultPoint); 
+				FVector ResultVector = UFactoryGridMathLibrary::GridToWorld(ResultPoint, GridLength); 
 				PlaceObjectPivotActor->SetActorLocation(ResultVector);
 			}
 		}
@@ -578,7 +579,7 @@ void UFactoryPlacementComponent::HandleBeltPlacementClick()
 		
 		// 마지막 벨트의 정보 저장
 		AFactoryPlacePreview* LastPreview = ActivePreviews.Last();
-		FIntPoint NextStartGrid = WorldToGrid(LastPreview->GetActorLocation());
+		FIntPoint NextStartGrid = UFactoryGridMathLibrary::WorldToGrid(LastPreview->GetActorLocation(), GridLength);
 		FVector NextStartDir;
 		
 		if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(LastPreview))
@@ -617,7 +618,8 @@ void UFactoryPlacementComponent::BeltPlacePreviewUpdate(TArray<FBeltPlacementDat
 	{
 		const UFactoryObjectData* TargetData = Data.bIsBridge ? BeltBridgeData : BeltData;
 		
-		AFactoryPlacePreview* Preview = CreateAndInitPreview(TargetData, GridToWorld(Data.GridPoint), Data.Rotation);
+		AFactoryPlacePreview* Preview = CreateAndInitPreview(
+			TargetData, UFactoryGridMathLibrary::GridToWorld(Data.GridPoint, GridLength), Data.Rotation);
 		
 		if (Data.bIsBridge)
 		{
@@ -716,7 +718,7 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
     for (int i = 0; i < Points.Num(); i++)
     {
     	// 만약 벨트 브릿지가 있다면 해당 위치는 프리뷰를 생성하지 않도록 변경
-    	FVector CurrentLoc = GridToWorld(Points[i]);
+    	FVector CurrentLoc = UFactoryGridMathLibrary::GridToWorld(Points[i], GridLength);
     	FHitResult TileHit;
     	FVector TraceStart = CurrentLoc + FVector(0, 0, 50.f);
     	FVector TraceEnd = CurrentLoc - FVector(0, 0, 50.f);
@@ -787,11 +789,12 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
 	    	// 마지막 벨트의 덮어쓰기가 없을때만 주변 포트 스캔
 	    	if (!bLastBeltOverwritten)
 	    	{
-	    		TryFindNearPortDirection(CurrentLoc, true, EndDir);
+	    		UFactoryGridMathLibrary::TryFindNearPortDirection(
+	    			this, CurrentLoc, true, EndDir, GridLength);
 	    	}
 	    }
        
-        PlacementData.Type = DetermineBeltType(InDir, EndDir);
+        PlacementData.Type = UFactoryGridMathLibrary::DetermineBeltType(InDir, EndDir);
         PlacementData.Rotation = InDir.Rotation();
     	PlacementData.bIsBridge = bIsCrossingOrthogonalBelt;
     	
@@ -801,27 +804,13 @@ TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
     return OutBeltPath;
 }
 
-EBeltType UFactoryPlacementComponent::DetermineBeltType(const FVector& StartDir, const FVector& EndDir) const
-{
-	if (StartDir.Equals(EndDir, 0.01f))
-	{
-		return EBeltType::Straight;
-	}
-	
-	float CrossZ = FVector::CrossProduct(StartDir, EndDir).Z;
-	if (CrossZ < 0.f) return EBeltType::LeftTurn;
-	if (CrossZ > 0.f) return EBeltType::RightTurn;
-	
-	return EBeltType::Straight;
-}
-
 bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLocation, 
                                                      FIntPoint& OutStartGrid, FVector& OutStartDir) const
 {
-	OutStartGrid = WorldToGrid(PointingLocation);
+	OutStartGrid = UFactoryGridMathLibrary::WorldToGrid(PointingLocation, GridLength);
 	
 	// 현재 클릭한 그리드에 기존 벨트가 있는지 수직으로 검사 (벨트 덮어쓰기 및 연장용)
-	if (AActor* HitActor = GetFacilityAtGrid(PointingLocation))
+	if (AActor* HitActor = UFactoryGridMathLibrary::GetFacilityAtGrid(this, PointingLocation, GridLength))
 	{
 		if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
 		{
@@ -833,7 +822,8 @@ bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLoca
 		FIntPoint SnapGrid;
 		UFactoryPortComponentBase* TargetPort = nullptr;
 		
-		if (TryGetSmartSnapPortGrid(PointingLocation, HitActor, true, SnapGrid, TargetPort))
+		if (UFactoryGridMathLibrary::TryGetSmartSnapPortGrid(
+			PointingLocation, HitActor, true, SnapGrid, TargetPort, GridLength))
 		{
 			OutStartGrid = SnapGrid;
 			OutStartDir = TargetPort->GetForwardVector();
@@ -843,7 +833,8 @@ bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLoca
 	
 	// 설비의 Outport찾기
 	FVector FoundDir;
-	if (TryFindNearPortDirection(PointingLocation, false, FoundDir))
+	if (UFactoryGridMathLibrary::TryFindNearPortDirection(
+		this, PointingLocation, false, FoundDir, GridLength))
 	{
 		OutStartDir = FoundDir;
 		return true;
@@ -934,7 +925,7 @@ void UFactoryPlacementComponent::BeginDragSelection(bool bIsRemove)
 	FVector HitLocation;
 	if (TryGetPointingGridLocation(HitLocation))
 	{
-		SelectionDragStartPoint = WorldToGrid(HitLocation);
+		SelectionDragStartPoint = UFactoryGridMathLibrary::WorldToGrid(HitLocation, GridLength);
 		bIsDraggingSelection = true;
 		bIsRemoveDrag = bIsRemove;
         
@@ -956,7 +947,7 @@ void UFactoryPlacementComponent::EndDragSelection(bool bIsRemove)
 	FVector CurrentLocation;
 	if (TryGetPointingGridLocation(CurrentLocation))
 	{
-		if (SelectionDragStartPoint == WorldToGrid(CurrentLocation))	// StartGrid = EndGrid라면 클릭
+		if (SelectionDragStartPoint == UFactoryGridMathLibrary::WorldToGrid(CurrentLocation, GridLength))	// StartGrid = EndGrid라면 클릭
 		{
 			if (!bIsRemove)
 			{
@@ -983,8 +974,9 @@ void UFactoryPlacementComponent::UpdateDragSelectionBox()
 	if (!TryGetPointingGridLocation(CurrentLocation)) return;
 	
 	// 드래그 박스 안 겹치는 객체 도출
-	FIntPoint CurrentGrid = WorldToGrid(CurrentLocation);
-	TArray<AFactoryLogisticsObjectBase*> OverlappedObjects = GetFacilitiesInGridBox(SelectionDragStartPoint, CurrentGrid);
+	FIntPoint CurrentGrid = UFactoryGridMathLibrary::WorldToGrid(CurrentLocation, GridLength);
+	TArray<AFactoryLogisticsObjectBase*> OverlappedObjects = 
+		UFactoryGridMathLibrary::GetFacilitiesInGridBox(this, SelectionDragStartPoint, CurrentGrid, GridLength);
 	
 	// 
 	TSet<AFactoryLogisticsObjectBase*> DesiredSelection = PreDragSelection;
@@ -1023,7 +1015,7 @@ void UFactoryPlacementComponent::SelectConnectedBeltLine()
 	FVector CurrentLocation;
 	if (TryGetPointingGridLocation(CurrentLocation))
 	{
-		if (AActor* HitActor = GetFacilityAtGrid(CurrentLocation))
+		if (AActor* HitActor = UFactoryGridMathLibrary::GetFacilityAtGrid(this, CurrentLocation, GridLength))
 		{
 			if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
 			{
@@ -1108,161 +1100,10 @@ bool UFactoryPlacementComponent::TryGetPointingGridLocation(FVector& OutResultVe
     
 	if (bHit)
 	{
-		OutResultVec = CalculateSnappedLocation(HitResult.Location, PlaceObjectPivotGridSize);
+		OutResultVec = UFactoryGridMathLibrary::CalculateSnappedLocation(HitResult.Location, PlaceObjectPivotGridSize, GridLength);
 	}
 	
 	return bHit;
-}
-
-FVector UFactoryPlacementComponent::CalculateSnappedLocation(FVector RawLocation, FIntPoint GridSize) const
-{
-	auto SnapValue = [this](float Raw, int32 Size) -> float
-	{
-		float GridStart = FMath::FloorToFloat(Raw / GridLength) * GridLength;
-		float Offset = (Size % 2 != 0) ? GridLength * 0.5f : 0.0f;
-		return GridStart + Offset;
-	};
-
-	return FVector(SnapValue(RawLocation.X, GridSize.X), SnapValue(RawLocation.Y, GridSize.Y), RawLocation.Z);
-}
-
-
-bool UFactoryPlacementComponent::TryGetSmartSnapPortGrid(const FVector& PointingLocation,
-	AActor* HitActor, bool bIsOutput, FIntPoint& OutGrid, UFactoryPortComponentBase*& OutPort) const
-{
-	AFactoryLogisticsObjectBase* Facility = Cast<AFactoryLogisticsObjectBase>(HitActor);
-	if (!Facility) return false;
-	if (Facility->IsA<AFactoryBelt>())
-		return false;
-	
-	OutPort = nullptr;
-	
-	TArray<UFactoryPortComponentBase*> PortsToSearch;
-	if (bIsOutput)
-	{
-		for (auto* Port : Facility->GetOutputPorts()) { PortsToSearch.Add(Port); }
-	}
-	else
-	{
-		for (auto* Port : Facility->GetInputPorts()) { PortsToSearch.Add(Port); }
-	}
-	
-	float MinDistSqr = FLT_MAX;
-	for (auto* Port : PortsToSearch)
-	{
-		float DistSqr = FVector::DistSquared(Port->GetComponentLocation(), PointingLocation);
-		if (DistSqr < MinDistSqr)
-		{
-			MinDistSqr = DistSqr;
-			OutPort = Port;
-		}
-	}
-	
-	if (OutPort)
-	{
-		FVector OutportDir = OutPort->GetForwardVector();
-		int32 Sign = bIsOutput ? 1 : -1;
-		FVector PortForwardVector = OutPort->GetComponentLocation() + (OutportDir * GridLength * Sign);
-		FVector SnappedPortForwardVector = CalculateSnappedLocation(PortForwardVector, FIntPoint(1,1));	// 결과값도 안전하게 스냅
-		OutGrid = WorldToGrid(SnappedPortForwardVector);
-		return true;
-	}
-	return false;
-}
-
-bool UFactoryPlacementComponent::TryFindNearPortDirection(const FVector& SearchCenter, bool bFindInputPort,
-	FVector& OutDir) const
-{
-	int XArr[4] = {1, -1, 0, 0};
-	int YArr[4] = {0, 0, 1, -1};
-	FVector StartLocation = SearchCenter + FVector(0, 0, 5.f); // 지면 간섭 방지
-	float TraceLength = GridLength; 
-	FHitResult PortHit;
-	
-	for (int i = 0; i < 4; i++)
-	{
-		FVector SearchEnd = StartLocation + FVector(XArr[i] * TraceLength, YArr[i] * TraceLength, 0.f);
-        
-		if (GetWorld()->LineTraceSingleByChannel(PortHit, StartLocation, SearchEnd, ECC_GameTraceChannel2))	// Port
-		{
-			if (bFindInputPort)
-			{
-				if (UFactoryInputPortComponent* InputPort = Cast<UFactoryInputPortComponent>(PortHit.GetComponent()))
-				{
-					OutDir = InputPort->GetForwardVector();
-					return true;
-				}
-			}
-			else
-			{
-				if (UFactoryOutputPortComponent* OutputPort = Cast<UFactoryOutputPortComponent>(PortHit.GetComponent()))
-				{
-					OutDir = OutputPort->GetForwardVector();
-					return true;
-				}
-			}
-		}
-	}
-	return false;
-}
-
-AActor* UFactoryPlacementComponent::GetFacilityAtGrid(const FVector& GridLocation) const
-{
-	FIntPoint TargetGrid = WorldToGrid(GridLocation);
-	TArray<AFactoryLogisticsObjectBase*> Facilities = GetFacilitiesInGridBox(TargetGrid, TargetGrid);
-	return Facilities.Num() > 0 ? Facilities[0] : nullptr;
-}
-
-TArray<AFactoryLogisticsObjectBase*> UFactoryPlacementComponent::GetFacilitiesInGridBox(const FIntPoint& StartGrid,
-	const FIntPoint& EndGrid) const
-{
-	int32 MinX = FMath::Min(StartGrid.X, EndGrid.X);
-	int32 MinY = FMath::Min(StartGrid.Y, EndGrid.Y);
-	int32 MaxX = FMath::Max(StartGrid.X, EndGrid.X);
-	int32 MaxY = FMath::Max(StartGrid.Y, EndGrid.Y);
-
-	float CenterX = (MinX + MaxX + 1) * GridLength * 0.5f;
-	float CenterY = (MinY + MaxY + 1) * GridLength * 0.5f;
-	FVector CenterLoc(CenterX, CenterY, 50.f);
-	
-	float Margin = 2.0f; 
-	float ExtentX = ((MaxX - MinX + 1) * GridLength * 0.5f) - Margin;
-	float ExtentY = ((MaxY - MinY + 1) * GridLength * 0.5f) - Margin;
-	FVector BoxExtent(ExtentX, ExtentY, 100.f);
-
-	FCollisionShape BoxShape = FCollisionShape::MakeBox(BoxExtent);
-	FCollisionObjectQueryParams ObjectParams;
-	ObjectParams.AddObjectTypesToQuery(ECC_GameTraceChannel3);
-    
-	TArray<FOverlapResult> Overlaps;
-	GetWorld()->OverlapMultiByObjectType(Overlaps, CenterLoc, FQuat::Identity, ObjectParams, BoxShape);
-
-	TArray<AFactoryLogisticsObjectBase*> FoundFacilities;
-	for (const FOverlapResult& Result : Overlaps)
-	{
-		if (AFactoryLogisticsObjectBase* HitObj = Cast<AFactoryLogisticsObjectBase>(Result.GetActor()))
-		{
-			FoundFacilities.Add(HitObj);
-		}
-	}
-	return FoundFacilities;
-}
-
-FIntPoint UFactoryPlacementComponent::WorldToGrid(const FVector& WorldLocation) const
-{
-	return FIntPoint(
-		FMath::FloorToInt(WorldLocation.X / GridLength),
-		FMath::FloorToInt(WorldLocation.Y / GridLength)
-	);
-}
-
-FVector UFactoryPlacementComponent::GridToWorld(const FIntPoint& GridLocation, const float Height) const
-{
-	return FVector(
-		(GridLocation.X * GridLength) + (GridLength * 0.5f),
-		(GridLocation.Y * GridLength) + (GridLength * 0.5f),
-		Height
-	);
 }
 
 UFactoryPoolSubsystem* UFactoryPlacementComponent::GetPool() const
