@@ -4,13 +4,9 @@
 #include "Placement/Components/FactoryPlacementComponent.h"
 
 #include "EnhancedInputComponent.h"
-#include "Engine/OverlapResult.h"
 #include "Logistics/Belts/FactoryBelt.h"
-#include "Logistics/Belts/FactoryBeltBridge.h"
-#include "Logistics/Ports/FactoryInputPortComponent.h"
 #include "Logistics/Machines/FactoryLogisticsObjectBase.h"
 #include "Logistics/FactoryLogisticsTypes.h"
-#include "Logistics/Ports/FactoryOutputPortComponent.h"
 #include "Placement/Previews/FactoryBeltBridgePreview.h"
 #include "Placement/Previews/FactoryBeltPreview.h"
 #include "Placement/FactoryObjectData.h"
@@ -20,6 +16,7 @@
 #include "Player/Input/FactoryInputConfig.h"
 #include "Core/FactoryDeveloperSettings.h"
 #include "Libraries/FactoryGridMathLibrary.h"
+#include "Placement/Components/FactoryBeltBuilderComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "UI/PlayerContext/FactoryDragSelectionWidget.h"
 
@@ -27,6 +24,8 @@
 UFactoryPlacementComponent::UFactoryPlacementComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	
+	BeltBuilder = CreateDefaultSubobject<UFactoryBeltBuilderComponent>(TEXT("BeltBuilder"));
 }
 
 #pragma region 엔진 라이프 사이클 및 컨트롤러 소통
@@ -109,40 +108,30 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 	FVector NewLocation;
 	if (TryGetPointingGridLocation(NewLocation))
 	{
-		if (CurrentPlacementMode == EPlacementMode::BeltPlace)
+		if (CurrentPlacementMode == EPlacementMode::BeltPlace && BeltBuilder)
 		{
-			FIntPoint ResultPoint = UFactoryGridMathLibrary::WorldToGrid(NewLocation, GridLength);
-			UFactoryPortComponentBase* TargetPort = nullptr;
-
-			// 목적지에 설비가 있는지 1번만 검사해서 EndPoint를 스냅으로 덮어씌움
-			if (AActor* HitActor = UFactoryGridMathLibrary::GetFacilityAtGrid(this, NewLocation, GridLength))
+			if (BeltBuilder->IsWaitingForEndPoint())
 			{
-				FIntPoint SnapGrid;
-				bool bIsOutput = !bIsWaitingDetermineBeltEnd;
-				if (UFactoryGridMathLibrary::TryGetSmartSnapPortGrid(NewLocation, HitActor, bIsOutput, SnapGrid, TargetPort, GridLength))
+				TArray<FBeltPlacementData> PathData;
+				
+				if (BeltBuilder->GetPreviewPathData(NewLocation, GridLength, false, PathData))
 				{
-					ResultPoint = SnapGrid;
-				}
-			}
-			
-			if (bIsWaitingDetermineBeltEnd)
-			{
-				FIntPoint EndPoint = ResultPoint;
-          
-				// 기본 경로로 프리뷰를 생성
-				BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, false, TargetPort));
-			
-				// 프리뷰 유효성 검사하여 만약 기본 경로가 Invalid라면
-				if (!CheckValidity())
-				{
-					// 대안 경로로 다시 생성
-					BeltPlacePreviewUpdate(CalculateBeltPath(BeltStartPoint, EndPoint, BeltStartDir, true, TargetPort));
+					RenderBeltPreviews(PathData);
+					
+					// 만약 첫번째 루트로 검사 후 실패시 대안경로로 생성
+					if (!CheckValidity())
+					{
+						if (BeltBuilder->GetPreviewPathData(NewLocation, GridLength, true, PathData))
+						{
+							RenderBeltPreviews(PathData);
+						}
+					}
 				}
 			}
 			else
 			{
-				FVector ResultVector = UFactoryGridMathLibrary::GridToWorld(ResultPoint, GridLength); 
-				PlaceObjectPivotActor->SetActorLocation(ResultVector);
+				FVector FinalLocation = BeltBuilder->GetSnappedStartLocation(NewLocation, GridLength);
+				PlaceObjectPivotActor->SetActorLocation(FinalLocation);
 			}
 		}
 		else
@@ -175,7 +164,26 @@ void UFactoryPlacementComponent::ProcessClickAction()
 		break;
 		
 	case EPlacementMode::BeltPlace:
-		HandleBeltPlacementClick();
+		FVector PointingLoc;
+		if (TryGetPointingGridLocation(PointingLoc))
+		{
+			if (BeltBuilder && BeltBuilder->ProcessClick(PointingLoc, GridLength))
+			{
+				// 현재 마우스 위치 다시 구해서 넘겨주기
+				FVector NextStartLoc = PointingLoc;
+				if (ActivePreviews.Num() > 0 && ActivePreviews.Last())
+				{
+					NextStartLoc = ActivePreviews.Last()->GetActorLocation();
+				}
+
+				if (PlaceObject())
+				{
+					// 스폰 성공 시, 방금 캐싱한 끝점을 다시 클릭한 것처럼 만들어서 연속 짓기 돌입
+					BeltBuilder->ResetBuilderState();
+					BeltBuilder->ProcessClick(NextStartLoc, GridLength); 
+				}
+			}
+		}
 		break;
 		
 	case EPlacementMode::Retrieve:
@@ -201,7 +209,7 @@ void UFactoryPlacementComponent::ToggleBeltPlaceMode()
 	{
 		// 먼저 벨트모드로 변경해야 TryGetPointingGridLocation의 가드에 걸리지 않음
 		CurrentPlacementMode = EPlacementMode::BeltPlace;
-		bIsWaitingDetermineBeltEnd = false;
+		if (BeltBuilder) BeltBuilder->ResetBuilderState();
        
 		FVector NewLocation;
 		if (!TryGetPointingGridLocation(NewLocation))
@@ -211,7 +219,7 @@ void UFactoryPlacementComponent::ToggleBeltPlaceMode()
 			return;
 		}
        
-		ResetBeltGuidePreview();
+		if (BeltBuilder) SetupSinglePreview(BeltBuilder->GetBeltData(), EPlacementMode::BeltPlace);
 	}
 	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
@@ -494,8 +502,8 @@ void UFactoryPlacementComponent::CancelPlaceObject()
 		DragSelectionWidget->StopDrag();
 	}
 	
+	if (BeltBuilder) BeltBuilder->ResetBuilderState();
 	ClearAllPreviews();
-	bIsWaitingDetermineBeltEnd = false;
 	CurrentPlacementMode = EPlacementMode::None;
 	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
@@ -560,50 +568,9 @@ void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
 
 #pragma region 벨트 제어
 
-void UFactoryPlacementComponent::HandleBeltPlacementClick()
+void UFactoryPlacementComponent::RenderBeltPreviews(const TArray<FBeltPlacementData>& BeltPlacementDatas)
 {
-	FVector SnappedPointingLocation = FVector::ZeroVector;
-	if (!TryGetPointingGridLocation(SnappedPointingLocation)) return;
-	
-	if (!bIsWaitingDetermineBeltEnd)
-	{
-		if (TryGetBeltStartData(SnappedPointingLocation, BeltStartPoint, BeltStartDir))
-		{
-			bIsWaitingDetermineBeltEnd = true;
-			ClearAllPreviews();
-		}
-	}
-	else
-	{
-		if (ActivePreviews.IsEmpty()) return;
-		
-		// 마지막 벨트의 정보 저장
-		AFactoryPlacePreview* LastPreview = ActivePreviews.Last();
-		FIntPoint NextStartGrid = UFactoryGridMathLibrary::WorldToGrid(LastPreview->GetActorLocation(), GridLength);
-		FVector NextStartDir;
-		
-		if (AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(LastPreview))
-		{
-			NextStartDir = BeltPreview->GetBeltExitDirection();
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("UFactoryPlacementComponent : HandleBeltPlacementClick에서 AFactoryBeltPreview Cast 실패"));
-			NextStartDir = LastPreview->GetActorForwardVector();
-		}
-		
-		if (PlaceObject())
-		{
-			bIsWaitingDetermineBeltEnd = true;		// 계속해서 이어서 벨트 배치
-			BeltStartPoint = NextStartGrid;
-			BeltStartDir = NextStartDir;
-		}
-	}
-}
-
-void UFactoryPlacementComponent::BeltPlacePreviewUpdate(TArray<FBeltPlacementData> BeltPlacementDatas)
-{
-	if (CurrentPlacementMode != EPlacementMode::BeltPlace || !bIsWaitingDetermineBeltEnd ) return;
+	if (CurrentPlacementMode != EPlacementMode::BeltPlace || !BeltBuilder ) return;
 	
 	UFactoryPoolSubsystem* Pool = GetPool();
 	if (!Pool) return;
@@ -616,7 +583,7 @@ void UFactoryPlacementComponent::BeltPlacePreviewUpdate(TArray<FBeltPlacementDat
 	
 	for (const FBeltPlacementData& Data : BeltPlacementDatas)
 	{
-		const UFactoryObjectData* TargetData = Data.bIsBridge ? BeltBridgeData : BeltData;
+		const UFactoryObjectData* TargetData = Data.bIsBridge ? BeltBuilder->GetBeltBridgeData() : BeltBuilder->GetBeltData();
 		
 		AFactoryPlacePreview* Preview = CreateAndInitPreview(
 			TargetData, UFactoryGridMathLibrary::GridToWorld(Data.GridPoint, GridLength), Data.Rotation);
@@ -634,213 +601,6 @@ void UFactoryPlacementComponent::BeltPlacePreviewUpdate(TArray<FBeltPlacementDat
 			}
 		}
 	}
-}
-
-void UFactoryPlacementComponent::ResetBeltGuidePreview()
-{
-	SetupSinglePreview(BeltData, EPlacementMode::BeltPlace);
-	bIsWaitingDetermineBeltEnd = false;
-}
-
-TArray<FBeltPlacementData> UFactoryPlacementComponent::CalculateBeltPath(
-	const FIntPoint& StartPoint, const FIntPoint& EndPoint, const FVector& StartPointDir, bool bAlternativeRoute, UFactoryPortComponentBase* TargetPort) const
-{
-	TArray<FIntPoint> Points;
-    Points.Add(StartPoint);
-
-    if (StartPoint != EndPoint)
-    {
-        // 지정한 축(X 또는 Y)으로 목표 지점까지 한 칸씩 배열에 추가하며 이동
-        auto MoveToX = [&](int32 TargetX) {
-            int32 Step = FMath::Sign(TargetX - Points.Last().X);
-            while (Points.Last().X != TargetX) {
-                Points.Add(FIntPoint(Points.Last().X + Step, Points.Last().Y));
-            }
-        };
-        auto MoveToY = [&](int32 TargetY) {
-            int32 Step = FMath::Sign(TargetY - Points.Last().Y);
-            while (Points.Last().Y != TargetY) {
-                Points.Add(FIntPoint(Points.Last().X, Points.Last().Y + Step));
-            }
-        };
-
-        FIntPoint StartDirInt(FMath::RoundToInt(StartPointDir.X), FMath::RoundToInt(StartPointDir.Y));
-        bool bIsXDir = (StartDirInt.X != 0);
-
-        // 목적지가 등 뒤에 있는지 판별
-        bool bTargetIsBehind = false;
-        if (bIsXDir && FMath::Sign(EndPoint.X - StartPoint.X) == -StartDirInt.X) bTargetIsBehind = true;
-        if (!bIsXDir && FMath::Sign(EndPoint.Y - StartPoint.Y) == -StartDirInt.Y) bTargetIsBehind = true;
-
-        if (!bTargetIsBehind)
-        {
-            // [정상 L자 라우팅]: 목표가 앞이나 옆에 있으면, 무조건 내가 바라보는 방향(직진)을 먼저 이동
-            if (bIsXDir) { MoveToX(EndPoint.X); MoveToY(EndPoint.Y); }
-            else         { MoveToY(EndPoint.Y); MoveToX(EndPoint.X); }
-        }
-        else
-        {
-            // [회피 U/L자 라우팅]: 목표가 등 뒤에 있으면, 무조건 좌/우 측면으로 먼저 이동
-            int32 AltSign = bAlternativeRoute ? -1 : 1; // 충돌 시 반대편으로 꺾기 위한 배수
-
-            if (bIsXDir)
-            {
-                if (StartPoint.Y == EndPoint.Y) // 목표가 정확히 일직선 뒤에 있을 때
-                {
-                    MoveToY(StartPoint.Y + AltSign); // 옆으로 1칸 회피
-                    MoveToX(EndPoint.X);             // 뒤로 이동
-                    MoveToY(EndPoint.Y);             // 다시 원래 라인으로 복귀
-                }
-                else
-                {
-                    MoveToY(EndPoint.Y); // 그냥 목표의 Y축으로 바로 꺾어서 빠져나감
-                    MoveToX(EndPoint.X); // 그 다음 뒤로 이동
-                }
-            }
-            else // 바라보는 방향이 Y축일 때
-            {
-                if (StartPoint.X == EndPoint.X)
-                {
-                    MoveToX(StartPoint.X + AltSign);
-                    MoveToY(EndPoint.Y);
-                    MoveToX(EndPoint.X);
-                }
-                else
-                {
-                    MoveToX(EndPoint.X);
-                    MoveToY(EndPoint.Y);
-                }
-            }
-        }
-    }
-	
-    TArray<FBeltPlacementData> OutBeltPath;
-    for (int i = 0; i < Points.Num(); i++)
-    {
-    	// 만약 벨트 브릿지가 있다면 해당 위치는 프리뷰를 생성하지 않도록 변경
-    	FVector CurrentLoc = UFactoryGridMathLibrary::GridToWorld(Points[i], GridLength);
-    	FHitResult TileHit;
-    	FVector TraceStart = CurrentLoc + FVector(0, 0, 50.f);
-    	FVector TraceEnd = CurrentLoc - FVector(0, 0, 50.f);
-    	FCollisionObjectQueryParams ObjectParams;
-    	ObjectParams.AddObjectTypesToQuery(ECC_GameTraceChannel3);
-    	
-    	bool bHitObject = GetWorld()->LineTraceSingleByObjectType(TileHit, TraceStart, TraceEnd, ObjectParams);
-    	AActor* HitActor = bHitObject ? TileHit.GetActor() : nullptr;
-    	
-    	if (HitActor && HitActor->IsA<AFactoryBeltBridge>())
-		{
-			continue; 
-		}
-    	
-        FBeltPlacementData PlacementData;
-    	PlacementData.GridPoint = Points[i];
-       
-        FVector InDir = (i == 0) ? 
-          StartPointDir : FVector(Points[i] - Points[i - 1], 0.f).GetSafeNormal();
-    	
-	    FVector EndDir;
-    	bool bIsCrossingOrthogonalBelt = false;		// 브릿지 생성 플래그
-    	
-	    if (i < Points.Num() - 1)
-	    {
-    		// 중간 벨트들은 다음 벨트를 향해 방향을 잡음
-    		EndDir = FVector(Points[i + 1] - Points[i], 0.f).GetSafeNormal();
-	    	
-	    	// 브릿지 생성 감지 로직
-	    	if (i > 0 && HitActor) 
-	    	{
-	    		if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
-	    		{
-	    			if (HitBelt->GetBeltType() == EBeltType::Straight)
-	    			{
-	    				FVector BeltDir = HitBelt->GetActorRotation().Vector().GetSafeNormal();
-                       
-	    				// 직교 검사
-	    				if (FMath::Abs(FVector::DotProduct(BeltDir, InDir)) < 0.1f)
-	    				{
-	    					bIsCrossingOrthogonalBelt = true;
-	    				}
-	    			}
-	    		}
-	    	}
-	    }
-	    else
-	    {
-    		// 마지막 벨트. 주변 InputPort를 스캔
-    		EndDir = InDir; // 기본값은 직진
-	    	bool bLastBeltOverwritten = false;
-	    	
-	    	if (TargetPort)
-	    	{
-	    		EndDir = TargetPort->GetForwardVector();
-	    		bLastBeltOverwritten = true; // 강제했으므로 4방향 스캔 스킵	    		
-	    	}
-			else if (HitActor)
-			{
-	    		// 마지막 벨트에 이미 벨트가 존재했었는지 확인
-				if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
-				{
-					EndDir = HitBelt->GetBeltExitDirection();
-					bLastBeltOverwritten = true; // 벨트를 찾았으므로 포트 스캔 통과
-				}
-			}
-	    	
-	    	// 마지막 벨트의 덮어쓰기가 없을때만 주변 포트 스캔
-	    	if (!bLastBeltOverwritten)
-	    	{
-	    		UFactoryGridMathLibrary::TryFindNearPortDirection(
-	    			this, CurrentLoc, true, EndDir, GridLength);
-	    	}
-	    }
-       
-        PlacementData.Type = UFactoryGridMathLibrary::DetermineBeltType(InDir, EndDir);
-        PlacementData.Rotation = InDir.Rotation();
-    	PlacementData.bIsBridge = bIsCrossingOrthogonalBelt;
-    	
-        OutBeltPath.Add(PlacementData);
-    }
-    
-    return OutBeltPath;
-}
-
-bool UFactoryPlacementComponent::TryGetBeltStartData(const FVector& PointingLocation, 
-                                                     FIntPoint& OutStartGrid, FVector& OutStartDir) const
-{
-	OutStartGrid = UFactoryGridMathLibrary::WorldToGrid(PointingLocation, GridLength);
-	
-	// 현재 클릭한 그리드에 기존 벨트가 있는지 수직으로 검사 (벨트 덮어쓰기 및 연장용)
-	if (AActor* HitActor = UFactoryGridMathLibrary::GetFacilityAtGrid(this, PointingLocation, GridLength))
-	{
-		if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
-		{
-			OutStartDir = HitBelt->GetActorForwardVector();
-			return true;
-		}
-		
-		// 설비를 눌렀고, outputPort가 있으면 자동으로 가장 가까운 outputPort 앞 그리드 선택
-		FIntPoint SnapGrid;
-		UFactoryPortComponentBase* TargetPort = nullptr;
-		
-		if (UFactoryGridMathLibrary::TryGetSmartSnapPortGrid(
-			PointingLocation, HitActor, true, SnapGrid, TargetPort, GridLength))
-		{
-			OutStartGrid = SnapGrid;
-			OutStartDir = TargetPort->GetForwardVector();
-			return true;
-		}
-	}
-	
-	// 설비의 Outport찾기
-	FVector FoundDir;
-	if (UFactoryGridMathLibrary::TryFindNearPortDirection(
-		this, PointingLocation, false, FoundDir, GridLength))
-	{
-		OutStartDir = FoundDir;
-		return true;
-	}
-	
-	return false;
 }
 
 #pragma endregion
@@ -1120,11 +880,11 @@ AFactoryPlacePreview* UFactoryPlacementComponent::CreateAndInitPreview(
 	UFactoryPoolSubsystem* Pool = GetPool();
 	if (!Pool) return nullptr;
 	
-	if (Data == BeltData)
+	if (BeltBuilder && Data == BeltBuilder->GetBeltData())
 	{
 		Preview = Pool->GetItemFromPool<AFactoryBeltPreview>(EFactoryPoolType::BeltPreview, Loc, Rot);
 	}
-	else if (Data == BeltBridgeData)
+	else if (BeltBuilder && Data == BeltBuilder->GetBeltBridgeData())
 	{
 		Preview = Pool->GetItemFromPool<AFactoryBeltBridgePreview>(AFactoryBeltBridgePreview::StaticClass(), Loc, Rot);
 	}

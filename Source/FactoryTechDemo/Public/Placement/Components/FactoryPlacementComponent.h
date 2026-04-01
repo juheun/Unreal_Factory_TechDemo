@@ -18,6 +18,7 @@ struct FBeltPlacementData;
 class AFactoryPlayerController;
 class UFactoryObjectData;
 class AFactoryPlacePreview;
+class UFactoryBeltBuilderComponent;
 
 UENUM()
 enum class EPlacementMode : uint8
@@ -59,13 +60,10 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
 	TSubclassOf<UFactoryDragSelectionWidget> DragSelectionWidgetBP;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Factory|Data")
-	TObjectPtr<UFactoryObjectData> BeltData;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Factory|Data")
-	TObjectPtr<UFactoryObjectData> BeltBridgeData;
-
+	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
+	TObjectPtr<UFactoryDragSelectionWidget> DragSelectionWidget;
+	UPROPERTY(VisibleAnywhere, Category = "Factory|Components")
+	TObjectPtr<UFactoryBeltBuilderComponent> BeltBuilder;
 	
 private:
 	///// 모드 진입
@@ -102,12 +100,10 @@ private:
 	
 	///// 내부 핵심 로직
 	bool PlaceObject();
-	void HandleBeltPlacementClick();
-	void BeltPlacePreviewUpdate(TArray<FBeltPlacementData> BeltPlacementDatas);
+	void RenderBeltPreviews(const TArray<FBeltPlacementData>& BeltPlacementDatas);
 	/////
 	
 	///// 프리뷰 및 피벗 관리 헬퍼
-	void ResetBeltGuidePreview();
 	void SetupSinglePreview(UFactoryObjectData* Data, EPlacementMode Mode);
 	void ClearAllPreviews();
 	void StartObjectPlaceMode();
@@ -122,12 +118,6 @@ private:
 	
 	///// 공간 연산 및 알고리즘 헬퍼
 	bool TryGetPointingGridLocation(FVector& OutResultVec) const;
-	// 지정된 위치에 벨트 배치가 가능한지 확인 및 설치가능 여부 반환
-	bool TryGetBeltStartData(const FVector& PointingLocation, FIntPoint& OutStartGrid, FVector& OutStartDir) const;
-	
-	TArray<FBeltPlacementData> CalculateBeltPath(const FIntPoint& StartPoint, const FIntPoint& EndPoint, 
-		const FVector& StartPointDir, bool bAlternativeRoute = false, UFactoryPortComponentBase* TargetPort = nullptr) const;
-	
 	
 	//////내부 변수
 	
@@ -135,9 +125,6 @@ private:
 	
 	UPROPERTY()
 	TWeakObjectPtr<AFactoryPlayerController> CachedPlayerController;
-	
-	UPROPERTY()
-	TObjectPtr<UFactoryDragSelectionWidget> DragSelectionWidget;
 	
 	// 오브젝트 다중 선택 후 이동 모드나 다중 철거 기능 구현을 위해 선택된 객체들을 저장
 	UPROPERTY()
@@ -149,11 +136,6 @@ private:
 	UPROPERTY()
 	TObjectPtr<AActor> PlaceObjectPivotActor; // 배치 시 기준이 되는 피벗 액터
 	FIntPoint PlaceObjectPivotGridSize;	// 피벗 액터의 그리드 크기
-	
-	// 벨트 건설 상태 관련 변수
-	FIntPoint BeltStartPoint;
-	FVector BeltStartDir;
-	bool bIsWaitingDetermineBeltEnd = false;
 	
 	//다중제어 관련 변수
 	bool bIsDraggingSelection = false;

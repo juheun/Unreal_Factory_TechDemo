@@ -47,6 +47,24 @@ bool UFactoryBeltBuilderComponent::GetPreviewPathData(
 	return OutPathData.Num() > 0;
 }
 
+FVector UFactoryBeltBuilderComponent::GetSnappedStartLocation(const FVector& PointingLocation, float GridLength) const
+{
+	FVector FinalLocation = PointingLocation;
+             
+	// 마우스 위치에 설비가 있다면 Output 포트에 자동으로 스냅
+	if (AFactoryLogisticsObjectBase* HitFacility = UFactoryGridMathLibrary::GetFacilityAtGrid(this, PointingLocation, GridLength))
+	{
+		FIntPoint SnapGrid;
+		UFactoryPortComponentBase* TargetPort = nullptr;
+		if (UFactoryGridMathLibrary::TryGetSmartSnapPortGrid(PointingLocation, HitFacility, true, SnapGrid, TargetPort, GridLength))
+		{
+			FinalLocation = UFactoryGridMathLibrary::GridToWorld(SnapGrid, GridLength);
+		}
+	}
+    
+	return FinalLocation;
+}
+
 bool UFactoryBeltBuilderComponent::ProcessClick(const FVector& PointingLocation, float GridLength)
 {
 	if (!bIsWaitingDetermineBeltEnd)	// 시작점이 안 찍힌 상태면
