@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Interface/FactoryInteractable.h"
+#include "Interfaces/FactoryInteractable.h"
 #include "UI/Storage/FactoryStorageMenuWidget.h"
 #include "FactoryPlaceObjectBase.generated.h"
 

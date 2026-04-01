@@ -2,7 +2,7 @@
 
 
 #include "Subsystems/FactoryCycleSubsystem.h"
-#include "Logistics/FactoryLogisticsObjectBase.h"
+#include "Logistics/Machines/FactoryLogisticsObjectBase.h"
 
 void UFactoryCycleSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {

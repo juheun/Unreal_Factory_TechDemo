@@ -6,8 +6,8 @@
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Items/FactoryFacilityItemData.h"
 #include "Placement/FactoryObjectData.h"
-#include "Player/FactoryPlayerController.h"
-#include "Player/Component/FactoryPlacementComponent.h"
+#include "Player/Input/FactoryPlayerController.h"
+#include "Placement/Components/FactoryPlacementComponent.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/Facility/FactoryFacilityPanelBase.h"
 

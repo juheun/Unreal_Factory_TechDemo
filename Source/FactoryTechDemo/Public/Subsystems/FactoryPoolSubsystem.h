@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Settings/FactoryDeveloperSettings.h"
+#include "Core/FactoryDeveloperSettings.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "FactoryPoolSubsystem.generated.h"
 

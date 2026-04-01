@@ -4,7 +4,7 @@
 #include "Items/FactoryItemRenderActor.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
-#include "Settings/FactoryDeveloperSettings.h"
+#include "Core/FactoryDeveloperSettings.h"
 #include "Subsystems/FactoryDataSubsystem.h"
 
 

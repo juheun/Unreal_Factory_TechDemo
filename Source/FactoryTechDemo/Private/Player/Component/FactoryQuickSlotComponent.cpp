@@ -6,7 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "Items/FactoryFacilityItemData.h"
 #include "Placement/FactoryObjectData.h"
-#include "Player/FactoryPlayerController.h"
+#include "Player/Input/FactoryPlayerController.h"
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Player/Input/FactoryInputConfig.h"
 #include "UI/QuickSlot/FactoryQuickBarWidget.h"

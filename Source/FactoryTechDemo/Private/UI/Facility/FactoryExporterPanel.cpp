@@ -5,7 +5,7 @@
 
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
-#include "Logistics/FactoryWarehouseExporter.h"
+#include "Logistics/Warehouse/FactoryWarehouseExporter.h"
 #include "Subsystems/FactoryDataSubsystem.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/Core/FactoryBaseSlotWidget.h"

@@ -8,7 +8,7 @@
 #include "Components/ScrollBox.h"
 #include "Components/VerticalBox.h"
 #include "Items/FactoryRecipeData.h"
-#include "Logistics/FactoryMachineBase.h"
+#include "Logistics/Machines/FactoryMachineBase.h"
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Subsystems/FactoryCycleSubsystem.h"
 #include "UI/Facility/FactoryFacilitySlotWidget.h"

@@ -3,7 +3,7 @@
 
 #include "UI/Inventory/FactoryInventorySlotWidget.h"
 
-#include "Logistics/FactoryMachineBase.h"
+#include "Logistics/Machines/FactoryMachineBase.h"
 #include "Player/Component/FactoryInventoryComponent.h"
 #include "Subsystems/FactoryWarehouseSubsystem.h"
 #include "UI/Core/FactoryItemDragDropOperation.h"

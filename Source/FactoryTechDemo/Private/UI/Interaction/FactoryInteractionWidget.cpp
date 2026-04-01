@@ -6,7 +6,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
-#include "Interface/FactoryInteractable.h"
+#include "Interfaces/FactoryInteractable.h"
 
 
 void UFactoryInteractionWidget::SetInteractionTextList(const TArray<FInteractionOption>& Options, int32 SelectedIndex)

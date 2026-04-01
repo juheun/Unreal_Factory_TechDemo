@@ -4,7 +4,7 @@
 #include "UI/Facility/FactoryFacilitySlotWidget.h"
 
 #include "UI/Core/FactoryItemDragDropOperation.h"
-#include "Logistics/FactoryLogisticsObjectBase.h"
+#include "Logistics/Machines/FactoryLogisticsObjectBase.h"
 
 void UFactoryFacilitySlotWidget::InitSlotIdentity(AFactoryLogisticsObjectBase* InOwnerFacility, bool bInIsInput,
 	int32 InSlotIndex)

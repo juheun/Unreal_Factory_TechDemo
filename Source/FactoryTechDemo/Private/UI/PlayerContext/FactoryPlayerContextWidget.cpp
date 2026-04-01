@@ -4,7 +4,7 @@
 #include "UI/PlayerContext/FactoryPlayerContextWidget.h"
 
 #include "Components/TextBlock.h"
-#include "Player/FactoryPlayerController.h"
+#include "Player/Input/FactoryPlayerController.h"
 
 void UFactoryPlayerContextWidget::UpdateViewModeUI(const FString& ViewModeString) const
 {
