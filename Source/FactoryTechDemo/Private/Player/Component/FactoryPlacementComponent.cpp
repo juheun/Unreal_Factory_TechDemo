@@ -87,6 +87,16 @@ void UFactoryPlacementComponent::UpdatePreviewState()
 {
 	if (CurrentPlacementMode == EPlacementMode::None || !PlaceObjectPivotActor) return;
 	
+	// 다중 제어모드에서는 충돌 검사를 할 필요가 없음. 그냥 유효하다고 치고 복잡한 검사 스킵
+	if (CurrentPlacementMode == EPlacementMode::MultipleControl)
+	{
+		for (AFactoryPlacePreview* Preview : ActivePreviews)
+		{
+			Preview->SetVisualValidity(true); 
+		}
+		return;
+	}
+	
 	// 유효성 검사 람다 생성
 	auto CheckValidity = [&]() -> bool {
 		for (AFactoryPlacePreview* Preview : ActivePreviews)
