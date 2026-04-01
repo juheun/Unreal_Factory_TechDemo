@@ -16,9 +16,9 @@ class FACTORYTECHDEMO_API UFactoryWorldUIActivatorComponent : public USphereComp
 
 public:
 	UFactoryWorldUIActivatorComponent();
+	virtual void BeginPlay() override;
 
 protected:
-	virtual void BeginPlay() override;
 
 	UFUNCTION()
 	void OnActivatorBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -30,7 +30,7 @@ protected:
 	void OnViewModeChanged(EFactoryViewModeType NewViewMode);
 	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|UIActivator")
-	float NormalViewRadius = 2000.f;
+	float NormalViewRadius = 1000.f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Factory|UIActivator")
 	float TopViewRadius = 8000.f; // 탑뷰에서는 화면을 덮을 만큼 거대하게 확장

@@ -4,6 +4,7 @@
 #include "UI/World/FactoryFacilityWorldUIComponent.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "Player/FactoryTopViewPawn.h"
 
 
 UFactoryFacilityWorldUIComponent::UFactoryFacilityWorldUIComponent()
@@ -26,6 +27,8 @@ void UFactoryFacilityWorldUIComponent::BeginPlay()
 		CachedCurrentViewMode = Controller->GetCurrentViewMode();
 		Controller->OnViewModeChanged.AddDynamic(this, &UFactoryFacilityWorldUIComponent::OnViewModeChanged);
 		OnViewModeChanged(CachedCurrentViewMode);
+		
+		CachedTopViewPawn = Controller->GetTopViewPawn();
 	}
 }
 
@@ -52,6 +55,32 @@ void UFactoryFacilityWorldUIComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 	
 	if (bHiddenInGame) SetHiddenInGame(false);
+	
+	// 탑뷰일때 줌 레벨에 따른 크기 조정
+	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
+	{
+		if (!CachedTopViewPawn.IsValid())	// 혹시 탑뷰폰 캐싱 안됐다면 재시도
+		{
+			if (AFactoryPlayerController* Controller = Cast<AFactoryPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0)))
+			{
+				CachedTopViewPawn = Controller->GetTopViewPawn();
+			}
+		}
+		
+		if (AFactoryTopViewPawn* TopViewPawn = CachedTopViewPawn.Get())
+		{
+			float CurrentOrtho = TopViewPawn->GetCurrentOrthoWidth();
+			float MinOrtho = TopViewPawn->GetMinOrthoWidth();
+			float MaxOrtho = TopViewPawn->GetMaxOrthoWidth();
+			
+			float Alpha = FMath::Clamp((CurrentOrtho - MinOrtho) / (MaxOrtho - MinOrtho), 0.0f, 1.0f);
+			float TargetScale = FMath::Lerp(MaxWidgetScale, MinWidgetScale, Alpha);
+			if (UUserWidget* WidgetObj = GetUserWidgetObject())
+			{
+				WidgetObj->SetRenderScale(FVector2D(TargetScale, TargetScale));
+			}
+		}
+	}
 	
 	// 컬링을 통과했다면 자식 클래스의 배치 로직 실행
 	UpdateUIPlacement(DeltaTime, CameraLoc, CameraForward, OwnerLoc);
@@ -84,6 +113,10 @@ void UFactoryFacilityWorldUIComponent::OnViewModeChanged(EFactoryViewModeType Ne
 	else
 	{
 		SetWidgetSpace(EWidgetSpace::World);
+		if (UUserWidget* WidgetObj = GetUserWidgetObject())
+		{
+			WidgetObj->SetRenderScale(FVector2D(1.f, 1.f));
+		}
 	}
 }
 

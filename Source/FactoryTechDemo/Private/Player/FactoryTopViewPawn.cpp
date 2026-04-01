@@ -87,6 +87,15 @@ void AFactoryTopViewPawn::SetCameraPerspective(bool bIsPerspective)
     }
 }
 
+float AFactoryTopViewPawn::GetCurrentOrthoWidth() const
+{
+    if (Camera)
+    {
+        return Camera->OrthoWidth;
+    }
+    return MinOrthoWidth;
+}
+
 void AFactoryTopViewPawn::Move(const FInputActionValue& Value)
 {
     FVector2D MoveVector = Value.Get<FVector2D>();

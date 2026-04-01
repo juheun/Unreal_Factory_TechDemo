@@ -21,6 +21,10 @@ public:
     virtual void Tick(float DeltaTime) override;
     void SetCameraPerspective(bool bIsPerspective);
     
+    float GetCurrentOrthoWidth() const;
+    float GetMaxOrthoWidth() const { return MaxOrthoWidth; }
+    float GetMinOrthoWidth() const { return MinOrthoWidth; }
+
 protected:
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
     

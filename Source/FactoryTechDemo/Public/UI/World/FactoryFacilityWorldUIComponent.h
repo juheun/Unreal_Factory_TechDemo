@@ -41,6 +41,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Factory|WorldUI")
 	float CullingDotThreshold = 0.4f;
 	
+	UPROPERTY(EditDefaultsOnly, Category="Factory|WorldUI")
+	float MaxWidgetScale = 1.2f;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Factory|WorldUI")
+	float MinWidgetScale = 0.25f;
+	
 	EFactoryViewModeType CachedCurrentViewMode = EFactoryViewModeType::NormalView;
 	bool bIsAwake = false;
+	
+	UPROPERTY()
+	TWeakObjectPtr<AFactoryTopViewPawn> CachedTopViewPawn;
 };

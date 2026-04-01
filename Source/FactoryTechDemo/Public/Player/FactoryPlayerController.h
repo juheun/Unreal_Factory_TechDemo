@@ -53,6 +53,7 @@ public:
     EPlacementMode GetCurrentPlacementMode() const {return PlacementComponent ? PlacementComponent->GetCurrentPlaceMode() : EPlacementMode::None;}
     bool GetIsStorageOpen() const { return bIsStorageMenuOpen; }
     UFactoryInventoryComponent* GetInventoryComponent() const { return InventoryComponent; };
+    AFactoryTopViewPawn* GetTopViewPawn() const { return CachedTopViewPawn.Get(); }
     
     UFactoryInputConfig* GetInputConfig() const { return InputConfig; }
 
