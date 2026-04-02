@@ -16,6 +16,7 @@
 #include "Player/Input/FactoryInputConfig.h"
 #include "Core/FactoryDeveloperSettings.h"
 #include "Libraries/FactoryGridMathLibrary.h"
+#include "Logistics/Belts/FactoryBeltBridge.h"
 #include "Placement/Components/FactoryBeltBuilderComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
 #include "UI/PlayerContext/FactoryDragSelectionWidget.h"
@@ -175,12 +176,28 @@ void UFactoryPlacementComponent::ProcessClickAction()
 				{
 					NextStartLoc = ActivePreviews.Last()->GetActorLocation();
 				}
-
+				
+				bool bShouldChainBuild = true;
+				if (AFactoryLogisticsObjectBase* HitFacility = UFactoryGridMathLibrary::GetFacilityAtGrid(this, PointingLoc, GridLength))
+				{
+					if (!HitFacility->IsA<AFactoryBelt>())
+					{
+						bShouldChainBuild = false;
+					}
+				}
+				
 				if (PlaceObject())
 				{
 					// 스폰 성공 시, 방금 캐싱한 끝점을 다시 클릭한 것처럼 만들어서 연속 짓기 돌입
 					BeltBuilder->ResetBuilderState();
-					BeltBuilder->ProcessClick(NextStartLoc, GridLength); 
+					if (bShouldChainBuild)	// 만약 지금 클릭한 곳이 벨트나 벨트 브릿지가 아니라면, 연속 짓기 모드로 들어가지 않음
+					{
+						BeltBuilder->ProcessClick(NextStartLoc, GridLength); 
+					}
+					else
+					{
+						SetupSinglePreview(BeltBuilder->GetBeltData(), EPlacementMode::BeltPlace);
+					}
 				}
 			}
 		}
