@@ -7,7 +7,7 @@
 #include "Logistics/FactoryLogisticsTypes.h"
 #include "FactoryPlacementComponent.generated.h"
 
-class UFactoryDragSelectionWidget;
+class UFactoryFacilitySelectionComponent;
 struct FInputActionValue;
 class UFactoryPortComponentBase;
 class UFactoryItemData;
@@ -58,44 +58,39 @@ public:
 	FOnObjectPlacedFromInventorySignature OnObjectPlacedFromInventorySignature;
 	
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Factory|UI")
-	TSubclassOf<UFactoryDragSelectionWidget> DragSelectionWidgetBP;
-	UPROPERTY(VisibleAnywhere, Category = "Factory|UI")
-	TObjectPtr<UFactoryDragSelectionWidget> DragSelectionWidget;
 	UPROPERTY(VisibleAnywhere, Category = "Factory|Components")
 	TObjectPtr<UFactoryBeltBuilderComponent> BeltBuilder;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Factory|Components")
+	TObjectPtr<UFactoryFacilitySelectionComponent> SelectionComponent;
 	
 private:
 	///// 모드 진입
 	void ProcessClickAction();		// 컨트롤러에서 클릭 눌렀을 때 호출
 	void RotatePlacementPreview();
 	void CancelPlaceObject();
-	void SetMoveObjectToPreviews();	// 이미 설치된 객체의 데이터를 기반으로 프리뷰 생성
 	void ToggleBeltPlaceMode();
 	void ToggleRetrieveMode();
-	void TryEnterMoveMode();
+	void EnterSingleMoveMode();
 	void ToggleMultipleControlMode();
 	/////
 	
-	///// 다중 제어
-	void SelectObject(AFactoryLogisticsObjectBase* TargetObject);	// 객체 선택. 추후 다중 선택 및 선택된 객체 그룹 이동/회전/철거 기능 구현 예정
-	void DeselectObject(AFactoryLogisticsObjectBase* TargetObject);	// 객체 선택 해제
-	void ClearSelectedObject();
-	
+	///// 다중 제어 관련
 	void OnMultipleControlAddStarted();
 	void OnMultipleControlAddCompleted();
-	
 	void OnMultipleControlRemoveStarted();
 	void OnMultipleControlRemoveCompleted();
-	
-	void BeginDragSelection(bool bIsRemove);
-	void EndDragSelection(bool bIsRemove);
-	
+	void UpdateDragSelectionBox();
 	void OnMultipleControlMove();
 	void OnMultipleControlRetrieve();
 	
-	void UpdateDragSelectionBox();
-	void SelectConnectedBeltLine();
+	// 델리게이트 수신 핸들러
+	UFUNCTION()
+	void HandleObjectSelected(AFactoryLogisticsObjectBase* SelectedObject);
+	UFUNCTION()
+	void HandleObjectDeselected(AFactoryLogisticsObjectBase* DeselectedObject);
+	UFUNCTION()
+	void HandleSelectionCleared();
 	/////
 	
 	///// 내부 핵심 로직
@@ -107,42 +102,30 @@ private:
 	void SetupSinglePreview(UFactoryObjectData* Data, EPlacementMode Mode);
 	void ClearAllPreviews();
 	void StartObjectPlaceMode();
-	void CalculatePlacementPivotCenterAndGridSize();	// 프리뷰 객체의 전체 그리드 크기 계산
+	void SetAccuratePlacementPivotCenterAndGridSize();	// 프리뷰 객체의 전체 그리드 크기 계산
 	/////
 	
 	///// 풀링 및 생성 유틸리티
 	UFactoryPoolSubsystem* GetPool() const;
-	AFactoryPlacePreview* CreateAndInitPreview(const UFactoryObjectData* Data, 
-		const FVector& Loc = FVector::ZeroVector, const FRotator& Rot = FRotator::ZeroRotator) const;
+	AFactoryPlacePreview* CreateAndInitPreview(const UFactoryObjectData* Data, const FVector& Loc = FVector::ZeroVector, 
+		const FRotator& Rot = FRotator::ZeroRotator, AFactoryLogisticsObjectBase* OriginalObject = nullptr) const;
 	/////
 	
 	///// 공간 연산 및 알고리즘 헬퍼
 	bool TryGetPointingGridLocation(FVector& OutResultVec) const;
 	
 	//////내부 변수
-	
 	EPlacementMode CurrentPlacementMode = EPlacementMode::None;
 	
 	UPROPERTY()
 	TWeakObjectPtr<AFactoryPlayerController> CachedPlayerController;
 	
-	// 오브젝트 다중 선택 후 이동 모드나 다중 철거 기능 구현을 위해 선택된 객체들을 저장
-	UPROPERTY()
-	TArray<TObjectPtr<AFactoryLogisticsObjectBase>> SelectedLogisticsObjectBases;
-	// 현재 배치 프리뷰 액터들. 단일 배치 모드에서는 1개, 다중 배치 모드에서는 여러 개가 존재할 수 있음
 	UPROPERTY()
 	TArray<TObjectPtr<AFactoryPlacePreview>> ActivePreviews;
 	
 	UPROPERTY()
 	TObjectPtr<AActor> PlaceObjectPivotActor; // 배치 시 기준이 되는 피벗 액터
 	FIntPoint PlaceObjectPivotGridSize;	// 피벗 액터의 그리드 크기
-	
-	//다중제어 관련 변수
-	bool bIsDraggingSelection = false;
-	bool bIsRemoveDrag = false;
-	FIntPoint SelectionDragStartPoint;
-	UPROPERTY()
-	TSet<AFactoryLogisticsObjectBase*> PreDragSelection;
 	
 	// 기본 변수
 	float GridLength = 100.f;

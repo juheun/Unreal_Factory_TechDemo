@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Logistics/Machines/FactoryLogisticsObjectBase.h"
 #include "GameFramework/Actor.h"
 #include "FactoryPlacePreview.generated.h"
 
@@ -29,7 +30,7 @@ class FACTORYTECHDEMO_API AFactoryPlacePreview : public AActor
 public:	
 	AFactoryPlacePreview();
 	
-	void InitPreview(const UFactoryObjectData* Data); // 데이터 에셋을 받아 메쉬, 데칼 크기 등 설정
+	void InitPreview(const UFactoryObjectData* Data, AFactoryLogisticsObjectBase* InOriginalObject = nullptr); // 데이터 에셋을 받아 메쉬, 데칼 크기 등 설정
 	
 	virtual EOverlapValidityResult UpdateOverlapValidity();	// 현재 다른 물체와 겹쳐있는지 여부 검사
 	void SetVisualValidity(bool const bIsValid);	// 배치가능 여부에 따라 색상 변경
@@ -38,6 +39,7 @@ public:
 	
 	EOverlapValidityResult GetPlacementValid() const { return CurrentValidity; }
 	const UFactoryObjectData* GetObjectData() const { return ObjectData.Get(); }
+	AFactoryLogisticsObjectBase* GetOriginalObject() const { return OriginalObject.Get(); }
 	
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Visual")
@@ -56,6 +58,8 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<const UFactoryObjectData> ObjectData;
+	UPROPERTY()
+	TWeakObjectPtr<AFactoryLogisticsObjectBase> OriginalObject;
 	
 private:
 	void ClearSpawnedArrows();

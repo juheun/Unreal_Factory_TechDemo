@@ -16,10 +16,9 @@
 #include "Player/Input/FactoryInputConfig.h"
 #include "Core/FactoryDeveloperSettings.h"
 #include "Libraries/FactoryGridMathLibrary.h"
-#include "Logistics/Belts/FactoryBeltBridge.h"
 #include "Placement/Components/FactoryBeltBuilderComponent.h"
+#include "Player/Component/FactoryFacilitySelectionComponent.h"
 #include "Subsystems/FactoryPoolSubsystem.h"
-#include "UI/PlayerContext/FactoryDragSelectionWidget.h"
 
 
 UFactoryPlacementComponent::UFactoryPlacementComponent()
@@ -27,6 +26,7 @@ UFactoryPlacementComponent::UFactoryPlacementComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 	
 	BeltBuilder = CreateDefaultSubobject<UFactoryBeltBuilderComponent>(TEXT("BeltBuilder"));
+	SelectionComponent = CreateDefaultSubobject<UFactoryFacilitySelectionComponent>(TEXT("FacilitySelectionComponent"));
 }
 
 #pragma region 엔진 라이프 사이클 및 컨트롤러 소통
@@ -39,7 +39,7 @@ void UFactoryPlacementComponent::SetUpInputComponent(UEnhancedInputComponent* Pl
 	PlayerInputComp->BindAction(InputConfig->PlaceObjectRotateAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::RotatePlacementPreview);
 	PlayerInputComp->BindAction(InputConfig->ToggleBeltPlaceModeAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::ToggleBeltPlaceMode);
 	PlayerInputComp->BindAction(InputConfig->ToggleRetrieveModeAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::ToggleRetrieveMode);
-	PlayerInputComp->BindAction(InputConfig->EnterMoveModeAction, ETriggerEvent::Triggered, this, &UFactoryPlacementComponent::TryEnterMoveMode);
+	PlayerInputComp->BindAction(InputConfig->EnterMoveModeAction, ETriggerEvent::Triggered, this, &UFactoryPlacementComponent::EnterSingleMoveMode);
 	PlayerInputComp->BindAction(InputConfig->ToggleMultipleControlModeAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::ToggleMultipleControlMode);
 	
 	PlayerInputComp->BindAction(InputConfig->MultipleControlAddAction, ETriggerEvent::Started, this, &UFactoryPlacementComponent::OnMultipleControlAddStarted);
@@ -65,14 +65,11 @@ void UFactoryPlacementComponent::BeginPlay()
 	
     CachedPlayerController = Cast<AFactoryPlayerController>(GetOwner());
 	
-	if (CachedPlayerController.Get() && DragSelectionWidgetBP)
+	if (SelectionComponent)
 	{
-		DragSelectionWidget = CreateWidget<UFactoryDragSelectionWidget>(CachedPlayerController.Get(), DragSelectionWidgetBP);
-		if (DragSelectionWidget)
-		{
-			DragSelectionWidget->AddToViewport();
-			DragSelectionWidget->StopDrag(); // 처음에 위젯 숨기기
-		}
+		SelectionComponent->OnObjectSelected.AddDynamic(this, &UFactoryPlacementComponent::HandleObjectSelected);
+		SelectionComponent->OnObjectDeselected.AddDynamic(this, &UFactoryPlacementComponent::HandleObjectDeselected);
+		SelectionComponent->OnSelectionCleared.AddDynamic(this, &UFactoryPlacementComponent::HandleSelectionCleared);
 	}
 	
 	FActorSpawnParameters SpawnParams;
@@ -213,16 +210,7 @@ void UFactoryPlacementComponent::ProcessClickAction()
 
 void UFactoryPlacementComponent::ToggleBeltPlaceMode()
 {
-	if (CurrentPlacementMode == EPlacementMode::BeltPlace)
-	{
-		CancelPlaceObject();
-		CurrentPlacementMode = EPlacementMode::None;
-	}
-	else if (CurrentPlacementMode != EPlacementMode::None)
-	{
-		return;	// 벨트 토글을 받을 상황이 아니므로 입력을 무시
-	}
-	else
+	if (CurrentPlacementMode == EPlacementMode::None)
 	{
 		// 먼저 벨트모드로 변경해야 TryGetPointingGridLocation의 가드에 걸리지 않음
 		CurrentPlacementMode = EPlacementMode::BeltPlace;
@@ -238,29 +226,31 @@ void UFactoryPlacementComponent::ToggleBeltPlaceMode()
        
 		if (BeltBuilder) SetupSinglePreview(BeltBuilder->GetBeltData(), EPlacementMode::BeltPlace);
 	}
+	else if (CurrentPlacementMode == EPlacementMode::BeltPlace)
+	{
+		CancelPlaceObject();
+		CurrentPlacementMode = EPlacementMode::None;
+	}
+
 	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
 
 void UFactoryPlacementComponent::ToggleRetrieveMode()
 {
-	if (CurrentPlacementMode == EPlacementMode::Retrieve)
-	{
-		CurrentPlacementMode = EPlacementMode::None;
-	}
-	else if (CurrentPlacementMode != EPlacementMode::None)
-	{
-		return;	// 수납모드 토글을 받을 상황이 아니므로 입력을 무시
-	}
-	else
+	if (CurrentPlacementMode == EPlacementMode::None)
 	{
 		CancelPlaceObject();	// 기존 배치 모드 취소
 		CurrentPlacementMode = EPlacementMode::Retrieve;
+	}
+	else if (CurrentPlacementMode == EPlacementMode::Retrieve)
+	{
+		CurrentPlacementMode = EPlacementMode::None;
 	}
 	
 	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
 
-void UFactoryPlacementComponent::TryEnterMoveMode()
+void UFactoryPlacementComponent::EnterSingleMoveMode()
 {
 	if (CurrentPlacementMode != EPlacementMode::None) return;
 
@@ -273,13 +263,17 @@ void UFactoryPlacementComponent::TryEnterMoveMode()
 		{
 			if (AFactoryLogisticsObjectBase* HitObject = Cast<AFactoryLogisticsObjectBase>(HitResult.GetActor()))
 			{
-				if (HitObject->IsA(AFactoryBelt::StaticClass()))
+				if (HitObject->IsA<AFactoryBelt>())
 				{
 					return;		// 기획상 벨트는 이동할 수 없게 방어
 				}
+				if (SelectionComponent) SelectionComponent->SelectObject(HitObject);
 				
-				SelectObject(HitObject);
-				SetMoveObjectToPreviews();
+				HitObject->SetActorEnableCollision(false);
+				
+				CurrentPlacementMode = EPlacementMode::Move;
+				OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
+				StartObjectPlaceMode();
 			}
 		}
 	}
@@ -290,25 +284,24 @@ void UFactoryPlacementComponent::ToggleMultipleControlMode()
 	if (CurrentPlacementMode == EPlacementMode::None)
 	{
 		CurrentPlacementMode = EPlacementMode::MultipleControl;
-		ClearSelectedObject();
+		if (SelectionComponent) SelectionComponent->ClearSelectedObjects();
 		OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 	}
 	else if (CurrentPlacementMode == EPlacementMode::MultipleControl)
 	{
 		CancelPlaceObject();
 	}
-	
-	if (DragSelectionWidget)
-	{
-		DragSelectionWidget->StopDrag();
-	}
 }
-
 
 #pragma endregion
 
 #pragma region 배치 및 프리뷰 제어
 
+/**
+ * 객체 데이터 하나를 받아서 해당 객체 하나에 대한 프리뷰를 띄우는 함수. 기존 프리뷰는 모두 제거하고 새로 시작함
+ * @param Data 프리뷰를 띄울 ObjectData
+ * @param Mode 프리뷰를 띄우며 진입할 배치모드
+ */
 void UFactoryPlacementComponent::SetupSinglePreview(UFactoryObjectData* Data, EPlacementMode Mode)
 {
 	if (!Data) return;
@@ -329,59 +322,28 @@ void UFactoryPlacementComponent::SetPlaceFromDataPreview(UFactoryObjectData* Dat
 	SetupSinglePreview(Data, EPlacementMode::PlaceFromInventory);
 }
 
-void UFactoryPlacementComponent::SetMoveObjectToPreviews()
-{
-	if (SelectedLogisticsObjectBases.Num() == 0) return;
-	ClearAllPreviews();
-	
-	for (auto& LogisticsObjectBase : SelectedLogisticsObjectBases)
-	{
-		const UFactoryObjectData* Data = LogisticsObjectBase->GetObjectData();
-		AFactoryPlacePreview* Preview = CreateAndInitPreview(
-			Data, LogisticsObjectBase->GetActorLocation(), LogisticsObjectBase->GetActorRotation());
-		
-		if (Preview)
-		{
-			if (Preview->IsA(AFactoryBeltPreview::StaticClass()))
-			{
-				AFactoryBeltPreview* BeltPreview = Cast<AFactoryBeltPreview>(Preview);
-				BeltPreview->SetBeltType(Cast<AFactoryBelt>(LogisticsObjectBase)->GetBeltType());
-			}
-			
-			ActivePreviews.Add(Preview);
-		}
-		
-		LogisticsObjectBase->SetActorHiddenInGame(true);
-		LogisticsObjectBase->SetActorEnableCollision(false);
-	}
-	
-	CurrentPlacementMode = EPlacementMode::Move;
-	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
-	StartObjectPlaceMode();
-}
-
 void UFactoryPlacementComponent::ClearAllPreviews()
 {
-	UFactoryPoolSubsystem* Pool = GetWorld()->GetGameInstance()->GetSubsystem<UFactoryPoolSubsystem>();
+	UFactoryPoolSubsystem* Pool = GetPool();
 	for (auto Preview : ActivePreviews)
 	{
+		if (AFactoryLogisticsObjectBase* OriginalObject = Preview->GetOriginalObject())
+		{
+			OriginalObject->SetActorHiddenInGame(false);
+			OriginalObject->SetActorEnableCollision(true);
+		}
+		
 		if (Preview)
 		{
-			if (Pool)
-			{
-				Pool->ReturnItemToPool(Preview);
-			}
-			else
-			{
-				Preview->Destroy();
-			}
+			if (Pool) Pool->ReturnItemToPool(Preview);
+			else Preview->Destroy();
 		}
 	}
 	ActivePreviews.Empty();
 	
 	if (PlaceObjectPivotActor)
 	{
-		PlaceObjectPivotActor->SetHidden(true);
+		PlaceObjectPivotActor->SetActorHiddenInGame(true);
 		PlaceObjectPivotActor->SetActorRotation(FRotator::ZeroRotator);
 	}
 	PlaceObjectPivotGridSize = FIntPoint(1,1);
@@ -393,7 +355,7 @@ void UFactoryPlacementComponent::StartObjectPlaceMode()
 	if (PlaceObjectPivotActor)
 	{
 		PlaceObjectPivotActor->SetHidden(false);
-		CalculatePlacementPivotCenterAndGridSize();
+		SetAccuratePlacementPivotCenterAndGridSize();
 		
 		for (auto& Preview : ActivePreviews)
 		{
@@ -409,7 +371,7 @@ void UFactoryPlacementComponent::RotatePlacementPreview()
 	float NextYaw = FMath::GridSnap(PlaceObjectPivotActor->GetActorRotation().Yaw + 90.f, 90.f);
 	PlaceObjectPivotActor->SetActorRotation(FRotator(0.f, FRotator::NormalizeAxis(NextYaw), 0.f));
 	
-	CalculatePlacementPivotCenterAndGridSize();
+	SetAccuratePlacementPivotCenterAndGridSize();
 }
 
 bool UFactoryPlacementComponent::PlaceObject()
@@ -422,15 +384,6 @@ bool UFactoryPlacementComponent::PlaceObject()
 		{ 
 			return false;
 		}
-	}
-	
-	if (CurrentPlacementMode == EPlacementMode::Move)
-	{
-		for (auto& LogisticsObjectBase : SelectedLogisticsObjectBases)
-		{
-			LogisticsObjectBase->Destroy();
-		}
-		SelectedLogisticsObjectBases.Empty();
 	}
 	
 	for (auto Preview : ActivePreviews)
@@ -486,9 +439,20 @@ bool UFactoryPlacementComponent::PlaceObject()
 		}
 	}
 	
+	if (CurrentPlacementMode == EPlacementMode::Move && SelectionComponent)
+	{
+		TArray<TObjectPtr<AFactoryLogisticsObjectBase>> ObjsToDestroy = SelectionComponent->GetSelectedObjects();
+		SelectionComponent->ClearSelectedObjects();
+		for (auto& Obj : ObjsToDestroy)
+		{
+			if (IsValid(Obj)) Obj->Destroy();
+		}
+	}
+	
 	ClearAllPreviews();
 	
-	if (CurrentPlacementMode != EPlacementMode::BeltPlace)
+	// 벨트, 다중 제어모드는 배치 후에도 계속 해당모드로 남아있음. 나머지 모드는 배치 후 None으로 돌아감
+	if (CurrentPlacementMode != EPlacementMode::BeltPlace && CurrentPlacementMode != EPlacementMode::MultipleControl)
 	{
 		CurrentPlacementMode = EPlacementMode::None;
 	}
@@ -502,30 +466,19 @@ void UFactoryPlacementComponent::CancelPlaceObject()
 	// 이동 모드 취소 시 숨겼던 원본을 다시 복구
 	if (CurrentPlacementMode == EPlacementMode::Move || CurrentPlacementMode == EPlacementMode::MultipleControl)
 	{
-		for (auto& Obj : SelectedLogisticsObjectBases)
-		{
-			if (Obj)
-			{
-				Obj->SetActorHiddenInGame(false);
-				Obj->SetActorEnableCollision(true);
-			}
-		}
-		// TODO : 상황에 따라 선택 배열이 남아있어야 할수도 있는 부분 체크
-		ClearSelectedObject(); // 선택 배열 비우기
-	}
-	
-	if (DragSelectionWidget)
-	{
-		DragSelectionWidget->StopDrag();
+		if (SelectionComponent) SelectionComponent->ClearSelectedObjects();
 	}
 	
 	if (BeltBuilder) BeltBuilder->ResetBuilderState();
-	ClearAllPreviews();
 	CurrentPlacementMode = EPlacementMode::None;
+	ClearAllPreviews();
 	OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
 }
 
-void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
+/**
+ * 현재 존재하는 Preview객체의 위치에 따라 Pivot 객체의 GridSize와 위치를 지정함
+ */
+void UFactoryPlacementComponent::SetAccuratePlacementPivotCenterAndGridSize()
 {
 	if (CurrentPlacementMode == EPlacementMode::BeltPlace && ActivePreviews.IsValidIndex(0))
 	{
@@ -546,7 +499,7 @@ void UFactoryPlacementComponent::CalculatePlacementPivotCenterAndGridSize()
 			PlaceObjectPivotActor->SetActorLocation(ActivePreviews[0]->GetActorLocation());
 		}
 	}
-	else if (CurrentPlacementMode == EPlacementMode::Move && SelectedLogisticsObjectBases.Num() > 0)
+	else if (CurrentPlacementMode == EPlacementMode::Move && SelectionComponent->GetSelectedObjects().Num() > 0)
 	{
 		// 모든 프리뷰 위치 포함 최소/최대 좌표 계산
 		FVector GlobalMin(FLT_MAX), GlobalMax(-FLT_MAX);
@@ -592,12 +545,14 @@ void UFactoryPlacementComponent::RenderBeltPreviews(const TArray<FBeltPlacementD
 	UFactoryPoolSubsystem* Pool = GetPool();
 	if (!Pool) return;
 	
+	// 1차적으로 이미 존재하는 벨트를 풀에 집어넣음
 	for (auto& Preview : ActivePreviews)
 	{
 		if (Preview) Pool->ReturnItemToPool(Preview);
 	}
 	ActivePreviews.Empty();
 	
+	// BeltPlacementDatas의 데이터에 따라 새로운 벨트 프리뷰 생성 (Pool에서 가져옴)
 	for (const FBeltPlacementData& Data : BeltPlacementDatas)
 	{
 		const UFactoryObjectData* TargetData = Data.bIsBridge ? BeltBuilder->GetBeltBridgeData() : BeltBuilder->GetBeltData();
@@ -622,212 +577,146 @@ void UFactoryPlacementComponent::RenderBeltPreviews(const TArray<FBeltPlacementD
 
 #pragma endregion
 
-#pragma region 객체 선택
+#pragma region 객체 선택 관련
 
-void UFactoryPlacementComponent::SelectObject(AFactoryLogisticsObjectBase* TargetObject)
+void UFactoryPlacementComponent::OnMultipleControlAddStarted()
 {
-	if (!TargetObject || SelectedLogisticsObjectBases.Contains(TargetObject)) return;
+	if (CurrentPlacementMode != EPlacementMode::MultipleControl) return;
+	
+	FVector HitLocation;
+	if (TryGetPointingGridLocation(HitLocation) && SelectionComponent)
+	{
+		SelectionComponent->BeginDragSelection(HitLocation, GridLength, false);
+	}
+}
 
-	SelectedLogisticsObjectBases.Add(TargetObject);
-	TargetObject->SetActorHiddenInGame(true);
+void UFactoryPlacementComponent::OnMultipleControlAddCompleted()
+{
+	if (CurrentPlacementMode != EPlacementMode::MultipleControl) return;
+	
+	FVector HitLocation;
+	if (TryGetPointingGridLocation(HitLocation) && SelectionComponent)
+	{
+		if (SelectionComponent->EndDragSelection(HitLocation, GridLength))
+		{
+			SelectionComponent->SelectConnectedBeltLine(HitLocation, GridLength);
+		}
+	}
+}
 
-	// 프리뷰 생성
-	AFactoryPlacePreview* Preview = CreateAndInitPreview(TargetObject->GetObjectData(), TargetObject->GetActorLocation(), TargetObject->GetActorRotation());
+void UFactoryPlacementComponent::OnMultipleControlRemoveStarted()
+{
+	if (CurrentPlacementMode != EPlacementMode::MultipleControl) return;
+	
+	FVector HitLocation;
+	if (TryGetPointingGridLocation(HitLocation) && SelectionComponent)
+	{
+		SelectionComponent->BeginDragSelection(HitLocation, GridLength, true);
+	}
+}
+
+void UFactoryPlacementComponent::OnMultipleControlRemoveCompleted()
+{
+	if (CurrentPlacementMode != EPlacementMode::MultipleControl) return;
+	
+	FVector HitLocation;
+	if (TryGetPointingGridLocation(HitLocation) && SelectionComponent)
+	{
+		// 일반 클릭이면 모드 종료
+		if (SelectionComponent->EndDragSelection(HitLocation, GridLength))
+		{
+			ToggleMultipleControlMode();
+		}
+	}
+}
+
+void UFactoryPlacementComponent::UpdateDragSelectionBox()
+{
+	if (CurrentPlacementMode != EPlacementMode::MultipleControl) return;
+	
+	FVector HitLocation;
+	if (TryGetPointingGridLocation(HitLocation) && SelectionComponent)
+	{
+		SelectionComponent->UpdateDragSelectionBox(HitLocation, GridLength);
+	}
+}
+
+void UFactoryPlacementComponent::OnMultipleControlMove()
+{
+	if (CurrentPlacementMode == EPlacementMode::MultipleControl && SelectionComponent->GetSelectedObjects().Num() > 0)
+	{
+		for (auto& Obj : SelectionComponent->GetSelectedObjects())
+		{
+			if (Obj) Obj->SetActorEnableCollision(false);
+		}
+		
+		CurrentPlacementMode = EPlacementMode::Move;
+		OnPlacementModeChanged.Broadcast(CurrentPlacementMode);
+		StartObjectPlaceMode();
+	}
+}
+
+void UFactoryPlacementComponent::OnMultipleControlRetrieve()
+{
+	if (CurrentPlacementMode == EPlacementMode::MultipleControl && SelectionComponent && SelectionComponent->GetSelectedObjects().Num() > 0)
+	{
+		// 데이터 복사 후 철거 (Clear하면 배열이 날아가므로)
+		TArray<TObjectPtr<AFactoryLogisticsObjectBase>> ObjectsToRetrieve = SelectionComponent->GetSelectedObjects();
+		SelectionComponent->ClearSelectedObjects(); 
+		
+		for (auto Obj : ObjectsToRetrieve)
+		{
+			if (Obj) Obj->Retrieve();
+		}
+	}
+}
+
+void UFactoryPlacementComponent::HandleObjectSelected(AFactoryLogisticsObjectBase* SelectedObject)
+{
+	if (!SelectedObject) return;
+
+	// 원본 숨기기
+	SelectedObject->SetActorHiddenInGame(true);
+
+	// 프리뷰 생성해서 ActivePreviews에 넣기
+	AFactoryPlacePreview* Preview = CreateAndInitPreview(SelectedObject->GetObjectData(), 
+		SelectedObject->GetActorLocation(), SelectedObject->GetActorRotation(), SelectedObject);
 	if (Preview)
 	{
-		Preview->InitPreview(TargetObject->GetObjectData());
 		if (Preview->IsA(AFactoryBeltPreview::StaticClass()))
 		{
-			Cast<AFactoryBeltPreview>(Preview)->SetBeltType(Cast<AFactoryBelt>(TargetObject)->GetBeltType());
+			Cast<AFactoryBeltPreview>(Preview)->SetBeltType(Cast<AFactoryBelt>(SelectedObject)->GetBeltType());
 		}
 		ActivePreviews.Add(Preview);
 	}
 }
 
-void UFactoryPlacementComponent::DeselectObject(AFactoryLogisticsObjectBase* TargetObject)
+void UFactoryPlacementComponent::HandleObjectDeselected(AFactoryLogisticsObjectBase* DeselectedObject)
 {
-	if (!TargetObject || !SelectedLogisticsObjectBases.Contains(TargetObject)) return;
+	if (!IsValid(DeselectedObject)) return; // 이동/철거 등으로 이미 삭제된 객체라면 무시
 
-	SelectedLogisticsObjectBases.Remove(TargetObject);
-	TargetObject->SetActorHiddenInGame(false);
-
-	// 해당 위치에 생성되었던 프리뷰 찾아서 파괴
-	for (int i = ActivePreviews.Num() - 1; i >= 0; i--)
+	// 원본 다시 보이기
+	DeselectedObject->SetActorHiddenInGame(false);
+	DeselectedObject->SetActorEnableCollision(true);
+	
+	for (int i = 0; i < ActivePreviews.Num(); i++)
 	{
-		if (ActivePreviews[i]->GetActorLocation().Equals(TargetObject->GetActorLocation(), 1.f))
+		AFactoryPlacePreview* Preview = ActivePreviews[i];
+		if (Preview && Preview->GetOriginalObject() == DeselectedObject)
 		{
 			UFactoryPoolSubsystem* Pool = GetPool();
-			if (Pool) Pool->ReturnItemToPool(ActivePreviews[i]);
-			else ActivePreviews[i]->Destroy();
-			
+			if (Pool) Pool->ReturnItemToPool(Preview);
+			else Preview->Destroy();
+          
 			ActivePreviews.RemoveAt(i);
 			break;
 		}
 	}
 }
 
-void UFactoryPlacementComponent::ClearSelectedObject()
+void UFactoryPlacementComponent::HandleSelectionCleared()
 {
-	// 배열을 순회하며 원본 복구 및 프리뷰 제거
-	for (int i = SelectedLogisticsObjectBases.Num() - 1; i >= 0; i--)
-	{
-		DeselectObject(SelectedLogisticsObjectBases[i]);
-	}
-	SelectedLogisticsObjectBases.Empty();
-}
-
-void UFactoryPlacementComponent::OnMultipleControlAddStarted()
-{
-	BeginDragSelection(false);
-}
-
-void UFactoryPlacementComponent::OnMultipleControlAddCompleted()
-{
-	EndDragSelection(false);
-}
-
-void UFactoryPlacementComponent::OnMultipleControlRemoveStarted()
-{
-	BeginDragSelection(true);
-}
-
-void UFactoryPlacementComponent::OnMultipleControlRemoveCompleted()
-{
-	EndDragSelection(true);
-}
-
-void UFactoryPlacementComponent::BeginDragSelection(bool bIsRemove)
-{
-	if (CurrentPlacementMode != EPlacementMode::MultipleControl) return;
-	FVector HitLocation;
-	if (TryGetPointingGridLocation(HitLocation))
-	{
-		SelectionDragStartPoint = UFactoryGridMathLibrary::WorldToGrid(HitLocation, GridLength);
-		bIsDraggingSelection = true;
-		bIsRemoveDrag = bIsRemove;
-        
-		PreDragSelection.Empty();
-		PreDragSelection.Append(SelectedLogisticsObjectBases);
-		
-		if (DragSelectionWidget)
-		{
-			DragSelectionWidget->StartDrag(HitLocation);
-		}
-	}
-}
-
-void UFactoryPlacementComponent::EndDragSelection(bool bIsRemove)
-{
-	if (!bIsDraggingSelection) return;
-	bIsDraggingSelection = false;
-	
-	FVector CurrentLocation;
-	if (TryGetPointingGridLocation(CurrentLocation))
-	{
-		if (SelectionDragStartPoint == UFactoryGridMathLibrary::WorldToGrid(CurrentLocation, GridLength))	// StartGrid = EndGrid라면 클릭
-		{
-			if (!bIsRemove)
-			{
-				SelectConnectedBeltLine();
-			}
-			else
-			{
-				ToggleMultipleControlMode();	// 단순 우클릭 처리. 선택모드 종료
-			}
-		}
-	}
-	// 드래그 선택 위젯 끄기
-	if (DragSelectionWidget)
-	{
-		DragSelectionWidget->StopDrag();
-	}
-}
-
-void UFactoryPlacementComponent::UpdateDragSelectionBox()
-{
-	if (!bIsDraggingSelection) return;
-	
-	FVector CurrentLocation;
-	if (!TryGetPointingGridLocation(CurrentLocation)) return;
-	
-	// 드래그 박스 안 겹치는 객체 도출
-	FIntPoint CurrentGrid = UFactoryGridMathLibrary::WorldToGrid(CurrentLocation, GridLength);
-	TArray<AFactoryLogisticsObjectBase*> OverlappedObjects = 
-		UFactoryGridMathLibrary::GetFacilitiesInGridBox(this, SelectionDragStartPoint, CurrentGrid, GridLength);
-	
-	// 
-	TSet<AFactoryLogisticsObjectBase*> DesiredSelection = PreDragSelection;
-	for (auto* HitObj : OverlappedObjects)
-	{
-		if (bIsRemoveDrag) DesiredSelection.Remove(HitObj);
-		else DesiredSelection.Add(HitObj);
-	}
-	// 없애야할 객체 Deselect
-	for (int i = SelectedLogisticsObjectBases.Num() - 1; i >= 0; i--)
-	{
-		if (!DesiredSelection.Contains(SelectedLogisticsObjectBases[i]))
-		{
-			DeselectObject(SelectedLogisticsObjectBases[i]);
-		}
-	}
-	// 추가해야 할 객체 Select
-	for (auto* Obj : DesiredSelection)
-	{
-		SelectObject(Obj);
-	}
-	
-	// 드래그 선택 위젯 업데이트
-	if (DragSelectionWidget && CachedPlayerController.IsValid())
-	{
-		float MouseX, MouseY;
-		if (CachedPlayerController.Get()->GetMousePosition(MouseX, MouseY))
-		{
-			DragSelectionWidget->UpdateDrag(CachedPlayerController.Get(), FVector2D(MouseX, MouseY));
-		}
-	}
-}
-
-void UFactoryPlacementComponent::SelectConnectedBeltLine()
-{
-	FVector CurrentLocation;
-	if (TryGetPointingGridLocation(CurrentLocation))
-	{
-		if (AActor* HitActor = UFactoryGridMathLibrary::GetFacilityAtGrid(this, CurrentLocation, GridLength))
-		{
-			if (AFactoryBelt* HitBelt = Cast<AFactoryBelt>(HitActor))
-			{
-				TSet<AFactoryBelt*> ConnectedBelts = HitBelt->GetConnectedBeltLine();
-				for (AFactoryBelt* Belt : ConnectedBelts)
-				{
-					SelectObject(Belt);
-				}
-			}
-		}
-	}
-}
-
-void UFactoryPlacementComponent::OnMultipleControlMove()
-{
-	if (CurrentPlacementMode == EPlacementMode::MultipleControl && SelectedLogisticsObjectBases.Num() > 0)
-	{
-		SetMoveObjectToPreviews(); 
-	}
-}
-
-void UFactoryPlacementComponent::OnMultipleControlRetrieve()
-{
-	if (CurrentPlacementMode == EPlacementMode::MultipleControl && SelectedLogisticsObjectBases.Num() > 0)
-	{
-		// 원본 배열이 순회 중 삭제/수정될 수 있으므로 임시 복사
-		TArray<AFactoryLogisticsObjectBase*> ObjectsToRetrieve = SelectedLogisticsObjectBases;
-		
-		ClearSelectedObject(); // 배열 비우고 프리뷰 싹 지우기
-		
-		for (AFactoryLogisticsObjectBase* Obj : ObjectsToRetrieve)
-		{
-			if (Obj) Obj->Retrieve();
-		}
-	}
+	ClearAllPreviews();
 }
 
 #pragma endregion
@@ -836,15 +725,6 @@ void UFactoryPlacementComponent::OnMultipleControlRetrieve()
 
 bool UFactoryPlacementComponent::TryGetPointingGridLocation(FVector& OutResultVec) const
 {
-	if (CurrentPlacementMode == EPlacementMode::None) return false;
-	
-	if (CurrentPlacementMode != EPlacementMode::BeltPlace && 
-		CurrentPlacementMode != EPlacementMode::MultipleControl && 
-		ActivePreviews.Num() <= 0) 
-	{
-		return false;
-	}
-
 	FHitResult HitResult;
 	bool bHit = false;
 	
@@ -889,7 +769,7 @@ UFactoryPoolSubsystem* UFactoryPlacementComponent::GetPool() const
 }
 
 AFactoryPlacePreview* UFactoryPlacementComponent::CreateAndInitPreview(
-	const UFactoryObjectData* Data, const FVector& Loc, const FRotator& Rot) const
+	const UFactoryObjectData* Data, const FVector& Loc, const FRotator& Rot, AFactoryLogisticsObjectBase* OriginalObject) const
 {
 	if (!Data) return nullptr;
 	
@@ -912,7 +792,7 @@ AFactoryPlacePreview* UFactoryPlacementComponent::CreateAndInitPreview(
 	
 	if (Preview)
 	{
-		Preview->InitPreview(Data);
+		Preview->InitPreview(Data, OriginalObject);
 		Preview->SetActorEnableCollision(true);
 	}
 	

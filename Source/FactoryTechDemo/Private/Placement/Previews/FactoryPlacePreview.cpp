@@ -41,10 +41,11 @@ AFactoryPlacePreview::AFactoryPlacePreview()
 	OverlapBox->SetCollisionResponseToChannel(ECC_GameTraceChannel3, ECR_Overlap);
 }
 
-void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data)
+void AFactoryPlacePreview::InitPreview(const UFactoryObjectData* Data, AFactoryLogisticsObjectBase* InOriginalObject)
 {
 	if (!Data) return;
 	ObjectData = Data;
+	OriginalObject = InOriginalObject;
 
 	ClearSpawnedArrows();
 

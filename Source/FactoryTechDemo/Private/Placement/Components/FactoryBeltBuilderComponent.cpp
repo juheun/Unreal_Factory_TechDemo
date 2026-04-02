@@ -221,6 +221,7 @@ bool UFactoryBeltBuilderComponent::TryGetBeltStartData(const FVector& PointingLo
 			OutStartDir = HitBelt->GetActorForwardVector();
 			return true;
 		}
+		
 		FIntPoint SnapGrid;
 		UFactoryPortComponentBase* Port = nullptr;
 		
