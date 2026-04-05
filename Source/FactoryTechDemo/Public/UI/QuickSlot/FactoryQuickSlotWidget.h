@@ -17,11 +17,12 @@ class FACTORYTECHDEMO_API UFactoryQuickSlotWidget : public UFactoryBaseSlotWidge
 public:
 	void InitQuickSlot(UFactoryQuickSlotComponent* QuickSlotComp, int32 InHotkeyIndex);
 
+	virtual void UpdateSlotVisual(const UFactoryItemData* ItemData, int32 Amount) override;
+	
 protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> HotkeyText;
 	
-	virtual void UpdateSlotVisual(const UFactoryItemData* ItemData, int32 Amount) override;
 	
 	UFUNCTION()
 	void OnDataChanged(int32 Index, UFactoryObjectData* Data, int32 Amount);

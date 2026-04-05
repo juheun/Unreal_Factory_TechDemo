@@ -30,6 +30,12 @@ void UFactoryFacilityWorldUIComponent::BeginPlay()
 		
 		CachedTopViewPawn = Controller->GetTopViewPawn();
 	}
+	
+	if (!bIsAwake)
+	{
+		bIsAwake = true;	// GoToSleep 가드를 깨기위해 일시적으로 IsAwake true;
+		GoToSleep();
+	}
 }
 
 

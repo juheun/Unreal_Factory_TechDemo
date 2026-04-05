@@ -33,5 +33,5 @@ protected:
 	float NormalViewRadius = 1000.f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Factory|UIActivator")
-	float TopViewRadius = 8000.f; // 탑뷰에서는 화면을 덮을 만큼 거대하게 확장
+	float TopViewRadius = 5000.f; // 탑뷰에서는 화면을 덮을 만큼 거대하게 확장
 };

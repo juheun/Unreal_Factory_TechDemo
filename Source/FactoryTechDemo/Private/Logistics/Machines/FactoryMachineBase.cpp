@@ -68,6 +68,10 @@ void AFactoryMachineBase::InitObject(const UFactoryObjectData* Data)
 	{
 		SmartNameplateComponent->InitNameplate(Data);
 	}
+	if (PlacementDataAsset && SmartNameplateComponent)
+	{
+		SmartNameplateComponent->InitNameplate(PlacementDataAsset);
+	}
 }
 
 void AFactoryMachineBase::InitMachine()

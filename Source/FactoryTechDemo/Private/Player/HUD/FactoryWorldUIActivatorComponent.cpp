@@ -32,6 +32,22 @@ void UFactoryWorldUIActivatorComponent::BeginPlay()
 		PC->OnViewModeChanged.AddDynamic(this, &UFactoryWorldUIActivatorComponent::OnViewModeChanged);
 		OnViewModeChanged(PC->GetCurrentViewMode());
 	}
+	
+	// 스폰 시점에 반경 내에 들어와있는 UFactoryFacilityWorldUIComponent들을 깨워줌
+	TArray<UPrimitiveComponent*> OverlappingComps;
+	GetOverlappingComponents(OverlappingComps);
+	for (UPrimitiveComponent* Comp : OverlappingComps)
+	{
+		if (AActor* OverlappedActor = Comp->GetOwner())
+		{
+			TArray<UFactoryFacilityWorldUIComponent*> UIComps;
+			OverlappedActor->GetComponents<UFactoryFacilityWorldUIComponent>(UIComps);
+			for (auto* UIComp : UIComps)
+			{
+				UIComp->WakeUp();
+			}
+		}
+	}
 }
 
 void UFactoryWorldUIActivatorComponent::OnActivatorBeginOverlap(UPrimitiveComponent* OverlappedComponent,

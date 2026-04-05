@@ -45,7 +45,7 @@ protected:
 	float MaxWidgetScale = 1.2f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|WorldUI")
-	float MinWidgetScale = 0.25f;
+	float MinWidgetScale = 0.5f;
 	
 	EFactoryViewModeType CachedCurrentViewMode = EFactoryViewModeType::NormalView;
 	bool bIsAwake = false;

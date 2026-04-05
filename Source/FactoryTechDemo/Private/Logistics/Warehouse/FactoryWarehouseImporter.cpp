@@ -34,6 +34,10 @@ void AFactoryWarehouseImporter::BeginPlay()
 		OnImportItemChanged.AddDynamic(RecipeBillboardComponent, &UFactoryRecipeBillboardComponent::OnItemChangedCallback);
 		RecipeBillboardComponent->OnItemChangedCallback(nullptr);
 	}
+	if (PlacementDataAsset && SmartNameplateComponent)
+	{
+		SmartNameplateComponent->InitNameplate(PlacementDataAsset);
+	}
 	
 	if (LogisticsInputPortArr.IsValidIndex(0) && LogisticsInputPortArr[0])
 	{

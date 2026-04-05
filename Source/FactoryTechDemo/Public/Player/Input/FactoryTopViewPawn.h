@@ -51,7 +51,7 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Factory|Camera")
     float MinOrthoWidth = 1000.f;
     UPROPERTY(EditAnywhere, Category = "Factory|Camera")
-    float MaxOrthoWidth = 10000.f;
+    float MaxOrthoWidth = 5000.f;
     UPROPERTY(EditAnywhere, Category = "Factory|Camera")
     float ZoomStep = 500.0f;
     UPROPERTY(EditAnywhere, Category = "Factory|Camera")

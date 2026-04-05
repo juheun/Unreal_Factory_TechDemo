@@ -38,6 +38,10 @@ void AFactoryWarehouseExporter::BeginPlay()
 		OnTargetItemChanged.AddDynamic(RecipeBillboardComponent, &UFactoryRecipeBillboardComponent::OnItemChangedCallback);
 		RecipeBillboardComponent->OnItemChangedCallback(TargetItemData);
 	}
+	if (PlacementDataAsset && SmartNameplateComponent)
+	{
+		SmartNameplateComponent->InitNameplate(PlacementDataAsset);
+	}
 	
 	if (LogisticsOutputPortArr.IsValidIndex(0) && LogisticsOutputPortArr[0])
 	{
