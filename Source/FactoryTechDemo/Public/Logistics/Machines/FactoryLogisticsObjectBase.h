@@ -65,7 +65,6 @@ public:
 protected:
 	// 포트 자동 수집 및 분류 함수
 	void InitializeLogisticsPort();
-	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	// 아이템을 받아 처리하는 함수 구현. 상속을 받는 설비에 따라 버퍼 공간에 넣거나 가공을 하는 등 행동을 정의 해야함.
 	virtual void ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item) PURE_VIRTUAL(AFactoryLogisticsObjectBase::ReceiveItem, ; );

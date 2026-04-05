@@ -35,7 +35,7 @@ public:
 	
 	virtual void ForceScanConnection() {};
 	
-	AFactoryLogisticsObjectBase* GetPortOwner() const { return PortOwner.Get();}
+	AFactoryLogisticsObjectBase* GetPortOwner();
 	bool GetIsPortEnabled() const { return bIsPortEnabled; }
 	
 	UArrowComponent* GetPortDirArrowComponent() const { return PortDirArrowComponent; }

@@ -70,6 +70,7 @@ private:
 	
 	const float BeltHeight = 20.f;
 	bool bIsBeltStop = false;
+	UPROPERTY()
 	float TotalSpineLength = 0.f;
 	bool bReceivedThisCycle = false;
 };

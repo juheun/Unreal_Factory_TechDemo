@@ -22,6 +22,8 @@ void UFactoryPortComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	ConnectedPort = nullptr;
+	
 	PortOwner = Cast<AFactoryLogisticsObjectBase>(GetOwner());
 }
 
@@ -82,13 +84,35 @@ void UFactoryPortComponentBase::SetPortEnabled(bool bEnabled)
 	}
 }
 
+AFactoryLogisticsObjectBase* UFactoryPortComponentBase::GetPortOwner()
+{
+	if (AFactoryLogisticsObjectBase* TmpPortOwner = PortOwner.Get())
+	{
+		return TmpPortOwner;
+	}
+
+	// 만약 비어있다면 (BeginPlay 전이거나 캐싱 누락 시), 한 번만 Cast 연산 수행 후 캐싱
+	PortOwner = Cast<AFactoryLogisticsObjectBase>(GetOwner());
+	
+	return PortOwner.Get();
+}
+
 void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 {
 	if (!Target) return;
 	
-	// 기획상 설비와 설비의 직결은 불가능함
-	if (Target->GetPortOwner()->GetLogisticsObjectType() == ELogisticsObjectType::Facility
-		&& GetPortOwner()->GetLogisticsObjectType() == ELogisticsObjectType::Facility) return;
+	AFactoryLogisticsObjectBase* MyOwner = GetPortOwner();
+	AFactoryLogisticsObjectBase* TargetOwner = Target->GetPortOwner();
+	
+	if (MyOwner && TargetOwner)
+	{
+		// 기획상 설비와 설비의 직결은 불가능함
+		if (TargetOwner->GetLogisticsObjectType() == ELogisticsObjectType::Facility && 
+			MyOwner->GetLogisticsObjectType() == ELogisticsObjectType::Facility)
+		{
+			return;
+		}
+	}
 	
 	// 상호 연결 (Handshake)
 	this->ConnectedPort = Target;

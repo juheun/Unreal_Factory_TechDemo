@@ -191,6 +191,12 @@ void AFactoryBelt::UpdateSplinePath(EBeltType Type)
 	if (!SplineComponent) return;
 	SplineComponent->ClearSplinePoints(true);
 	
+	// 스트레스 툴 등으로 자동적으로 벨트를 생성한경우 LogisticsOutputPortArr가 비어있으므로 강제로 한번 초기화
+	if (LogisticsOutputPortArr.IsEmpty() || LogisticsInputPortArr.IsEmpty())
+	{
+		InitializeLogisticsPort();
+	}
+	
 	float GridLength = GetDefault<UFactoryDeveloperSettings>()->GetGridLength();
 	float HalfGridLength = GridLength * 0.5f;
 	float CurveStrength = HalfGridLength; // 곡률의 부드러움 결정 (보통 변의 길이의 절반 정도)

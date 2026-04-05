@@ -11,17 +11,11 @@ AFactoryLogisticsObjectBase::AFactoryLogisticsObjectBase()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-
-void AFactoryLogisticsObjectBase::OnConstruction(const FTransform& Transform)
-{
-	Super::OnConstruction(Transform);
-	
-	InitializeLogisticsPort();
-}
-
 void AFactoryLogisticsObjectBase::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	InitializeLogisticsPort();
 	
 	if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
 	{
