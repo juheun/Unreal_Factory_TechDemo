@@ -31,6 +31,8 @@ public:
 	UStaticMesh* GetDefaultItemMesh() const { return DefaultItemMesh.LoadSynchronous(); }
 	UMaterialInterface* GetDefaultItemMaterial() const { return DefaultItemMaterial.LoadSynchronous(); }
 	
+	UStaticMesh* GetArrowMesh() const { return ArrowMesh.LoadSynchronous(); }
+	
 	TSubclassOf<AActor> GetPoolClass(EFactoryPoolType PoolType) const
 	{
 		return PoolClassMap.Contains(PoolType) ? PoolClassMap[PoolType] : nullptr;
@@ -52,6 +54,9 @@ private:
 	TSoftObjectPtr<UStaticMesh> DefaultItemMesh;
 	UPROPERTY(Config, EditAnywhere, Category="Visuals|Item")
 	TSoftObjectPtr<UMaterialInterface> DefaultItemMaterial;
+	
+	UPROPERTY(Config, EditAnywhere, Category="Visuals|Arrow")
+	TSoftObjectPtr<UStaticMesh> ArrowMesh;
 	
 	UPROPERTY(Config, EditAnywhere, Category="Pooling")
 	TMap<EFactoryPoolType, TSubclassOf<AActor>> PoolClassMap;

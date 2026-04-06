@@ -4,6 +4,7 @@
 #include "Components/BoxComponent.h"
 #include "FactoryPortComponentBase.generated.h"
 
+class UFactoryArrowMeshComponent;
 class UArrowComponent;
 class AFactoryLogisticsObjectBase;
 
@@ -38,7 +39,7 @@ public:
 	AFactoryLogisticsObjectBase* GetPortOwner();
 	bool GetIsPortEnabled() const { return bIsPortEnabled; }
 	
-	UArrowComponent* GetPortDirArrowComponent() const { return PortDirArrowComponent; }
+	UFactoryArrowMeshComponent* GetPortDirArrowComponent() const { return PortArrowMeshComponent; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")
@@ -48,7 +49,7 @@ protected:
 	TWeakObjectPtr<UFactoryPortComponentBase> ConnectedPort;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Logistics")
-	TObjectPtr<UArrowComponent> PortDirArrowComponent;
+	TObjectPtr<UFactoryArrowMeshComponent> PortArrowMeshComponent;
 	
 	// 연결 스캔 로직
 	void ScanForConnection(FVector Direction, TSubclassOf<UFactoryPortComponentBase> TargetClassType);

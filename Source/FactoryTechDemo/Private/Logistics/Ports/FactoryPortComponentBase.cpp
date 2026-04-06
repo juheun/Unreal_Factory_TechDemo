@@ -1,8 +1,8 @@
 ﻿#include "Logistics/Ports/FactoryPortComponentBase.h"
 
-#include "Components/ArrowComponent.h"
 #include "Logistics/Machines/FactoryLogisticsObjectBase.h"
 #include "Core/FactoryDeveloperSettings.h"
+#include "Logistics/FactoryArrowMeshComponent.h"
 
 UFactoryPortComponentBase::UFactoryPortComponentBase()
 {
@@ -11,18 +11,16 @@ UFactoryPortComponentBase::UFactoryPortComponentBase()
 	SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Block);
 	BoxExtent = FVector(10.0f, 40.0f, 10.0f);
 	
-	PortDirArrowComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("ArrowComponent"));
-	PortDirArrowComponent->SetupAttachment(this);
-	PortDirArrowComponent->SetHiddenInGame(false);
-	PortDirArrowComponent->SetRelativeLocation(FVector(-40.0f, 0.f, 0.f));
-	PortDirArrowComponent->SetArrowLength(80.f);
+	PortArrowMeshComponent = CreateDefaultSubobject<UFactoryArrowMeshComponent>(TEXT("ArrowMeshComponent"));
+	PortArrowMeshComponent->SetupAttachment(this);
+	PortArrowMeshComponent->SetHiddenInGame(false);
+	PortArrowMeshComponent->SetRelativeLocation(FVector(-40.0f, 0.f, 0.f));
+	PortArrowMeshComponent->SetArrowLength(80.f);
 }
 
 void UFactoryPortComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	ConnectedPort = nullptr;
 	
 	PortOwner = Cast<AFactoryLogisticsObjectBase>(GetOwner());
 }
@@ -42,11 +40,17 @@ void UFactoryPortComponentBase::Disconnect()
 		if (TargetPort->ConnectedPort.Get() == this)
 		{
 			TargetPort->ConnectedPort = nullptr;
-			TargetPort->PortDirArrowComponent->SetHiddenInGame(false);
+			if (TargetPort->PortArrowMeshComponent)
+			{
+				TargetPort->PortArrowMeshComponent->SetHiddenInGame(false);
+			}
 			TargetPort->OnPortConnectionChanged.Broadcast(TargetPort, false);
 		}
 		ConnectedPort = nullptr;
-		PortDirArrowComponent->SetHiddenInGame(false);
+		if (PortArrowMeshComponent)
+		{
+			PortArrowMeshComponent->SetHiddenInGame(false);
+		}
 		OnPortConnectionChanged.Broadcast(this, false);
 	}
 }
@@ -72,7 +76,10 @@ void UFactoryPortComponentBase::SetPortEnabled(bool bEnabled)
 	// 2. 화살표 시각적 제어 (켜지면 화살표 보임, 꺼지면 화살표 숨김)
 	// 단, 포트가 '연결(Connected)'된 상태라면 무조건 숨겨야 하므로 조건 추가
 	bool bShouldHideArrow = !bEnabled || ConnectedPort.IsValid();
-	PortDirArrowComponent->SetHiddenInGame(bShouldHideArrow);
+	if (PortArrowMeshComponent)
+	{
+		PortArrowMeshComponent->SetHiddenInGame(bShouldHideArrow);
+	}
 	
 	if (bEnabled)
 	{
@@ -116,11 +123,11 @@ void UFactoryPortComponentBase::ConnectTo(UFactoryPortComponentBase* Target)
 	
 	// 상호 연결 (Handshake)
 	this->ConnectedPort = Target;
-	PortDirArrowComponent->SetHiddenInGame(true);
+	if (PortArrowMeshComponent) PortArrowMeshComponent->SetHiddenInGame(true);
 	OnPortConnectionChanged.Broadcast(this, true);
 	
 	Target->ConnectedPort = this;
-	Target->PortDirArrowComponent->SetHiddenInGame(true);
+	if (Target->PortArrowMeshComponent) Target->PortArrowMeshComponent->SetHiddenInGame(true);
 	Target->OnPortConnectionChanged.Broadcast(Target, true);
 }
 

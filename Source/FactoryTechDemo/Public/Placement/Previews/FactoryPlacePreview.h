@@ -7,7 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "FactoryPlacePreview.generated.h"
 
-class UArrowComponent;
+class UFactoryArrowMeshComponent;
 class UFactoryObjectData;
 class UBoxComponent;
 class UDecalComponent;
@@ -50,7 +50,7 @@ protected:
 	TObjectPtr<UBoxComponent> OverlapBox;
 	
 	UPROPERTY()
-	TArray<TObjectPtr<UArrowComponent>> SpawnedArrows;
+	TArray<TObjectPtr<UFactoryArrowMeshComponent>> SpawnedArrows;
 	
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> PreviewDynamicMaterial;	// 배치불가시 색상변경 위함
@@ -66,5 +66,5 @@ private:
 	void SetupPortArrows(const UFactoryObjectData* Data, const AFactoryPlaceObjectBase* CDO);
 	void SetupVisualsAndCollisions(const UFactoryObjectData* Data);
 	
-	void CloneAndAttachArrow(UArrowComponent* SourceArrow, const FTransform& RelativeTransform);
+	void CloneAndAttachArrow(UFactoryArrowMeshComponent* SourceArrow, const FTransform& RelativeTransform);
 };

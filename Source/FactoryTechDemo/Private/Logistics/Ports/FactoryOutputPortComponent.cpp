@@ -1,11 +1,11 @@
 ﻿#include "Logistics/Ports/FactoryOutputPortComponent.h"
 
-#include "Components/ArrowComponent.h"
+#include "Logistics/FactoryArrowMeshComponent.h"
 #include "Logistics/Ports/FactoryInputPortComponent.h"
 
 UFactoryOutputPortComponent::UFactoryOutputPortComponent()
 {
-	PortDirArrowComponent->ArrowColor = FColor::Orange;
+	PortArrowMeshComponent->SetArrowColor(FColor::Orange);
 }
 
 void UFactoryOutputPortComponent::BeginPlay()

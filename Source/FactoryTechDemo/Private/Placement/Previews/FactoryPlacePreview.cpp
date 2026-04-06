@@ -3,7 +3,6 @@
 
 #include "Placement/Previews/FactoryPlacePreview.h"
 
-#include "Components/ArrowComponent.h"
 #include "Core/FactoryDeveloperSettings.h"
 #include "Placement/FactoryObjectData.h"
 #include "Placement/FactoryPlaceObjectBase.h"
@@ -11,6 +10,7 @@
 #include "Components/DecalComponent.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
+#include "Logistics/FactoryArrowMeshComponent.h"
 #include "Logistics/Ports/FactoryPortComponentBase.h"
 
 AFactoryPlacePreview::AFactoryPlacePreview()
@@ -116,7 +116,7 @@ TArray<AFactoryPlaceObjectBase*> AFactoryPlacePreview::GetOverlappingPlaceObject
 
 void AFactoryPlacePreview::ClearSpawnedArrows()
 {
-	for (UArrowComponent* Arrow : SpawnedArrows)
+	for (UFactoryArrowMeshComponent* Arrow : SpawnedArrows)
 	{
 		if (Arrow) Arrow->DestroyComponent();
 	}
@@ -125,10 +125,10 @@ void AFactoryPlacePreview::ClearSpawnedArrows()
 
 void AFactoryPlacePreview::SetupPortArrows(const UFactoryObjectData* Data, const AFactoryPlaceObjectBase* CDO)
 {
-	TArray<UArrowComponent*> BPArrows;
-	CDO->GetComponents<UArrowComponent>(BPArrows, true);
+	TArray<UFactoryArrowMeshComponent*> BPArrows;
+	CDO->GetComponents<UFactoryArrowMeshComponent>(BPArrows, true);
     
-	for (UArrowComponent* Arrow : BPArrows)
+	for (UFactoryArrowMeshComponent* Arrow : BPArrows)
 	{
 		FTransform ParentTransform = Arrow->GetAttachParent() ? Arrow->GetAttachParent()->GetRelativeTransform() : FTransform::Identity;
 		FTransform FinalTransform = Arrow->GetRelativeTransform() * ParentTransform;
@@ -145,7 +145,7 @@ void AFactoryPlacePreview::SetupPortArrows(const UFactoryObjectData* Data, const
 				{
 					if (UFactoryPortComponentBase* BPPortTemplate = Cast<UFactoryPortComponentBase>(Node->GetActualComponentTemplate(BPClass)))
 					{
-						if (UArrowComponent* TargetArrow = BPPortTemplate->GetPortDirArrowComponent())
+						if (UFactoryArrowMeshComponent* TargetArrow = BPPortTemplate->GetPortDirArrowComponent())
 						{
 							FTransform PortTransform = BPPortTemplate->GetRelativeTransform();
 							FTransform ArrowLocalTransform = TargetArrow->GetRelativeTransform();
@@ -199,20 +199,21 @@ void AFactoryPlacePreview::SetupVisualsAndCollisions(const UFactoryObjectData* D
 	}
 }
 
-void AFactoryPlacePreview::CloneAndAttachArrow(UArrowComponent* SourceArrow, const FTransform& RelativeTransform)
+void AFactoryPlacePreview::CloneAndAttachArrow(UFactoryArrowMeshComponent* SourceArrow, const FTransform& RelativeTransform)
 {
 	if (!SourceArrow) return;
 
-	UArrowComponent* NewArrow = NewObject<UArrowComponent>(this);
-	NewArrow->ArrowColor = SourceArrow->ArrowColor;
+	UFactoryArrowMeshComponent* NewArrow = NewObject<UFactoryArrowMeshComponent>(this);
+	NewArrow->SetArrowColor(SourceArrow->ArrowColor);
 	NewArrow->ArrowSize = SourceArrow->ArrowSize;
 	NewArrow->SetArrowLength(SourceArrow->ArrowLength);
+    
+	NewArrow->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	NewArrow->RegisterComponent();
 	NewArrow->SetRelativeTransform(RelativeTransform);
     
-	NewArrow->SetHiddenInGame(false); 
-	NewArrow->RegisterComponent();
-	NewArrow->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-    
+	NewArrow->SetHiddenInGame(false);
+	
 	SpawnedArrows.Add(NewArrow);
 }
 
