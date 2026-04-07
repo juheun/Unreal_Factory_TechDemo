@@ -17,7 +17,7 @@ class FACTORYTECHDEMO_API UFactoryCycleSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 	
 public:
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void Deinitialize() override;
 	
 	void RegisterLogisticsActor(AFactoryLogisticsObjectBase* LogisticsObject);

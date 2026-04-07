@@ -4,11 +4,12 @@
 #include "Subsystems/FactoryCycleSubsystem.h"
 #include "Logistics/Machines/FactoryLogisticsObjectBase.h"
 
-void UFactoryCycleSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+
+void UFactoryCycleSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
-	Super::Initialize(Collection);
+	Super::OnWorldBeginPlay(InWorld);
 	
-	GetWorld()->GetTimerManager().SetTimer(
+	InWorld.GetTimerManager().SetTimer(
 		CycleTimerHandle,
 		this,
 		&UFactoryCycleSubsystem::OnFactoryCycle,

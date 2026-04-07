@@ -26,7 +26,7 @@ void UFactoryArrowMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& P
 
 void UFactoryArrowMeshComponent::UpdateVisuals()
 {
-	if (HasAnyFlags(RF_ClassDefaultObject)) return;
+	if (IsTemplate()) return;
 	
 	if (const UFactoryDeveloperSettings* Settings = GetDefault<UFactoryDeveloperSettings>())
 	{
@@ -53,12 +53,18 @@ void UFactoryArrowMeshComponent::SetArrowLength(float InLength)
 void UFactoryArrowMeshComponent::SetArrowColor(FColor NewColor)
 {
 	ArrowColor = NewColor;
+	if (IsTemplate()) return;
+	
 	if (GetStaticMesh() && GetMaterial(0))
 	{
 		UMaterialInstanceDynamic* DynMat = Cast<UMaterialInstanceDynamic>(GetMaterial(0));
 		if (!DynMat)
 		{
 			DynMat = CreateAndSetMaterialInstanceDynamic(0);
+			if (DynMat)
+			{
+				DynMat->SetFlags(RF_Transient);
+			}
 		}
        
 		if (DynMat)

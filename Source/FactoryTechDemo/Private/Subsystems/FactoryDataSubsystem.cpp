@@ -19,6 +19,12 @@ void UFactoryDataSubsystem::CacheAllItemData()
 {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+	
+	// 독립형/패키징 환경에서의 작동을 위해 강제로 스캔
+	TArray<FString> PathsToScan;
+	PathsToScan.Add(TEXT("/Game/ItemData/Resource"));
+	PathsToScan.Add(TEXT("/Game/PlacementData/DataAssets/Item"));
+	AssetRegistry.ScanPathsSynchronous(PathsToScan);
 
 	// 검색 필터 설정 (UFactoryItemData 기준)
 	FARFilter Filter;
@@ -53,6 +59,11 @@ void UFactoryDataSubsystem::CacheAllRecipesData()
 {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+	
+	// 독립형/패키징 환경에서의 작동을 위해 강제로 스캔
+	TArray<FString> PathsToScan;
+	PathsToScan.Add(TEXT("/Game/ItemData/Recipe"));
+	AssetRegistry.ScanPathsSynchronous(PathsToScan);
 
 	// 검색 필터 설정
 	FARFilter Filter;
