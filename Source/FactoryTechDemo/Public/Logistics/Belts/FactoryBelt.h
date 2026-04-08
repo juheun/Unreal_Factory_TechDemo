@@ -19,6 +19,7 @@ public:
 	// Sets default values for this actor's properties
 	AFactoryBelt();
 	
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -63,11 +64,16 @@ protected:
 	void UpdateSplinePath(EBeltType Type);
 	void UpdateBeltVisual(EBeltType Type);
 	FTransform GetSpineDistance(float Alpha) const;
+	void CacheSplineTransforms();
 	
 	void MassRetrieve();
 	
 private:
 	void TryPullInputFromPorts();
+	
+	UPROPERTY(Transient)
+	TArray<FTransform> CachedSplineTransforms;
+	const int32 SplineCacheSteps = 10;	//CachedSplineTransforms에 저장할 스플라인 포인트 수
 	
 	const float BeltHeight = 20.f;
 	bool bIsBeltStop = false;
