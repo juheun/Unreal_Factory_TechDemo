@@ -5,6 +5,8 @@
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Core/FactoryDeveloperSettings.h"
+#include "Logistics/Belts/FactoryBelt.h"
+#include "Subsystems/FactoryCycleSubsystem.h"
 #include "Subsystems/FactoryDataSubsystem.h"
 
 
@@ -67,6 +69,31 @@ void AFactoryItemRenderActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
+	// 사이클 알파 추출
+	float Alpha = 0.f;
+	if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
+	{
+		Alpha = CycleSubsystem->GetCycleAlpha();
+	}
+	// 활성화된 벨트들에게서만 랜더링 요청 긁어오기
+	for (int32 i = ActiveBelts.Num() - 1; i >= 0; --i)
+	{
+		if (AFactoryBelt* Belt = ActiveBelts[i].Get())
+		{
+			const UFactoryItemData* ItemData = Belt->GetCurrentItemData();
+			if (ItemData)
+			{
+				FTransform Transform = Belt->GetItemRenderTransform(Alpha);
+				RequestRenderItem(ItemData, Transform);
+			}
+		}
+		else
+		{
+			// 혹시라도 벨트가 파괴되었는데 해제가 누락된 경우 청소
+			ActiveBelts.RemoveAtSwap(i); 
+		}
+	}
+	// 랜더린 요청 처리
 	for (auto& Pair : RenderRequests)
 	{
 		const UFactoryItemData* ItemData = Pair.Key;
@@ -117,6 +144,22 @@ void AFactoryItemRenderActor::RequestRenderItem(const UFactoryItemData* ItemData
 	if (ItemData && RenderRequests.Contains(ItemData))
 	{
 		RenderRequests[ItemData].Add(Transform);
+	}
+}
+
+void AFactoryItemRenderActor::RegisterActiveBelt(AFactoryBelt* Belt)
+{
+	if (Belt)
+	{
+		ActiveBelts.AddUnique(Belt);
+	}
+}
+
+void AFactoryItemRenderActor::UnRegisterActiveBelt(AFactoryBelt* Belt)
+{
+	if (Belt)
+	{
+		ActiveBelts.RemoveSwap(Belt); 
 	}
 }
 

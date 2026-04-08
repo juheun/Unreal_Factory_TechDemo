@@ -6,6 +6,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "FactoryItemRenderSubsystem.generated.h"
 
+class AFactoryBelt;
 class AFactoryItemRenderActor;
 class UFactoryItemData;
 /**
@@ -23,6 +24,8 @@ public:
 	
 	// 외부에서 아이템 랜더 요청
 	void RequestRenderItem(const UFactoryItemData* ItemData, const FTransform& Transform);
+	void RegisterActiveBelt(AFactoryBelt* Belt);
+	void UnregisterActiveBelt(AFactoryBelt* Belt);
 	
 private:
 	UPROPERTY()

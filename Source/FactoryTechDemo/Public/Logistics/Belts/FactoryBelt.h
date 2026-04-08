@@ -19,6 +19,10 @@ public:
 	// Sets default values for this actor's properties
 	AFactoryBelt();
 	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+	virtual void OnConstruction(const FTransform& Transform) override;
+	
 	virtual void InitPhase() override;
 	virtual void LogisticsPhase() override;
 	virtual void LateLogisticsPhase() override;
@@ -37,14 +41,11 @@ public:
 	TSet<AFactoryBelt*> GetConnectedBeltLine();
 	
 	FVector GetBeltExitDirection() const;	// 벨트의 타입을 고려한 실제 배출 방향을 반환
-	EBeltType GetBeltType() const {return BeltType;};
+	FTransform GetItemRenderTransform(float CycleAlpha) const;
+	EBeltType GetBeltType() const {return BeltType;}
+	const UFactoryItemData* GetCurrentItemData() const { return CurrentItem.ItemData.Get(); }
 
 protected:
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void Tick(float DeltaSeconds) override;
-	
-	virtual void OnConstruction(const FTransform& Transform) override;
-	
 	virtual void ReceiveItem(UFactoryInputPortComponent* RequestPort, FFactoryItemInstance Item) override;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Factory|Movement")
@@ -61,7 +62,7 @@ protected:
 	
 	void UpdateSplinePath(EBeltType Type);
 	void UpdateBeltVisual(EBeltType Type);
-	FTransform GetSpineDistance(float Alpha);
+	FTransform GetSpineDistance(float Alpha) const;
 	
 	void MassRetrieve();
 	
@@ -73,4 +74,5 @@ private:
 	UPROPERTY()
 	float TotalSpineLength = 0.f;
 	bool bReceivedThisCycle = false;
+	bool bIsBeltRegistered = false;		// 아이템 랜더 액터에 등록되었는지에 대한 내부 캐싱
 };

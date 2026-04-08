@@ -39,3 +39,19 @@ void UFactoryItemRenderSubsystem::RequestRenderItem(const UFactoryItemData* Item
 		RenderActor->RequestRenderItem(ItemData, Transform);
 	}
 }
+
+void UFactoryItemRenderSubsystem::RegisterActiveBelt(AFactoryBelt* Belt)
+{
+	if (RenderActor)
+	{
+		RenderActor->RegisterActiveBelt(Belt);
+	}
+}
+
+void UFactoryItemRenderSubsystem::UnregisterActiveBelt(AFactoryBelt* Belt)
+{
+	if (RenderActor)
+	{
+		RenderActor->UnRegisterActiveBelt(Belt);
+	}
+}

@@ -17,7 +17,7 @@
 
 AFactoryBelt::AFactoryBelt()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	
 	SplineComponent = CreateDefaultSubobject<USplineComponent>("SplineComponent");
@@ -29,6 +29,11 @@ AFactoryBelt::AFactoryBelt()
 void AFactoryBelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
+	
+	if (UFactoryItemRenderSubsystem* RenderSubsystem = GetWorld()->GetSubsystem<UFactoryItemRenderSubsystem>())
+	{
+		RenderSubsystem->UnregisterActiveBelt(this);
+	}
 	
 	UFactoryWarehouseSubsystem* WarehouseSubsystem = GetWorld()->GetSubsystem<UFactoryWarehouseSubsystem>();
 	if (!WarehouseSubsystem) return;
@@ -46,27 +51,6 @@ void AFactoryBelt::OnConstruction(const FTransform& Transform)
 }
 
 #pragma region Belt Logic
-
-void AFactoryBelt::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-	
-	UFactoryItemRenderSubsystem* RenderSubsystem = GetWorld()->GetSubsystem<UFactoryItemRenderSubsystem>();
-	if (RenderSubsystem && CurrentItem.ItemData)
-	{
-		float Alpha = bIsBeltStop ? 1.0f : 0.0f;
-		
-		if (!bIsBeltStop)
-		{
-			if (UFactoryCycleSubsystem* CycleSubsystem = GetWorld()->GetSubsystem<UFactoryCycleSubsystem>())
-			{
-				Alpha = CycleSubsystem->GetCycleAlpha();
-			}
-		}
-		FTransform ItemTransform = GetSpineDistance(Alpha);
-		RenderSubsystem->RequestRenderItem(CurrentItem.ItemData, ItemTransform);
-	}
-}
 
 void AFactoryBelt::InitPhase()
 {
@@ -92,7 +76,21 @@ void AFactoryBelt::LogicPhase()
 
 void AFactoryBelt::VisualPhase()
 {
-	SetActorTickEnabled(CurrentItem.IsValid());
+	if (bIsBeltRegistered != CurrentItem.IsValid())
+	{
+		if (UFactoryItemRenderSubsystem* RenderSubsystem = GetWorld()->GetSubsystem<UFactoryItemRenderSubsystem>())
+		{
+			bIsBeltRegistered = CurrentItem.IsValid();
+			if (bIsBeltRegistered)
+			{
+				RenderSubsystem->RegisterActiveBelt(this);	
+			}
+			else
+			{
+				RenderSubsystem->UnregisterActiveBelt(this);
+			}
+		}
+	}
 }
 
 void AFactoryBelt::TryPullInputFromPorts()
@@ -273,13 +271,20 @@ void AFactoryBelt::UpdateBeltVisual(EBeltType Type)
 	}
 }
 
-FTransform AFactoryBelt::GetSpineDistance(float Alpha)
+FTransform AFactoryBelt::GetSpineDistance(float Alpha) const
 {
 	float TargetDistance = Alpha * TotalSpineLength;
 		
 	FVector NewLoc = SplineComponent->GetLocationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
 	FRotator NewRot = SplineComponent->GetRotationAtDistanceAlongSpline(TargetDistance, ESplineCoordinateSpace::World);
 	return FTransform(NewRot, NewLoc);
+}
+
+
+FTransform AFactoryBelt::GetItemRenderTransform(float CycleAlpha) const
+{
+	float FinalAlpha = bIsBeltStop ? 1.0f : CycleAlpha;
+	return GetSpineDistance(FinalAlpha);
 }
 
 #pragma endregion
