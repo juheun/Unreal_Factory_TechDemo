@@ -50,7 +50,7 @@ void AFactoryItemRenderActor::InitializeRenderers()
 
 			NewISM->SetStaticMesh(BaseMesh);
 			NewISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			NewISM->SetCastShadow(true);
+			NewISM->SetCastShadow(false);
 			NewISM->SetReceivesDecals(false);
 
 			// 다이내믹 머티리얼 생성 및 아이콘 텍스처 삽입

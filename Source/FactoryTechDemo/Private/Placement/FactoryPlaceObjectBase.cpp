@@ -21,6 +21,7 @@ AFactoryPlaceObjectBase::AFactoryPlaceObjectBase()
 	
 	MeshComponent->SetCollisionObjectType(ECC_GameTraceChannel3);
 	MeshComponent->SetGenerateOverlapEvents(true);
+	MeshComponent->SetCastShadow(false);
 }
 
 void AFactoryPlaceObjectBase::BeginPlay()
