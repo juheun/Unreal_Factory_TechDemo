@@ -7,6 +7,7 @@
 #include "Components/ProgressBar.h"
 #include "Components/ScrollBox.h"
 #include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
 #include "Items/FactoryRecipeData.h"
 #include "Logistics/Machines/FactoryMachineBase.h"
 #include "Player/Component/FactoryInventoryComponent.h"
@@ -48,7 +49,10 @@ void UFactoryMachineBasePanel::InitPanel(AFactoryPlaceObjectBase* PlaceObject)
 				if (UFactoryFacilitySlotWidget* NewSlot = CreateWidget<UFactoryFacilitySlotWidget>(this, FacilitySlotBP))
 				{
 					// Vertical Box에 자식으로 추가
-					InputSlotContainer->AddChildToVerticalBox(NewSlot);
+					if (UVerticalBoxSlot* VertSlot = InputSlotContainer->AddChildToVerticalBox(NewSlot))
+					{
+						VertSlot->SetPadding(FMargin(0.f, 0.f, 0.f, 10.f));
+					}
 					InputSlots.Add(NewSlot);
 					
 					NewSlot->InitSlotIdentity(Machine, true, i);
