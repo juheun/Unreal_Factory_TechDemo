@@ -66,5 +66,5 @@ private:
 	void SetupPortArrows(const UFactoryObjectData* Data, const AFactoryPlaceObjectBase* CDO);
 	void SetupVisualsAndCollisions(const UFactoryObjectData* Data);
 	
-	void CloneAndAttachArrow(UFactoryArrowMeshComponent* SourceArrow, const FTransform& RelativeTransform);
+	void AttachArrowWithSpecs(const FTransform& RelativeTransform, FColor Color, float Size, float Length);
 };
