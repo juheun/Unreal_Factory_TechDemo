@@ -155,7 +155,7 @@ void AFactoryPlacePreview::SetupPortArrows(const UFactoryObjectData* Data, const
                     if (!Node || !Node->ComponentClass) continue;
                     
                     // SCS 내 부모 트랜스폼 누적을 위한 람다 함수
-                    auto GetAccumulatedTransform = [&](FTransform BaseTransform) -> FTransform
+                    auto GetAccumulatedTransform = [&](const FTransform& BaseTransform) -> FTransform
                     {
                         FTransform Accum = BaseTransform;
                         USCS_Node* ParentNode = SCS->FindParentNode(Node);
