@@ -17,6 +17,9 @@ class FACTORYTECHDEMO_API UFactoryWorldUIActivatorComponent : public USphereComp
 public:
 	UFactoryWorldUIActivatorComponent();
 	virtual void BeginPlay() override;
+	
+	void SleepAndDisable();
+	void EnableAndWakeUp(EFactoryViewModeType NewViewMode);
 
 protected:
 
@@ -25,9 +28,8 @@ protected:
 
 	UFUNCTION()
 	void OnActivatorEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
-	UFUNCTION()
-	void OnViewModeChanged(EFactoryViewModeType NewViewMode);
+	
+	void SetUIStateForOverlappedActors(bool bWakeUp);
 	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|UIActivator")
 	float NormalViewRadius = 1000.f;

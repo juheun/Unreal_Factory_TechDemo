@@ -14,6 +14,36 @@ UFactoryRecipeBillboardComponent::UFactoryRecipeBillboardComponent()
 	SetDrawSize(FVector2D(100.f, 100.f));
 }
 
+void UFactoryRecipeBillboardComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	CachedZOffset = DefaultBillboardZHeight;
+
+	if (AActor* OwnerActor = GetOwner())
+	{
+		FBox MeshBounds(ForceInit);
+		TArray<UStaticMeshComponent*> MeshComps;
+		OwnerActor->GetComponents<UStaticMeshComponent>(MeshComps);
+        
+		for (UStaticMeshComponent* Mesh : MeshComps)
+		{
+			MeshBounds += Mesh->Bounds.GetBox();
+		}
+        
+		if (MeshBounds.IsValid)
+		{
+			CachedZOffset = (MeshBounds.Max.Z - OwnerActor->GetActorLocation().Z) + BillboardZHeight;
+		}
+	}
+}
+
+void UFactoryRecipeBillboardComponent::WakeUp()
+{
+	Super::WakeUp();
+	RefreshIconUI();
+}
+
 void UFactoryRecipeBillboardComponent::OnRecipeChangedCallback(const UFactoryRecipeData* NewRecipe)
 {
 	UTexture2D* Icon = (NewRecipe && NewRecipe->Output.ItemData) ? NewRecipe->Output.ItemData->ItemIcon : nullptr;
@@ -38,8 +68,28 @@ void UFactoryRecipeBillboardComponent::SetIcon(UTexture2D* Icon)
 	
 	if (Icon)
 	{
-		BillboardWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		BillboardWidget->SetRecipeIcon(Icon);
+		bIsIconSet = true;
+	}
+	else
+	{
+		bIsIconSet = false;
+	}
+	
+	if (bIsAwake)
+	{
+		RefreshIconUI();
+	}
+}
+
+void UFactoryRecipeBillboardComponent::RefreshIconUI()
+{
+	UFactoryRecipeBillboardWidget* BillboardWidget = Cast<UFactoryRecipeBillboardWidget>(GetUserWidgetObject());
+	if (!BillboardWidget) return;
+	
+	if (bIsIconSet)
+	{
+		BillboardWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
 	else
 	{
@@ -51,30 +101,7 @@ void UFactoryRecipeBillboardComponent::UpdateUIPlacement(float DeltaTime, const 
 {
 	FVector TargetLoc = OwnerLoc;
 	
-	if (AActor* OwnerActor = GetOwner())
-	{
-		FBox MeshBounds(ForceInit);
-		
-		TArray<UStaticMeshComponent*> MeshComps;
-		OwnerActor->GetComponents<UStaticMeshComponent>(MeshComps);
-		for (UStaticMeshComponent* Mesh : MeshComps)
-		{
-			MeshBounds += Mesh->Bounds.GetBox();
-		}
-		
-		if (MeshBounds.IsValid)
-		{
-			TargetLoc.Z = MeshBounds.Max.Z + BillboardZHeight;
-		}
-		else
-		{
-			TargetLoc.Z += DefaultBillboardZHeight;
-		}
-	}
-	else
-	{
-		TargetLoc.Z += DefaultBillboardZHeight; // 예외 처리 (기본값)
-	}
+	TargetLoc.Z += CachedZOffset;
 	
 	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
 	{

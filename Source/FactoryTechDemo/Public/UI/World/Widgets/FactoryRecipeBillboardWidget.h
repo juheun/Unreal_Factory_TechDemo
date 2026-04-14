@@ -17,7 +17,7 @@ class FACTORYTECHDEMO_API UFactoryRecipeBillboardWidget : public UUserWidget
 public:
 	UFUNCTION(BlueprintCallable, Category = "Factory|UI")
 	void SetRecipeIcon(UTexture2D* InIcon);
-
+	
 protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> RecipeIconImage;

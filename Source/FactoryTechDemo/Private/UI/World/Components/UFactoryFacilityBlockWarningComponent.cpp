@@ -20,17 +20,10 @@ void UFactoryFacilityBlockWarningComponent::BeginPlay()
 
 void UFactoryFacilityBlockWarningComponent::OnFacilityBlockCallback(bool bIsBlocked)
 {
-	SetDrawSize(FVector2D(50.f, 50.f));
-	SetHiddenInGame(!bIsBlocked);
-	
-	if (!GetUserWidgetObject())
+	bIsCurrentlyBlocked = bIsBlocked;
+	if (bIsAwake)
 	{
-		InitWidget();
-	}
-	
-	if (UUserWidget* WidgetObj = GetUserWidgetObject())
-	{
-		WidgetObj->SetVisibility(bIsBlocked ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+		RefreshWarningUI();
 	}
 }
 
@@ -80,4 +73,26 @@ void UFactoryFacilityBlockWarningComponent::UpdateUIPlacement(float DeltaTime, c
 	FRotator TargetRot = FRotator(0.f, CameraRot.Yaw + 180.f, 0.f);
 
 	SetWorldLocationAndRotation(TargetLoc, TargetRot);
+}
+
+void UFactoryFacilityBlockWarningComponent::WakeUp()
+{
+	Super::WakeUp();
+	RefreshWarningUI();
+}
+
+void UFactoryFacilityBlockWarningComponent::RefreshWarningUI()
+{
+	SetDrawSize(FVector2D(50.f, 50.f));
+	SetHiddenInGame(!bIsCurrentlyBlocked);
+	
+	if (!GetUserWidgetObject())
+	{
+		InitWidget();
+	}
+	
+	if (UUserWidget* WidgetObj = GetUserWidgetObject())
+	{
+		WidgetObj->SetVisibility(bIsCurrentlyBlocked ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
 }

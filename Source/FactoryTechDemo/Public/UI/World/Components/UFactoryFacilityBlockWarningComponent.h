@@ -14,12 +14,13 @@ class FACTORYTECHDEMO_API UFactoryFacilityBlockWarningComponent : public UFactor
 
 public:
 	UFactoryFacilityBlockWarningComponent();
+	virtual void BeginPlay() override;
+	virtual void WakeUp() override;
 	
 	UFUNCTION()
 	void OnFacilityBlockCallback(bool bIsBlocked);
 	
 protected:
-	virtual void BeginPlay() override;
 	
 	virtual void UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc, const FVector& CameraForward, const FVector& OwnerLoc) override;
 	
@@ -30,4 +31,8 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
 	float TopViewScreenOffset = 100.f;
+	
+private:
+	bool bIsCurrentlyBlocked = false;
+	void RefreshWarningUI();
 };

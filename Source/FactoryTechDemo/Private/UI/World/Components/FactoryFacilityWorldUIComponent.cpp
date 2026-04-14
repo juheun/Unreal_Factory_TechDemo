@@ -13,6 +13,7 @@ UFactoryFacilityWorldUIComponent::UFactoryFacilityWorldUIComponent()
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	
 	SetHiddenInGame(true);
+	SetVisibility(false);
 	SetWidgetSpace(EWidgetSpace::World);
 	SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
@@ -24,27 +25,24 @@ void UFactoryFacilityWorldUIComponent::BeginPlay()
 
 	if (AFactoryPlayerController* Controller = Cast<AFactoryPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0)))
 	{
-		CachedCurrentViewMode = Controller->GetCurrentViewMode();
-		Controller->OnViewModeChanged.AddDynamic(this, &UFactoryFacilityWorldUIComponent::OnViewModeChanged);
-		OnViewModeChanged(CachedCurrentViewMode);
-		
+		CachedPC = Controller;
 		CachedTopViewPawn = Controller->GetTopViewPawn();
 	}
+	CachedCameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
 	
-	if (!bIsAwake)
-	{
-		bIsAwake = true;	// GoToSleep 가드를 깨기위해 일시적으로 IsAwake true;
-		GoToSleep();
-	}
+	bIsAwake = true;
+	GoToSleep();
 }
 
 
 void UFactoryFacilityWorldUIComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                                      FActorComponentTickFunction* ThisTickFunction)
 {
+	if (!bIsAwake) return;
+	
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
+	APlayerCameraManager* CameraManager = CachedCameraManager.Get();
 	AActor* OwnerActor = GetOwner();
 	if (!CameraManager || !OwnerActor) return;
 	
@@ -56,11 +54,19 @@ void UFactoryFacilityWorldUIComponent::TickComponent(float DeltaTime, ELevelTick
 	// 공통 시야각 판별 로직
 	if (FVector::DotProduct(CameraForward, DirToMachine) < CullingDotThreshold)
 	{
-		if (!bHiddenInGame) SetHiddenInGame(true);
+		if (IsVisible())
+		{
+			SetHiddenInGame(true);
+			SetVisibility(false);
+		}
 		return;
 	}
 	
-	if (bHiddenInGame) SetHiddenInGame(false);
+	if (!IsVisible())
+	{
+		SetHiddenInGame(false);
+		SetVisibility(true);
+	}
 	
 	// 탑뷰일때 줌 레벨에 따른 크기 조정
 	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
@@ -96,7 +102,25 @@ void UFactoryFacilityWorldUIComponent::WakeUp()
 {
 	if (bIsAwake) return;
 	bIsAwake = true;
-	// Tick 내부 계산에 따라 SetHiddenInGame 설정
+	
+	if (AFactoryPlayerController* PC = CachedPC.Get())
+	{
+		CachedCurrentViewMode = PC->GetCurrentViewMode();
+		EWidgetSpace TargetSpace = (CachedCurrentViewMode == EFactoryViewModeType::TopView) ? EWidgetSpace::Screen : EWidgetSpace::World;
+       
+		if (GetWidgetSpace() != TargetSpace)
+		{
+			SetWidgetSpace(TargetSpace);
+			if (TargetSpace == EWidgetSpace::World)
+			{
+				if (UUserWidget* WidgetObj = GetUserWidgetObject())
+					WidgetObj->SetRenderScale(FVector2D(1.f, 1.f));
+			}
+		}
+	}
+
+	SetVisibility(true);
+	SetHiddenInGame(false);
 	SetComponentTickEnabled(true);
 }
 
@@ -104,25 +128,19 @@ void UFactoryFacilityWorldUIComponent::GoToSleep()
 {
 	if (!bIsAwake) return;
 	bIsAwake = false;
+	if (GetWidgetSpace() != EWidgetSpace::World)
+	{
+		SetWidgetSpace(EWidgetSpace::World);
+	}
+	
+	if (UUserWidget* WidgetObj = GetUserWidgetObject())
+	{
+		WidgetObj->SetRenderScale(FVector2D(1.f, 1.f));
+		WidgetObj->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	SetVisibility(false);
 	SetHiddenInGame(true);
 	SetComponentTickEnabled(false);
 }
 
-void UFactoryFacilityWorldUIComponent::OnViewModeChanged(EFactoryViewModeType NewViewMode)
-{
-	CachedCurrentViewMode = NewViewMode;
-	
-	if (CachedCurrentViewMode == EFactoryViewModeType::TopView)
-	{
-		SetWidgetSpace(EWidgetSpace::Screen);
-	}
-	else
-	{
-		SetWidgetSpace(EWidgetSpace::World);
-		if (UUserWidget* WidgetObj = GetUserWidgetObject())
-		{
-			WidgetObj->SetRenderScale(FVector2D(1.f, 1.f));
-		}
-	}
-}
 

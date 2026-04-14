@@ -12,7 +12,7 @@ UFactoryWorldUIActivatorComponent::UFactoryWorldUIActivatorComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 	
 	InitSphereRadius(NormalViewRadius);
-	SetGenerateOverlapEvents(true);
+	SetGenerateOverlapEvents(false); // 수동으로 켤 것이므로 초기엔 false
 	SetCollisionObjectType(ECC_WorldDynamic);
 	SetCollisionResponseToAllChannels(ECR_Ignore);
 	SetCollisionResponseToChannel(ECC_GameTraceChannel3, ECR_Overlap);
@@ -25,34 +25,30 @@ void UFactoryWorldUIActivatorComponent::BeginPlay()
 
 	OnComponentBeginOverlap.AddDynamic(this, &UFactoryWorldUIActivatorComponent::OnActivatorBeginOverlap);
 	OnComponentEndOverlap.AddDynamic(this, &UFactoryWorldUIActivatorComponent::OnActivatorEndOverlap);
-
-	// 뷰 모드 전환 델리게이트 구독
-	if (AFactoryPlayerController* PC = Cast<AFactoryPlayerController>(GetOwner()))
-	{
-		PC->OnViewModeChanged.AddDynamic(this, &UFactoryWorldUIActivatorComponent::OnViewModeChanged);
-		OnViewModeChanged(PC->GetCurrentViewMode());
-	}
-	
-	// 스폰 시점에 반경 내에 들어와있는 UFactoryFacilityWorldUIComponent들을 깨워줌
-	TArray<UPrimitiveComponent*> OverlappingComps;
-	GetOverlappingComponents(OverlappingComps);
-	for (UPrimitiveComponent* Comp : OverlappingComps)
-	{
-		if (AActor* OverlappedActor = Comp->GetOwner())
-		{
-			TArray<UFactoryFacilityWorldUIComponent*> UIComps;
-			OverlappedActor->GetComponents<UFactoryFacilityWorldUIComponent>(UIComps);
-			for (auto* UIComp : UIComps)
-			{
-				UIComp->WakeUp();
-			}
-		}
-	}
 }
 
+void UFactoryWorldUIActivatorComponent::SleepAndDisable()
+{
+	SetUIStateForOverlappedActors(false);
+	
+	SetGenerateOverlapEvents(false);
+}
+
+void UFactoryWorldUIActivatorComponent::EnableAndWakeUp(EFactoryViewModeType NewViewMode)
+{
+	float TargetRadius = (NewViewMode == EFactoryViewModeType::TopView) ? TopViewRadius : NormalViewRadius;
+	SetSphereRadius(TargetRadius);
+    
+	SetGenerateOverlapEvents(true);
+	UpdateOverlaps();
+
+	SetUIStateForOverlappedActors(true);
+}
+
+
 void UFactoryWorldUIActivatorComponent::OnActivatorBeginOverlap(UPrimitiveComponent* OverlappedComponent,
-	AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
-	const FHitResult& SweepResult)
+                                                                AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+                                                                const FHitResult& SweepResult)
 {
 	if (!OtherActor || OtherActor == GetOwner()) return;
 
@@ -79,15 +75,28 @@ void UFactoryWorldUIActivatorComponent::OnActivatorEndOverlap(UPrimitiveComponen
 	}
 }
 
-void UFactoryWorldUIActivatorComponent::OnViewModeChanged(EFactoryViewModeType NewViewMode)
+void UFactoryWorldUIActivatorComponent::SetUIStateForOverlappedActors(bool bWakeUp)
 {
-	if (NewViewMode == EFactoryViewModeType::TopView)
+	TArray<AActor*> OverlappingActors;
+	GetOverlappingActors(OverlappingActors); 
+
+	for (AActor* Actor : OverlappingActors)
 	{
-		SetSphereRadius(TopViewRadius);
-	}
-	else
-	{
-		SetSphereRadius(NormalViewRadius);
+		if (!Actor || Actor == GetOwner()) continue;
+        
+		TArray<UFactoryFacilityWorldUIComponent*> UIComps;
+		Actor->GetComponents<UFactoryFacilityWorldUIComponent>(UIComps);
+		for (UFactoryFacilityWorldUIComponent* UIComp : UIComps)
+		{
+			if (bWakeUp)
+			{
+				UIComp->WakeUp();
+			}
+			else
+			{
+				UIComp->GoToSleep();
+			}
+		}
 	}
 }
 

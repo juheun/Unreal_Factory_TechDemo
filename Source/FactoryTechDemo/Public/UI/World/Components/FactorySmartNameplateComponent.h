@@ -20,6 +20,7 @@ public:
 	void InitNameplate(const UFactoryObjectData* Data);
 	
 	virtual void BeginPlay() override;
+	virtual void WakeUp() override;
 	
 protected:
 	virtual void UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc, const FVector& CameraForward, const FVector& OwnerLoc) override;

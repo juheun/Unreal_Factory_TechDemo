@@ -16,6 +16,9 @@ class FACTORYTECHDEMO_API UFactoryRecipeBillboardComponent : public UFactoryFaci
 public:
 	UFactoryRecipeBillboardComponent();
 	
+	virtual void BeginPlay() override;
+	virtual void WakeUp() override;
+	
 	UFUNCTION()
 	void OnRecipeChangedCallback(const UFactoryRecipeData* NewRecipe);
 	
@@ -26,6 +29,9 @@ protected:
 	virtual void UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc, const FVector& CameraForward, const FVector& OwnerLoc) override;
 	void SetIcon(UTexture2D* Icon);
 
+	void RefreshIconUI();
+	bool bIsIconSet = false;
+
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
 	float DefaultBillboardZHeight = 250.f;
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
@@ -33,4 +39,6 @@ protected:
 		
 	UPROPERTY(EditDefaultsOnly, Category="Factory|Billboard")
 	float TopViewScreenOffset = -100.f;
+	
+	float CachedZOffset;
 };

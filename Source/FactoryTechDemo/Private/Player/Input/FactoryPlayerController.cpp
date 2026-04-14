@@ -38,6 +38,7 @@ void AFactoryPlayerController::BeginPlay()
         if (WorldUIActivatorComponent)
         {
             WorldUIActivatorComponent->AttachToComponent(NormalViewCharacter->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+            WorldUIActivatorComponent->EnableAndWakeUp(CurrentViewMode);
         }
     }
     
@@ -191,6 +192,11 @@ void AFactoryPlayerController::UpdateInputState()
 void AFactoryPlayerController::OnToggleViewMode()
 {
     if (!CachedNormalViewCharacter.IsValid() || !CachedTopViewPawn.IsValid()) return;
+    
+    if (WorldUIActivatorComponent)
+    {
+        WorldUIActivatorComponent->SleepAndDisable();
+    }
 
     const float BlendTime = 0.3f;
     APawn* TargetPawn = (CurrentViewMode == EFactoryViewModeType::NormalView) ? 
@@ -208,15 +214,17 @@ void AFactoryPlayerController::OnToggleViewMode()
     
     DisableInput(this);
     SetViewTargetWithBlend(TargetPawn, BlendTime);
+    
+    TWeakObjectPtr<APawn> WeakTargetPawn = TargetPawn;
 
     FTimerHandle ViewChangeTimerHandle;
-    GetWorldTimerManager().SetTimer(ViewChangeTimerHandle, [this, TargetPawn]()
+    GetWorldTimerManager().SetTimer(ViewChangeTimerHandle, [this, WeakTargetPawn]()
     {
-        if(!IsValid(this)) return;
-
-        Possess(TargetPawn);
+        if(!IsValid(this) || !WeakTargetPawn.IsValid()) return;
         EFactoryViewModeType NewMode = (CurrentViewMode == EFactoryViewModeType::NormalView) ? 
             EFactoryViewModeType::TopView : EFactoryViewModeType::NormalView;
+        CurrentViewMode = NewMode;
+        Possess(WeakTargetPawn.Get());
 
         if (NewMode == EFactoryViewModeType::NormalView)
         {
@@ -227,8 +235,12 @@ void AFactoryPlayerController::OnToggleViewMode()
             CachedTopViewPawn->SetActorHiddenInGame(false);
             CachedTopViewPawn->SetCameraPerspective(false);
         }
+        
+        if (WorldUIActivatorComponent)
+        {
+            WorldUIActivatorComponent->EnableAndWakeUp(CurrentViewMode);
+        }
 
-        CurrentViewMode = NewMode; 
         OnViewModeChanged.Broadcast(CurrentViewMode);
         UpdateInputState();
         EnableInput(this);

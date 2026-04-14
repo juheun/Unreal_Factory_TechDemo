@@ -46,8 +46,17 @@ void UFactorySmartNameplateComponent::BeginPlay()
 	}
 }
 
+void UFactorySmartNameplateComponent::WakeUp()
+{
+	Super::WakeUp();
+	if (UFactoryNameplateWidget* NameplateWidget = Cast<UFactoryNameplateWidget>(GetUserWidgetObject()))
+	{
+		NameplateWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
+}
+
 void UFactorySmartNameplateComponent::UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc,
-	const FVector& CameraForward, const FVector& OwnerLoc)
+                                                        const FVector& CameraForward, const FVector& OwnerLoc)
 {
 	Super::UpdateUIPlacement(DeltaTime, CameraLoc, CameraForward, OwnerLoc);
 	

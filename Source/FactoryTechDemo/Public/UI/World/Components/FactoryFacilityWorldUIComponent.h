@@ -29,9 +29,6 @@ public:
 	virtual void GoToSleep();
 	
 protected:
-	UFUNCTION()
-	virtual void OnViewModeChanged(EFactoryViewModeType NewViewMode);
-	
 	// 자식 클래스에서 이동/회전 로직 구현
 	virtual void UpdateUIPlacement(float DeltaTime, const FVector& CameraLoc, const FVector& CameraForward, const FVector& OwnerLoc) {};
 	
@@ -52,4 +49,10 @@ protected:
 	
 	UPROPERTY()
 	TWeakObjectPtr<AFactoryTopViewPawn> CachedTopViewPawn;
+	
+	UPROPERTY()
+	TWeakObjectPtr<APlayerCameraManager> CachedCameraManager;
+	
+	UPROPERTY()
+	TWeakObjectPtr<AFactoryPlayerController> CachedPC;
 };
