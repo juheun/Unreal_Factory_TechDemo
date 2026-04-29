@@ -17,10 +17,18 @@
 
 대규모 물류 연산 시 액터 틱(Tick) 오버헤드를 막기 위해, 데이터 흐름과 렌더링을 분리한 중앙 집중식 아키텍처를 설계했습니다.
 
+### 1. 시스템 계층 오버뷰 (System Layer Overview)
+사용자의 입력(UI)부터 데이터 연산, 그리고 최종 렌더링(ISM)까지 이어지는 전체 파이프라인 구조입니다.
+> <img width="342" height="1298" alt="image" src="https://github.com/user-attachments/assets/978ae748-7d85-4779-a147-0de3b412d2b0" />
+
+
+### 2. 핵심 클래스 구조 및 데이터 흐름 (Class Diagram)
 - `UFactoryCycleSubsystem`: **(System Manager)** 맵 내의 모든 물류 객체를 관리하고, 매 프레임 위상 정렬을 통해 연산 순서를 결정합니다.
-- `AFactoryLogisticsObjectBase`: **(Logistics Entity)** 개별 틱 연산을 하지 않고, 서브시스템의 호출(`InitPhase`, `LogisticsPhase` 등)에 따라 상태만 갱신합니다.
-- `AFactoryItemRenderActor`: **(Rendering Agent)** 객체들의 트랜스폼(Transform) 데이터를 받아 **ISM(Instanced Static Mesh)** 기반으로 드로우 콜(Draw Call)을 묶어 일괄 렌더링합니다.
-- `UPrimaryDataAsset`: **(Data Definition)** 설비 속성, 레시피, 포트 위치 등을 데이터화하여 하드코딩 배제 및 확장성 확보
+- `AFactoryLogisticsObjectBase`: **(Logistics Entity)** 개별 틱 연산을 하지 않고, 서브시스템의 일괄 호출(`InitPhase`, `LogisticsPhase` 등)에 따라 내부 상태만 갱신합니다.
+- `AFactoryItemRenderActor`: **(Rendering Agent)** 객체들의 트랜스폼(Transform) 데이터를 전달받아 **ISM(Instanced Static Mesh)** 기반으로 드로우 콜(Draw Call)을 묶어 일괄 렌더링합니다.
+- `UPrimaryDataAsset`: **(Data Definition)** 설비 속성, 레시피, 포트 위치 등을 데이터화하여 하드코딩을 배제하고 확장성을 확보합니다.
+
+> <img width="1761" height="1571" alt="image" src="https://github.com/user-attachments/assets/caebd42a-19e5-4ccf-8468-762150f337c9" />
 
 ---
 
