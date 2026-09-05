@@ -145,8 +145,3 @@ void UFactoryCycleSubsystem::SortRegisteredLogisticsObjectArr()
 * 프로젝트에 사용된 일부 UI 이미지 에셋은 '명일방주: 엔드필드(Arknights: Endfield)'의 에셋을 모작 및 임시 차용하였으며, 해당 에셋의 모든 저작권은 원저작자(Hypergryph)에게 있습니다.
 * 그래픽 에셋을 제외한 모든 시스템 구조 설계, C++ 로직 구현 및 최적화 코드는 본인이 직접 작성하였습니다.
 
----
-
-## 📜 License
-* **Source Code:** 이 레포지토리의 소스 코드(C++)는 `MIT License`를 따릅니다.
-* **Assets:** 프로젝트에 사용된 일부 UI 이미지(명일방주: 엔드필드 차용) 및 그래픽 에셋은 원저작자에게 권리가 있으며, 무단 배포 및 상업적 사용을 금지합니다.
