@@ -138,10 +138,4 @@ void UFactoryCycleSubsystem::SortRegisteredLogisticsObjectArr()
 * Engine: Unreal Engine 5.6
 * IDE : JetBrains Rider 2025.3.2
 
----
-
-## ⚠️ Disclaimer (저작권 안내)
-* 본 프로젝트는 개인의 기술 포트폴리오 및 비상업적 목적을 위해 제작된 테크 데모입니다.
-* 프로젝트에 사용된 일부 UI 이미지 에셋은 '명일방주: 엔드필드(Arknights: Endfield)'의 에셋을 모작 및 임시 차용하였으며, 해당 에셋의 모든 저작권은 원저작자(Hypergryph)에게 있습니다.
-* 그래픽 에셋을 제외한 모든 시스템 구조 설계, C++ 로직 구현 및 최적화 코드는 본인이 직접 작성하였습니다.
 
